@@ -94,26 +94,26 @@ const TokensTable = () => {
     let encodedServerAddress = encodeURIComponent(serverAddress);
     const nextLink = localStorage.getItem('chat_link');
     let nextUrl;
-  
+
     if (nextLink) {
-      nextUrl = nextLink + `/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
+      nextUrl = nextLink + `/#/?settings={"key":"laisky-${key}","url":"${serverAddress}"}`;
     } else {
-      nextUrl = `https://chat.oneapi.pro/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
+      nextUrl = `https://chat.oneapi.pro/#/?settings={"key":"laisky-${key}","url":"${serverAddress}"}`;
     }
 
     let url;
     switch (type) {
       case 'ama':
-        url = `ama://set-api-key?server=${encodedServerAddress}&key=sk-${key}`;
+        url = `ama://set-api-key?server=${encodedServerAddress}&key=laisky-${key}`;
         break;
       case 'opencat':
-        url = `opencat://team/join?domain=${encodedServerAddress}&token=sk-${key}`;
+        url = `opencat://team/join?domain=${encodedServerAddress}&token=laisky-${key}`;
         break;
       case 'next':
         url = nextUrl;
         break;
       default:
-        url = `sk-${key}`;
+        url = `laisky-${key}`;
     }
     if (await copy(url)) {
       showSuccess('已复制到剪贴板！');
@@ -128,7 +128,7 @@ const TokensTable = () => {
     let serverAddress = '';
     if (status) {
       status = JSON.parse(status);
-      serverAddress = status.server_address; 
+      serverAddress = status.server_address;
     }
     if (serverAddress === '') {
       serverAddress = window.location.origin;
@@ -136,26 +136,26 @@ const TokensTable = () => {
     let encodedServerAddress = encodeURIComponent(serverAddress);
     const chatLink = localStorage.getItem('chat_link');
     let defaultUrl;
-  
+
     if (chatLink) {
-      defaultUrl = chatLink + `/#/?settings={"key":"sk-${key}"}`;
+      defaultUrl = chatLink + `/#/?settings={"key":"laisky-${key}"}`;
     } else {
-      defaultUrl = `https://chat.oneapi.pro/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
+      defaultUrl = `https://chat.oneapi.pro/#/?settings={"key":"laisky-${key}","url":"${serverAddress}"}`;
     }
     let url;
     switch (type) {
       case 'ama':
-        url = `ama://set-api-key?server=${encodedServerAddress}&key=sk-${key}`;
+        url = `ama://set-api-key?server=${encodedServerAddress}&key=laisky-${key}`;
         break;
-  
+
       case 'opencat':
-        url = `opencat://team/join?domain=${encodedServerAddress}&token=sk-${key}`;
+        url = `opencat://team/join?domain=${encodedServerAddress}&token=laisky-${key}`;
         break;
-        
+
       default:
         url = defaultUrl;
     }
-  
+
     window.open(url, '_blank');
   }
 
@@ -351,21 +351,21 @@ const TokensTable = () => {
                         <Button
                             size={'small'}
                             positive
-                            onClick={() => {     
-                              onOpenLink('', token.key);       
+                            onClick={() => {
+                              onOpenLink('', token.key);
                             }}>
                             聊天
                           </Button>
-                          <Dropdown   
-                            className="button icon"       
+                          <Dropdown
+                            className="button icon"
                             floating
                             options={OPEN_LINK_OPTIONS.map(option => ({
                               ...option,
                               onClick: async () => {
                                 await onOpenLink(option.value, token.key);
                               }
-                            }))}       
-                            trigger={<></>}   
+                            }))}
+                            trigger={<></>}
                           />
                       </Button.Group>
                       {' '}

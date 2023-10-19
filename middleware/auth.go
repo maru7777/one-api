@@ -86,7 +86,7 @@ func TokenAuth() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		key := c.Request.Header.Get("Authorization")
 		key = strings.TrimPrefix(key, "Bearer ")
-		key = strings.TrimPrefix(key, "sk-")
+		key = strings.TrimPrefix(strings.TrimPrefix(key, "sk-"), "laisky-")
 		parts := strings.Split(key, "-")
 		key = parts[0]
 		token, err := model.ValidateUserToken(key)
