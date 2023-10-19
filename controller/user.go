@@ -312,6 +312,16 @@ func GetAffCode(c *gin.Context) {
 	return
 }
 
+// GetSelfByToken get user by openai api token
+func GetSelfByToken(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"uid":      c.GetInt("id"),
+		"token_id": c.GetInt("token_id"),
+		"username": c.GetString("username"),
+	})
+	return
+}
+
 func GetSelf(c *gin.Context) {
 	id := c.GetInt("id")
 	user, err := model.GetUserById(id, false)
