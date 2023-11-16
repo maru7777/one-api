@@ -169,9 +169,10 @@ type updateTokenDto struct {
 	RemainQuota    *int    `json:"remain_quota" gorm:"default:0"`
 	UnlimitedQuota *bool   `json:"unlimited_quota" gorm:"default:false"`
 	// AddRemainQuota add or subtract remain quota
-	AddRemainQuota int `json:"add_remain_quota"`
+	AddRemainQuota int `json:"add_remain_quota" gorm:"-"`
 	// AddUsedQuota add or subtract used quota
-	AddUsedQuota int `json:"add_used_quota"`
+	AddUsedQuota int    `json:"add_used_quota" gorm:"-"`
+	AddReason    string `json:"add_reason" gorm:"-"`
 }
 
 func UpdateToken(c *gin.Context) {
@@ -244,6 +245,13 @@ func UpdateToken(c *gin.Context) {
 
 	cleanToken.RemainQuota += tokenPatch.AddRemainQuota
 	cleanToken.UsedQuota += tokenPatch.AddUsedQuota
+
+	if tokenPatch.AddUsedQuota != 0 {
+		model.RecordLog(userId, model.LogTypeConsume, fmt.Sprintf("外部(%s)消耗 %s", tokenPatch.AddReason, common.LogQuota(tokenPatch.AddUsedQuota)))
+	}
+	if tokenPatch.AddRemainQuota != 0 {
+		model.RecordLog(userId, model.LogTypeManage, fmt.Sprintf("修改令牌可用额度(%s) %s", tokenPatch.AddReason, common.LogQuota(tokenPatch.AddRemainQuota)))
+	}
 
 	if err = cleanToken.Update(); err != nil {
 		c.JSON(http.StatusOK, gin.H{
