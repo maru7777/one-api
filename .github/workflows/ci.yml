@@ -5,6 +5,9 @@ on:
     branches:
       - 'main'
 
+env:
+  SHORT_SHA: "${GITHUB_SHA} | cut -c1-8`"
+
 jobs:
   docker:
     runs-on: ubuntu-latest
@@ -46,8 +49,8 @@ jobs:
           path: ${{ steps.go-cache-paths.outputs.go-mod }}
           key: ${{ runner.os }}-go-mod-${{ hashFiles('**/go.sum') }}
 
-      - name: Add SHORT_SHA env property with commit short sha
-        run: echo "SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-8`" >> $GITHUB_ENV
+      # - name: Add SHORT_SHA env property with commit short sha
+      #   run: echo "SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-8`" >> $GITHUB_ENV
 
       -
         name: Build and push latest
@@ -62,4 +65,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: ppcelery/one-api:${SHORT_SHA}
+          tags: ppcelery/one-api:${{ env.SHORT_SHA }}
