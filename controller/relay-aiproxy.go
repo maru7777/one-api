@@ -49,23 +49,13 @@ type AIProxyLibraryStreamResponse struct {
 
 func requestOpenAI2AIProxyLibrary(request GeneralOpenAIRequest) *AIProxyLibraryRequest {
 	query := ""
+
 	if request.MessagesLen() != 0 {
-		switch msgs := request.Messages.(type) {
-		case []Message:
+		if msgs, err := request.TextMessages(); err == nil {
 			query = msgs[len(msgs)-1].Content
-		case []VisionMessage:
+		} else if msgs, err := request.VisionMessages(); err == nil {
 			query = msgs[len(msgs)-1].Content.Text
-		case []any:
-			msg := msgs[len(msgs)-1]
-			switch msg := msg.(type) {
-			case Message:
-				query = msg.Content
-			case VisionMessage:
-				query = msg.Content.Text
-			default:
-				log.Panicf("unknown message type: %T", msg)
-			}
-		default:
+		} else {
 			log.Panicf("unknown message type: %T", msgs)
 		}
 	}

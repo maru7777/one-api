@@ -23,17 +23,17 @@ func printHelp() {
 }
 
 func init() {
-	flag.Parse()
+	// flag.Parse()
 
-	if *PrintVersion {
-		fmt.Println(Version)
-		os.Exit(0)
-	}
+	// if *PrintVersion {
+	// 	fmt.Println(Version)
+	// 	os.Exit(0)
+	// }
 
-	if *PrintHelp {
-		printHelp()
-		os.Exit(0)
-	}
+	// if *PrintHelp {
+	// 	printHelp()
+	// 	os.Exit(0)
+	// }
 
 	if os.Getenv("SESSION_SECRET") != "" {
 		SessionSecret = os.Getenv("SESSION_SECRET")
