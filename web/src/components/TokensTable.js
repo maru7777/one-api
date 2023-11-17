@@ -7,8 +7,7 @@ import { ITEMS_PER_PAGE } from '../constants';
 import { renderQuota } from '../helpers/render';
 
 const COPY_OPTIONS = [
-  { key: 'next', text: 'ChatGPT Next Web', value: 'next' },
-  { key: 'ama', text: 'AMA 问天', value: 'ama' },
+  { key: 'web', text: 'Web', value: 'web' },
   { key: 'opencat', text: 'OpenCat', value: 'opencat' },
 ];
 
@@ -92,14 +91,14 @@ const TokensTable = () => {
       serverAddress = window.location.origin;
     }
     let encodedServerAddress = encodeURIComponent(serverAddress);
-    const nextLink = localStorage.getItem('chat_link');
-    let nextUrl;
+    // const nextLink = localStorage.getItem('chat_link');
+    // let nextUrl;
 
-    if (nextLink) {
-      nextUrl = nextLink + `/#/?settings={"key":"laisky-${key}","url":"${serverAddress}"}`;
-    } else {
-      nextUrl = `https://chat.oneapi.pro/#/?settings={"key":"laisky-${key}","url":"${serverAddress}"}`;
-    }
+    // if (nextLink) {
+    //   nextUrl = nextLink + `/#/?settings={"key":"laisky-${key}","url":"${serverAddress}"}`;
+    // } else {
+    //   nextUrl = `https://chat.oneapi.pro/#/?settings={"key":"laisky-${key}","url":"${serverAddress}"}`;
+    // }
 
     let url;
     switch (type) {
@@ -109,8 +108,8 @@ const TokensTable = () => {
       case 'opencat':
         url = `opencat://team/join?domain=${encodedServerAddress}&token=laisky-${key}`;
         break;
-      case 'next':
-        url = nextUrl;
+      case 'web':
+        url = `https://chat.laisky.com?apikey=laisky-${key}`;
         break;
       default:
         url = `laisky-${key}`;
@@ -351,28 +350,6 @@ const TokensTable = () => {
                           }))}
                           trigger={<></>}
                         />
-                      </Button.Group>
-                      {' '}
-                      <Button.Group color='blue' size={'small'}>
-                        <Button
-                            size={'small'}
-                            positive
-                            onClick={() => {
-                              onOpenLink('', token.key);
-                            }}>
-                            聊天
-                          </Button>
-                          <Dropdown
-                            className="button icon"
-                            floating
-                            options={OPEN_LINK_OPTIONS.map(option => ({
-                              ...option,
-                              onClick: async () => {
-                                await onOpenLink(option.value, token.key);
-                              }
-                            }))}
-                            trigger={<></>}
-                          />
                       </Button.Group>
                       {' '}
                       <Popup
