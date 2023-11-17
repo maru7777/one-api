@@ -202,12 +202,20 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 	var completionTokens int
 	switch relayMode {
 	case RelayModeChatCompletions:
-		messages, err := textRequest.TextMessages()
-		if err != nil {
-			return errorWrapper(err, "parse_text_messages_failed", http.StatusBadRequest)
+		// first try to parse as text messages
+		if messages, err := textRequest.TextMessages(); err != nil {
+			// then try to parse as vision messages
+			if messages, err := textRequest.VisionMessages(); err != nil {
+				return errorWrapper(err, "parse_text_messages_failed", http.StatusBadRequest)
+			} else {
+				// vision message
+				if promptTokens, err = countVisonTokenMessages(messages, textRequest.Model); err != nil {
+					return errorWrapper(err, "count_token_messages_failed", http.StatusInternalServerError)
+				}
+			}
+		} else {
+			promptTokens = countTokenMessages(messages, textRequest.Model)
 		}
-
-		promptTokens = countTokenMessages(messages, textRequest.Model)
 	case RelayModeCompletions:
 		promptTokens = countTokenInput(textRequest.Prompt, textRequest.Model)
 	case RelayModeModerations:

@@ -105,7 +105,7 @@ func (r *GeneralOpenAIRequest) TextMessages() (messages []Message, err error) {
 	if blob, err := json.Marshal(r.Messages); err != nil {
 		return nil, errors.Wrap(err, "marshal messages failed")
 	} else if err := json.Unmarshal(blob, &messages); err != nil {
-		return nil, errors.Wrap(err, "unmarshal messages failed")
+		return nil, errors.Wrapf(err, "unmarshal messages failed %q", string(blob))
 	} else {
 		return messages, nil
 	}
