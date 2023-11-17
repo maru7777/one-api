@@ -4,12 +4,14 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"io"
+	"log"
 	"net/http"
 	"one-api/common"
 	"strconv"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 // https://docs.aiproxy.io/dev/library#使用已经定制好的知识库进行对话问答
@@ -47,9 +49,27 @@ type AIProxyLibraryStreamResponse struct {
 
 func requestOpenAI2AIProxyLibrary(request GeneralOpenAIRequest) *AIProxyLibraryRequest {
 	query := ""
-	if len(request.Messages) != 0 {
-		query = request.Messages[len(request.Messages)-1].Content
+	if request.MessagesLen() != 0 {
+		switch msgs := request.Messages.(type) {
+		case []Message:
+			query = msgs[len(msgs)-1].Content
+		case []VisionMessage:
+			query = msgs[len(msgs)-1].Content.Text
+		case []any:
+			msg := msgs[len(msgs)-1]
+			switch msg := msg.(type) {
+			case Message:
+				query = msg.Content
+			case VisionMessage:
+				query = msg.Content.Text
+			default:
+				log.Panicf("unknown message type: %T", msg)
+			}
+		default:
+			log.Panicf("unknown message type: %T", msgs)
+		}
 	}
+
 	return &AIProxyLibraryRequest{
 		Model:  request.Model,
 		Stream: request.Stream,

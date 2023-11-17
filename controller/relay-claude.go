@@ -4,11 +4,13 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"io"
+	"log"
 	"net/http"
 	"one-api/common"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 type ClaudeMetadata struct {
@@ -64,7 +66,13 @@ func requestOpenAI2Claude(textRequest GeneralOpenAIRequest) *ClaudeRequest {
 		claudeRequest.MaxTokensToSample = 1000000
 	}
 	prompt := ""
-	for _, message := range textRequest.Messages {
+
+	messages, err := textRequest.TextMessages()
+	if err != nil {
+		log.Panicf("invalid message type: %T", textRequest.Messages)
+	}
+
+	for _, message := range messages {
 		if message.Role == "user" {
 			prompt += fmt.Sprintf("\n\nHuman: %s", message.Content)
 		} else if message.Role == "assistant" {

@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"one-api/common"
@@ -14,6 +15,44 @@ type Message struct {
 	Role    string  `json:"role"`
 	Content string  `json:"content"`
 	Name    *string `json:"name,omitempty"`
+}
+
+type VisionMessage struct {
+	Role    string                     `json:"role"`
+	Content OpenaiVisionMessageContent `json:"content"`
+	Name    *string                    `json:"name,omitempty"`
+}
+
+// OpenaiVisionMessageContentType vision message content type
+type OpenaiVisionMessageContentType string
+
+const (
+	// OpenaiVisionMessageContentTypeText text
+	OpenaiVisionMessageContentTypeText OpenaiVisionMessageContentType = "text"
+	// OpenaiVisionMessageContentTypeImageUrl image url
+	OpenaiVisionMessageContentTypeImageUrl OpenaiVisionMessageContentType = "image_url"
+)
+
+// OpenaiVisionMessageContent vision message content
+type OpenaiVisionMessageContent struct {
+	Type     OpenaiVisionMessageContentType     `json:"type"`
+	Text     string                             `json:"text,omitempty"`
+	ImageUrl OpenaiVisionMessageContentImageUrl `json:"image_url,omitempty"`
+}
+
+// VisionImageResolution image resolution
+type VisionImageResolution string
+
+const (
+	// VisionImageResolutionLow low resolution
+	VisionImageResolutionLow VisionImageResolution = "low"
+	// VisionImageResolutionHigh high resolution
+	VisionImageResolutionHigh VisionImageResolution = "high"
+)
+
+type OpenaiVisionMessageContentImageUrl struct {
+	URL    string                `json:"url"`
+	Detail VisionImageResolution `json:"detail,omitempty"`
 }
 
 const (
@@ -30,18 +69,76 @@ const (
 // https://platform.openai.com/docs/api-reference/chat
 
 type GeneralOpenAIRequest struct {
-	Model       string    `json:"model,omitempty"`
-	Messages    []Message `json:"messages,omitempty"`
-	Prompt      any       `json:"prompt,omitempty"`
-	Stream      bool      `json:"stream,omitempty"`
-	MaxTokens   int       `json:"max_tokens,omitempty"`
-	Temperature float64   `json:"temperature,omitempty"`
-	TopP        float64   `json:"top_p,omitempty"`
-	N           int       `json:"n,omitempty"`
-	Input       any       `json:"input,omitempty"`
-	Instruction string    `json:"instruction,omitempty"`
-	Size        string    `json:"size,omitempty"`
-	Functions   any       `json:"functions,omitempty"`
+	Model string `json:"model,omitempty"`
+	// Messages maybe []Message or []VisionMessage
+	Messages    any     `json:"messages,omitempty"`
+	Prompt      any     `json:"prompt,omitempty"`
+	Stream      bool    `json:"stream,omitempty"`
+	MaxTokens   int     `json:"max_tokens,omitempty"`
+	Temperature float64 `json:"temperature,omitempty"`
+	TopP        float64 `json:"top_p,omitempty"`
+	N           int     `json:"n,omitempty"`
+	Input       any     `json:"input,omitempty"`
+	Instruction string  `json:"instruction,omitempty"`
+	Size        string  `json:"size,omitempty"`
+	Functions   any     `json:"functions,omitempty"`
+}
+
+func (r *GeneralOpenAIRequest) MessagesLen() int {
+	switch msgs := r.Messages.(type) {
+	case []any:
+		return len(msgs)
+	case []Message:
+		return len(msgs)
+	case []VisionMessage:
+		return len(msgs)
+	default:
+		return 0
+	}
+}
+
+// TextMessages returns messages as []Message
+func (r *GeneralOpenAIRequest) TextMessages() (messages []Message, err error) {
+	switch msgs := r.Messages.(type) {
+	case []any:
+		messages = make([]Message, 0, len(msgs))
+		for _, msg := range msgs {
+			if m, ok := msg.(Message); ok {
+				messages = append(messages, m)
+			} else {
+				err = fmt.Errorf("invalid message type")
+				return
+			}
+		}
+	case []Message:
+		messages = msgs
+	default:
+		return nil, errors.New("invalid message type")
+	}
+
+	return
+}
+
+// VisionMessages returns messages as []VisionMessage
+func (r *GeneralOpenAIRequest) VisionMessages() (messages []VisionMessage, err error) {
+	switch msgs := r.Messages.(type) {
+	case []any:
+		messages = make([]VisionMessage, 0, len(msgs))
+		for _, msg := range msgs {
+			if m, ok := msg.(VisionMessage); ok {
+				messages = append(messages, m)
+			} else {
+				err = fmt.Errorf("invalid message type")
+				return
+			}
+		}
+	case []VisionMessage:
+		messages = msgs
+	default:
+		return nil, errors.New("invalid message type")
+	}
+
+	return
 }
 
 func (r GeneralOpenAIRequest) ParseInput() []string {
