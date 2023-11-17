@@ -116,7 +116,7 @@ func (r *GeneralOpenAIRequest) VisionMessages() (messages []VisionMessage, err e
 	if blob, err := json.Marshal(r.Messages); err != nil {
 		return nil, errors.Wrap(err, "marshal vision messages failed")
 	} else if err := json.Unmarshal(blob, &messages); err != nil {
-		return nil, errors.Wrap(err, "unmarshal vision messages failed")
+		return nil, errors.Wrapf(err, "unmarshal vision messages failed %q", string(blob))
 	} else {
 		return messages, nil
 	}
