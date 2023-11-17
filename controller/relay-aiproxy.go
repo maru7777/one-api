@@ -54,7 +54,15 @@ func requestOpenAI2AIProxyLibrary(request GeneralOpenAIRequest) *AIProxyLibraryR
 		if msgs, err := request.TextMessages(); err == nil {
 			query = msgs[len(msgs)-1].Content
 		} else if msgs, err := request.VisionMessages(); err == nil {
-			query = msgs[len(msgs)-1].Content.Text
+			lastMsg := msgs[len(msgs)-1]
+			if len(lastMsg.Content) != 0 {
+				for i := range lastMsg.Content {
+					if lastMsg.Content[i].Type == OpenaiVisionMessageContentTypeText {
+						query = lastMsg.Content[i].Text
+						break
+					}
+				}
+			}
 		} else {
 			log.Panicf("unknown message type: %T", msgs)
 		}

@@ -168,19 +168,21 @@ func countVisonTokenMessages(messages []VisionMessage, model string) (int, error
 	tokenNum := 0
 	for _, message := range messages {
 		tokenNum += tokensPerMessage
-		switch message.Content.Type {
-		case OpenaiVisionMessageContentTypeText:
-			tokenNum += getTokenNum(tokenEncoder, message.Content.Text)
-		case OpenaiVisionMessageContentTypeImageUrl:
-			imgblob, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(message.Content.ImageUrl.URL, "data:image/jpeg;base64,"))
-			if err != nil {
-				return 0, errors.Wrap(err, "failed to decode base64 image")
-			}
+		for _, cnt := range message.Content {
+			switch cnt.Type {
+			case OpenaiVisionMessageContentTypeText:
+				tokenNum += getTokenNum(tokenEncoder, cnt.Text)
+			case OpenaiVisionMessageContentTypeImageUrl:
+				imgblob, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(cnt.ImageUrl.URL, "data:image/jpeg;base64,"))
+				if err != nil {
+					return 0, errors.Wrap(err, "failed to decode base64 image")
+				}
 
-			if imgtoken, err := CountVisionImageToken(imgblob, message.Content.ImageUrl.Detail); err != nil {
-				return 0, errors.Wrap(err, "failed to count vision image token")
-			} else {
-				tokenNum += imgtoken
+				if imgtoken, err := CountVisionImageToken(imgblob, cnt.ImageUrl.Detail); err != nil {
+					return 0, errors.Wrap(err, "failed to count vision image token")
+				} else {
+					tokenNum += imgtoken
+				}
 			}
 		}
 

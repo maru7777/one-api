@@ -19,9 +19,9 @@ type Message struct {
 }
 
 type VisionMessage struct {
-	Role    string                     `json:"role"`
-	Content OpenaiVisionMessageContent `json:"content"`
-	Name    *string                    `json:"name,omitempty"`
+	Role    string                       `json:"role"`
+	Content []OpenaiVisionMessageContent `json:"content"`
+	Name    *string                      `json:"name,omitempty"`
 }
 
 // OpenaiVisionMessageContentType vision message content type
