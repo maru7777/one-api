@@ -1,14 +1,16 @@
 package model
 
 import (
-	"gorm.io/driver/mysql"
-	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 	"one-api/common"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/Laisky/errors/v2"
+	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 var DB *gorm.DB
@@ -20,7 +22,7 @@ func createRootAccountIfNeed() error {
 		common.SysLog("no user exists, create a root user for you: username is root, password is 123456")
 		hashedPassword, err := common.Password2Hash("123456")
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		rootUser := User{
 			Username:    "root",
@@ -73,7 +75,7 @@ func InitDB() (err error) {
 		DB = db
 		sqlDB, err := DB.DB()
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		sqlDB.SetMaxIdleConns(common.GetOrDefault("SQL_MAX_IDLE_CONNS", 100))
 		sqlDB.SetMaxOpenConns(common.GetOrDefault("SQL_MAX_OPEN_CONNS", 1000))
@@ -85,46 +87,46 @@ func InitDB() (err error) {
 		common.SysLog("database migration started")
 		err = db.AutoMigrate(&Channel{})
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		err = db.AutoMigrate(&Token{})
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		err = db.AutoMigrate(&User{})
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		err = db.AutoMigrate(&Option{})
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		err = db.AutoMigrate(&Redemption{})
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		err = db.AutoMigrate(&Ability{})
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		err = db.AutoMigrate(&Log{})
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		common.SysLog("database migrated")
 		err = createRootAccountIfNeed()
-		return err
+		return errors.WithStack(err)
 	} else {
 		common.FatalLog(err)
 	}
-	return err
+	return errors.WithStack(err)
 }
 
 func CloseDB() error {
 	sqlDB, err := DB.DB()
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	err = sqlDB.Close()
-	return err
+	return errors.WithStack(err)
 }

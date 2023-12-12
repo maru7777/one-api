@@ -3,9 +3,6 @@ package main
 import (
 	"embed"
 	"fmt"
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/cookie"
-	"github.com/gin-gonic/gin"
 	"one-api/common"
 	"one-api/controller"
 	"one-api/middleware"
@@ -13,6 +10,10 @@ import (
 	"one-api/router"
 	"os"
 	"strconv"
+
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
+	"github.com/gin-gonic/gin"
 )
 
 //go:embed web/build
@@ -33,19 +34,19 @@ func main() {
 	// Initialize SQL Database
 	err := model.InitDB()
 	if err != nil {
-		common.FatalLog("failed to initialize database: " + err.Error())
+		common.FatalLog(fmt.Sprintf("failed to initialize database: %+v", err))
 	}
 	defer func() {
 		err := model.CloseDB()
 		if err != nil {
-			common.FatalLog("failed to close database: " + err.Error())
+			common.FatalLog(fmt.Sprintf("failed to close database: %+v", err))
 		}
 	}()
 
 	// Initialize Redis
 	err = common.InitRedisClient()
 	if err != nil {
-		common.FatalLog("failed to initialize Redis: " + err.Error())
+		common.FatalLog(fmt.Sprintf("failed to initialize Redis: %+v", err))
 	}
 
 	// Initialize options
