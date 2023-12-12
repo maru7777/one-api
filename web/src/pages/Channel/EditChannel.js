@@ -60,7 +60,7 @@ const EditChannel = () => {
       let localModels = [];
       switch (value) {
         case 14:
-          localModels = ['claude-instant-1', 'claude-2'];
+          localModels = ['claude-instant-1', 'claude-2', 'claude-2.0', 'claude-2.1'];
           break;
         case 11:
           localModels = ['PaLM-2'];
@@ -336,6 +336,20 @@ const EditChannel = () => {
                   label='知识库 ID'
                   name='other'
                   placeholder={'请输入知识库 ID，例如：123456'}
+                  onChange={handleInputChange}
+                  value={inputs.other}
+                  autoComplete='new-password'
+                />
+              </Form.Field>
+            )
+          }
+          {
+            inputs.type === 17 && (
+              <Form.Field>
+                <Form.Input
+                  label='插件参数'
+                  name='other'
+                  placeholder={'请输入插件参数，即 X-DashScope-Plugin 请求头的取值'}
                   onChange={handleInputChange}
                   value={inputs.other}
                   autoComplete='new-password'

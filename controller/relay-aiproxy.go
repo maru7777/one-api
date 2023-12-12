@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"one-api/common"
 	"strconv"
@@ -49,23 +48,8 @@ type AIProxyLibraryStreamResponse struct {
 
 func requestOpenAI2AIProxyLibrary(request GeneralOpenAIRequest) *AIProxyLibraryRequest {
 	query := ""
-
-	if request.MessagesLen() != 0 {
-		if msgs, err := request.TextMessages(); err == nil {
-			query = msgs[len(msgs)-1].Content
-		} else if msgs, err := request.VisionMessages(); err == nil {
-			lastMsg := msgs[len(msgs)-1]
-			if len(lastMsg.Content) != 0 {
-				for i := range lastMsg.Content {
-					if lastMsg.Content[i].Type == OpenaiVisionMessageContentTypeText {
-						query = lastMsg.Content[i].Text
-						break
-					}
-				}
-			}
-		} else {
-			log.Panicf("unknown message type: %T", msgs)
-		}
+	if len(request.Messages) != 0 {
+		query = request.Messages[len(request.Messages)-1].StringContent()
 	}
 
 	return &AIProxyLibraryRequest{

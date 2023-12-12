@@ -51,14 +51,11 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 	channelId := c.GetInt("channel_id")
 	tokenId := c.GetInt("token_id")
 	userId := c.GetInt("id")
-	consumeQuota := c.GetBool("consume_quota")
 	group := c.GetString("group")
 	var textRequest GeneralOpenAIRequest
-	if consumeQuota || channelType == common.ChannelTypeAzure || channelType == common.ChannelTypePaLM {
-		err := common.UnmarshalBodyReusable(c, &textRequest)
-		if err != nil {
-			return errorWrapper(err, "bind_request_body_failed", http.StatusBadRequest)
-		}
+	err := common.UnmarshalBodyReusable(c, &textRequest)
+	if err != nil {
+		return errorWrapper(err, "bind_request_body_failed", http.StatusBadRequest)
 	}
 	if relayMode == RelayModeModerations && textRequest.Model == "" {
 		textRequest.Model = "text-moderation-latest"
@@ -76,7 +73,7 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 			return errorWrapper(errors.New("field prompt is required"), "required_field_missing", http.StatusBadRequest)
 		}
 	case RelayModeChatCompletions:
-		if textRequest.Messages == nil || textRequest.MessagesLen() == 0 {
+		if len(textRequest.Messages) == 0 {
 			return errorWrapper(errors.New("field messages is required"), "required_field_missing", http.StatusBadRequest)
 		}
 	case RelayModeEmbeddings:
@@ -132,11 +129,7 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 	case APITypeOpenAI:
 		if channelType == common.ChannelTypeAzure {
 			// https://learn.microsoft.com/en-us/azure/cognitive-services/openai/chatgpt-quickstart?pivots=rest-api&tabs=command-line#rest-api
-			query := c.Request.URL.Query()
-			apiVersion := query.Get("api-version")
-			if apiVersion == "" {
-				apiVersion = c.GetString("api_version")
-			}
+			apiVersion := GetAPIVersion(c)
 			requestURL := strings.Split(requestURL, "?")[0]
 			requestURL = fmt.Sprintf("%s?api-version=%s", requestURL, apiVersion)
 			baseURL = c.GetString("base_url")
@@ -147,7 +140,9 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 			model_ = strings.TrimSuffix(model_, "-0301")
 			model_ = strings.TrimSuffix(model_, "-0314")
 			model_ = strings.TrimSuffix(model_, "-0613")
-			fullRequestURL = fmt.Sprintf("%s/openai/deployments/%s/%s", baseURL, model_, task)
+
+			requestURL = fmt.Sprintf("/openai/deployments/%s/%s", model_, task)
+			fullRequestURL = getFullRequestURL(baseURL, requestURL, channelType)
 		}
 	case APITypeClaude:
 		fullRequestURL = "https://api.anthropic.com/v1/complete"
@@ -182,19 +177,19 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 		apiKey := c.Request.Header.Get("Authorization")
 		apiKey = strings.TrimPrefix(apiKey, "Bearer ")
 		fullRequestURL += "?key=" + apiKey
-	case APITypeZhipu:
-		method := "invoke"
-		if textRequest.Stream {
-			method = "sse-invoke"
-		}
-		fullRequestURL = fmt.Sprintf("https://open.bigmodel.cn/api/paas/v3/model-api/%s/%s", textRequest.Model, method)
-	case APITypeAli:
-		fullRequestURL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation"
-		if relayMode == RelayModeEmbeddings {
-			fullRequestURL = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding"
-		}
-	case APITypeTencent:
-		fullRequestURL = "https://hunyuan.cloud.tencent.com/hyllm/v1/chat/completions"
+	// case APITypeZhipu:
+	// 	method := "invoke"
+	// 	if textRequest.Stream {
+	// 		method = "sse-invoke"
+	// 	}
+	// 	fullRequestURL = fmt.Sprintf("https://open.bigmodel.cn/api/paas/v3/model-api/%s/%s", textRequest.Model, method)
+	// case APITypeAli:
+	// 	fullRequestURL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation"
+	// 	if relayMode == RelayModeEmbeddings {
+	// 		fullRequestURL = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding"
+	// 	}
+	// case APITypeTencent:
+	// 	fullRequestURL = "https://hunyuan.cloud.tencent.com/hyllm/v1/chat/completions"
 	case APITypeAIProxyLibrary:
 		fullRequestURL = fmt.Sprintf("%s/api/library/ask", baseURL)
 	}
@@ -202,20 +197,21 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 	var completionTokens int
 	switch relayMode {
 	case RelayModeChatCompletions:
+		promptTokens = countTokenMessages(textRequest.Messages, textRequest.Model)
 		// first try to parse as text messages
-		if messages, err := textRequest.TextMessages(); err != nil {
-			// then try to parse as vision messages
-			if messages, err := textRequest.VisionMessages(); err != nil {
-				return errorWrapper(err, "parse_text_messages_failed", http.StatusBadRequest)
-			} else {
-				// vision message
-				if promptTokens, err = countVisonTokenMessages(messages, textRequest.Model); err != nil {
-					return errorWrapper(err, "count_token_messages_failed", http.StatusInternalServerError)
-				}
-			}
-		} else {
-			promptTokens = countTokenMessages(messages, textRequest.Model)
-		}
+		// if messages, err := textRequest.TextMessages(); err != nil {
+		// 	// then try to parse as vision messages
+		// 	if messages, err := textRequest.VisionMessages(); err != nil {
+		// 		return errorWrapper(err, "parse_text_messages_failed", http.StatusBadRequest)
+		// 	} else {
+		// 		// vision message
+		// 		if promptTokens, err = countVisonTokenMessages(messages, textRequest.Model); err != nil {
+		// 			return errorWrapper(err, "count_token_messages_failed", http.StatusInternalServerError)
+		// 		}
+		// 	}
+		// } else {
+		// 	promptTokens = countTokenMessages(messages, textRequest.Model)
+		// }
 	case RelayModeCompletions:
 		promptTokens = countTokenInput(textRequest.Prompt, textRequest.Model)
 	case RelayModeModerations:
@@ -246,7 +242,7 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 		preConsumedQuota = 0
 		common.LogInfo(c.Request.Context(), fmt.Sprintf("user %d has enough quota %d, trusted and no need to pre-consume", userId, userQuota))
 	}
-	if consumeQuota && preConsumedQuota > 0 {
+	if preConsumedQuota > 0 {
 		err := model.PreConsumeTokenQuota(tokenId, preConsumedQuota)
 		if err != nil {
 			return errorWrapper(err, "pre_consume_token_quota_failed", http.StatusForbidden)
@@ -378,8 +374,13 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 		// 	if textRequest.Stream {
 		// 		req.Header.Set("X-DashScope-SSE", "enable")
 		// 	}
+		// 	if c.GetString("plugin") != "" {
+		// 		req.Header.Set("X-DashScope-Plugin", c.GetString("plugin"))
+		// 	}
 		// case APITypeTencent:
 		// 	req.Header.Set("Authorization", apiKey)
+		case APITypePaLM:
+			// do not set Authorization header
 		default:
 			req.Header.Set("Authorization", "Bearer "+apiKey)
 		}
@@ -423,37 +424,36 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 	defer func(ctx context.Context) {
 		// c.Writer.Flush()
 		go func() {
-			if consumeQuota {
-				quota := 0
-				completionRatio := common.GetCompletionRatio(textRequest.Model)
-				promptTokens = textResponse.Usage.PromptTokens
-				completionTokens = textResponse.Usage.CompletionTokens
-				quota = int(math.Ceil((float64(promptTokens) + float64(completionTokens)*completionRatio) * ratio))
-				if ratio != 0 && quota <= 0 {
-					quota = 1
-				}
-				totalTokens := promptTokens + completionTokens
-				if totalTokens == 0 {
-					// in this case, must be some error happened
-					// we cannot just return, because we may have to return the pre-consumed quota
-					quota = 0
-				}
-				quotaDelta := quota - preConsumedQuota
-				err := model.PostConsumeTokenQuota(tokenId, quotaDelta)
-				if err != nil {
-					common.LogError(ctx, "error consuming token remain quota: "+err.Error())
-				}
-				err = model.CacheUpdateUserQuota(userId)
-				if err != nil {
-					common.LogError(ctx, "error update user quota cache: "+err.Error())
-				}
-				if quota != 0 {
-					logContent := fmt.Sprintf("模型倍率 %.2f，分组倍率 %.2f", modelRatio, groupRatio)
-					model.RecordConsumeLog(ctx, userId, channelId, promptTokens, completionTokens, textRequest.Model, tokenName, quota, logContent)
-					model.UpdateUserUsedQuotaAndRequestCount(userId, quota)
-					model.UpdateChannelUsedQuota(channelId, quota)
-				}
+			quota := 0
+			completionRatio := common.GetCompletionRatio(textRequest.Model)
+			promptTokens = textResponse.Usage.PromptTokens
+			completionTokens = textResponse.Usage.CompletionTokens
+			quota = int(math.Ceil((float64(promptTokens) + float64(completionTokens)*completionRatio) * ratio))
+			if ratio != 0 && quota <= 0 {
+				quota = 1
 			}
+			totalTokens := promptTokens + completionTokens
+			if totalTokens == 0 {
+				// in this case, must be some error happened
+				// we cannot just return, because we may have to return the pre-consumed quota
+				quota = 0
+			}
+			quotaDelta := quota - preConsumedQuota
+			err := model.PostConsumeTokenQuota(tokenId, quotaDelta)
+			if err != nil {
+				common.LogError(ctx, "error consuming token remain quota: "+err.Error())
+			}
+			err = model.CacheUpdateUserQuota(userId)
+			if err != nil {
+				common.LogError(ctx, "error update user quota cache: "+err.Error())
+			}
+			if quota != 0 {
+				logContent := fmt.Sprintf("模型倍率 %.2f，分组倍率 %.2f", modelRatio, groupRatio)
+				model.RecordConsumeLog(ctx, userId, channelId, promptTokens, completionTokens, textRequest.Model, tokenName, quota, logContent)
+				model.UpdateUserUsedQuotaAndRequestCount(userId, quota)
+				model.UpdateChannelUsedQuota(channelId, quota)
+			}
+
 		}()
 	}(c.Request.Context())
 	switch apiType {
@@ -467,7 +467,7 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 			textResponse.Usage.CompletionTokens = countTokenText(responseText, textRequest.Model)
 			return nil
 		} else {
-			err, usage := openaiHandler(c, resp, consumeQuota, promptTokens, textRequest.Model)
+			err, usage := openaiHandler(c, resp, promptTokens, textRequest.Model)
 			if err != nil {
 				return err
 			}

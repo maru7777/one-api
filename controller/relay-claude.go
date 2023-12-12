@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"one-api/common"
 	"strings"
@@ -67,18 +66,20 @@ func requestOpenAI2Claude(textRequest GeneralOpenAIRequest) *ClaudeRequest {
 	}
 	prompt := ""
 
-	messages, err := textRequest.TextMessages()
-	if err != nil {
-		log.Panicf("invalid message type: %T", textRequest.Messages)
-	}
+	// messages, err := textRequest.TextMessages()
+	// if err != nil {
+	// 	log.Panicf("invalid message type: %T", textRequest.Messages)
+	// }
 
-	for _, message := range messages {
+	for _, message := range textRequest.Messages {
 		if message.Role == "user" {
 			prompt += fmt.Sprintf("\n\nHuman: %s", message.Content)
 		} else if message.Role == "assistant" {
 			prompt += fmt.Sprintf("\n\nAssistant: %s", message.Content)
 		} else if message.Role == "system" {
-			prompt += fmt.Sprintf("\n\nSystem: %s", message.Content)
+			if prompt == "" {
+				prompt = message.StringContent()
+			}
 		}
 	}
 	prompt += "\n\nAssistant:"

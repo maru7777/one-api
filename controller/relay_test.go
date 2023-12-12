@@ -2,7 +2,6 @@ package controller
 
 import (
 	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -11,13 +10,13 @@ import (
 func TestGeneralOpenAIRequest_TextMessages(t *testing.T) {
 	tests := []struct {
 		name     string
-		messages interface{}
+		messages []Message
 		want     []Message
 		wantErr  error
 	}{
 		{
 			name:     "Test with []any messages",
-			messages: []any{Message{}, Message{}},
+			messages: []Message{Message{}, Message{}},
 			want:     []Message{{}, {}},
 			wantErr:  nil,
 		},
@@ -26,12 +25,6 @@ func TestGeneralOpenAIRequest_TextMessages(t *testing.T) {
 			messages: []Message{{}, {}},
 			want:     []Message{{}, {}},
 			wantErr:  nil,
-		},
-		{
-			name:     "Test with invalid message type",
-			messages: "invalid",
-			want:     nil,
-			wantErr:  fmt.Errorf("invalid message type string"),
 		},
 	}
 
@@ -47,15 +40,7 @@ func TestGeneralOpenAIRequest_TextMessages(t *testing.T) {
 			err = json.Unmarshal(blob, got)
 			require.NoError(t, err)
 
-			gotMessages, err := got.TextMessages()
-			if tt.wantErr != nil {
-				require.ErrorContains(t, err, "cannot unmarshal string into Go value")
-				return
-			} else {
-				require.NoError(t, err)
-			}
-
-			require.Equal(t, tt.want, gotMessages)
+			require.Equal(t, tt.want, got.Messages)
 		})
 	}
 }
