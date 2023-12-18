@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm/logger"
 )
 
 const (
@@ -443,6 +444,15 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 					}
 				}(c.Request.Context())
 			}
+
+			{ // more error info
+				if reqdata, err := json.Marshal(req); err != nil {
+					fmt.Printf("relay text error: %s\n", err.Error())
+				} else {
+					fmt.Printf("send req %q got error %d", reqdata, resp.StatusCode)
+				}
+			}
+
 			return relayErrorHandler(resp)
 		}
 	}
