@@ -448,7 +448,14 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 				if reqdata, err := json.Marshal(textRequest); err != nil {
 					fmt.Printf("[ERROR] marshal relay text error: %s\n", err.Error())
 				} else {
-					fmt.Printf("[ERROR] send req %q got error %d\n", string(reqdata), resp.StatusCode)
+					if respdata, err := io.ReadAll(resp.Body); err != nil {
+						fmt.Printf("[ERROR] read resp body error: %s\n", err.Error())
+					} else {
+						resp.Body = io.NopCloser(bytes.NewBuffer(respdata))
+
+						fmt.Printf("[ERROR] send req %q to %s got error [%d]%s\n",
+							string(reqdata), req.URL.String(), resp.StatusCode, string(respdata))
+					}
 				}
 			}
 
