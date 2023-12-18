@@ -16,7 +16,7 @@ func TestGeneralOpenAIRequest_TextMessages(t *testing.T) {
 	}{
 		{
 			name:     "Test with []any messages",
-			messages: []Message{Message{}, Message{}},
+			messages: []Message{{}, {}},
 			want:     []Message{{}, {}},
 			wantErr:  nil,
 		},

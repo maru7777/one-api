@@ -13,13 +13,13 @@ package controller
 // // https://help.aliyun.com/document_detail/613695.html?spm=a2c4g.2399480.0.0.1adb778fAdzP9w#341800c0f8w0r
 
 // type AliMessage struct {
-// 	User string `json:"user"`
-// 	Bot  string `json:"bot"`
+// 	Content string `json:"content"`
+// 	Role    string `json:"role"`
 // }
 
 // type AliInput struct {
-// 	Prompt  string       `json:"prompt"`
-// 	History []AliMessage `json:"history"`
+// 	//Prompt   string       `json:"prompt"`
+// 	Messages []AliMessage `json:"messages"`
 // }
 
 // type AliParameters struct {

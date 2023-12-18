@@ -27,6 +27,7 @@ const (
 	APITypeXunfei
 	APITypeAIProxyLibrary
 	APITypeTencent
+	APITypeGemini
 )
 
 var httpClient *http.Client
@@ -118,6 +119,8 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 		apiType = APITypeAIProxyLibrary
 	case common.ChannelTypeTencent:
 		apiType = APITypeTencent
+	case common.ChannelTypeGemini:
+		apiType = APITypeGemini
 	}
 	baseURL := common.ChannelBaseURLs[channelType]
 	requestURL := c.Request.URL.String()
@@ -177,21 +180,38 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 		apiKey := c.Request.Header.Get("Authorization")
 		apiKey = strings.TrimPrefix(apiKey, "Bearer ")
 		fullRequestURL += "?key=" + apiKey
-	// case APITypeZhipu:
-	// 	method := "invoke"
-	// 	if textRequest.Stream {
-	// 		method = "sse-invoke"
-	// 	}
-	// 	fullRequestURL = fmt.Sprintf("https://open.bigmodel.cn/api/paas/v3/model-api/%s/%s", textRequest.Model, method)
-	// case APITypeAli:
-	// 	fullRequestURL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation"
-	// 	if relayMode == RelayModeEmbeddings {
-	// 		fullRequestURL = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding"
-	// 	}
-	// case APITypeTencent:
-	// 	fullRequestURL = "https://hunyuan.cloud.tencent.com/hyllm/v1/chat/completions"
-	case APITypeAIProxyLibrary:
-		fullRequestURL = fmt.Sprintf("%s/api/library/ask", baseURL)
+	case APITypeGemini:
+		requestBaseURL := "https://generativelanguage.googleapis.com"
+		if baseURL != "" {
+			requestBaseURL = baseURL
+		}
+		version := "v1"
+		if c.GetString("api_version") != "" {
+			version = c.GetString("api_version")
+		}
+		action := "generateContent"
+		if textRequest.Stream {
+			action = "streamGenerateContent"
+		}
+		fullRequestURL = fmt.Sprintf("%s/%s/models/%s:%s", requestBaseURL, version, textRequest.Model, action)
+		apiKey := c.Request.Header.Get("Authorization")
+		apiKey = strings.TrimPrefix(apiKey, "Bearer ")
+		fullRequestURL += "?key=" + apiKey
+		// case APITypeZhipu:
+		// 	method := "invoke"
+		// 	if textRequest.Stream {
+		// 		method = "sse-invoke"
+		// 	}
+		// 	fullRequestURL = fmt.Sprintf("https://open.bigmodel.cn/api/paas/v3/model-api/%s/%s", textRequest.Model, method)
+		// case APITypeAli:
+		// 	fullRequestURL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation"
+		// 	if relayMode == RelayModeEmbeddings {
+		// 		fullRequestURL = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding"
+		// 	}
+		// case APITypeTencent:
+		// 	fullRequestURL = "https://hunyuan.cloud.tencent.com/hyllm/v1/chat/completions"
+		// case APITypeAIProxyLibrary:
+		// 	fullRequestURL = fmt.Sprintf("%s/api/library/ask", baseURL)
 	}
 	var promptTokens int
 	var completionTokens int
@@ -281,13 +301,20 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 	// 		return errorWrapper(err, "marshal_text_request_failed", http.StatusInternalServerError)
 	// 	}
 	// 	requestBody = bytes.NewBuffer(jsonData)
-	// case APITypePaLM:
-	// 	palmRequest := requestOpenAI2PaLM(textRequest)
-	// 	jsonStr, err := json.Marshal(palmRequest)
-	// 	if err != nil {
-	// 		return errorWrapper(err, "marshal_text_request_failed", http.StatusInternalServerError)
-	// 	}
-	// 	requestBody = bytes.NewBuffer(jsonStr)
+	case APITypePaLM:
+		palmRequest := requestOpenAI2PaLM(textRequest)
+		jsonStr, err := json.Marshal(palmRequest)
+		if err != nil {
+			return errorWrapper(err, "marshal_text_request_failed", http.StatusInternalServerError)
+		}
+		requestBody = bytes.NewBuffer(jsonStr)
+	case APITypeGemini:
+		geminiChatRequest := requestOpenAI2Gemini(textRequest)
+		jsonStr, err := json.Marshal(geminiChatRequest)
+		if err != nil {
+			return errorWrapper(err, "marshal_text_request_failed", http.StatusInternalServerError)
+		}
+		requestBody = bytes.NewBuffer(jsonStr)
 	// case APITypeZhipu:
 	// 	zhipuRequest := requestOpenAI2Zhipu(textRequest)
 	// 	jsonStr, err := json.Marshal(zhipuRequest)
@@ -380,6 +407,8 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 		// case APITypeTencent:
 		// 	req.Header.Set("Authorization", apiKey)
 		case APITypePaLM:
+			// do not set Authorization header
+		case APITypeGemini:
 			// do not set Authorization header
 		default:
 			req.Header.Set("Authorization", "Bearer "+apiKey)
@@ -522,25 +551,44 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 	// 		}
 	// 		return nil
 	// 	}
-	// case APITypePaLM:
-	// 	if textRequest.Stream { // PaLM2 API does not support stream
-	// 		err, responseText := palmStreamHandler(c, resp)
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 		textResponse.Usage.PromptTokens = promptTokens
-	// 		textResponse.Usage.CompletionTokens = countTokenText(responseText, textRequest.Model)
-	// 		return nil
-	// 	} else {
-	// 		err, usage := palmHandler(c, resp, promptTokens, textRequest.Model)
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 		if usage != nil {
-	// 			textResponse.Usage = *usage
-	// 		}
-	// 		return nil
-	// 	}
+	case APITypePaLM:
+		if textRequest.Stream { // PaLM2 API does not support stream
+			err, responseText := palmStreamHandler(c, resp)
+			if err != nil {
+				return err
+			}
+			textResponse.Usage.PromptTokens = promptTokens
+			textResponse.Usage.CompletionTokens = countTokenText(responseText, textRequest.Model)
+			return nil
+		} else {
+			err, usage := palmHandler(c, resp, promptTokens, textRequest.Model)
+			if err != nil {
+				return err
+			}
+			if usage != nil {
+				textResponse.Usage = *usage
+			}
+			return nil
+		}
+	case APITypeGemini:
+		if textRequest.Stream {
+			err, responseText := geminiChatStreamHandler(c, resp)
+			if err != nil {
+				return err
+			}
+			textResponse.Usage.PromptTokens = promptTokens
+			textResponse.Usage.CompletionTokens = countTokenText(responseText, textRequest.Model)
+			return nil
+		} else {
+			err, usage := geminiChatHandler(c, resp, promptTokens, textRequest.Model)
+			if err != nil {
+				return err
+			}
+			if usage != nil {
+				textResponse.Usage = *usage
+			}
+			return nil
+		}
 	// case APITypeZhipu:
 	// 	if isStream {
 	// 		err, usage := zhipuStreamHandler(c, resp)
