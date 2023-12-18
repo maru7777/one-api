@@ -445,10 +445,10 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 			}
 
 			{ // more error info
-				if reqdata, err := json.Marshal(req); err != nil {
-					fmt.Printf("relay text error: %s\n", err.Error())
+				if reqdata, err := json.Marshal(textRequest); err != nil {
+					fmt.Printf("[ERROR] marshal relay text error: %s\n", err.Error())
 				} else {
-					fmt.Printf("send req %q got error %d", reqdata, resp.StatusCode)
+					fmt.Printf("[ERROR] send req %q got error %d\n", string(reqdata), resp.StatusCode)
 				}
 			}
 
