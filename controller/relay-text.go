@@ -77,7 +77,7 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 			return errorWrapper(errors.New("field prompt is required"), "required_field_missing", http.StatusBadRequest)
 		}
 	case RelayModeChatCompletions:
-		if len(textRequest.Messages) == 0 {
+		if textRequest.Messages == nil || len(textRequest.Messages) == 0 {
 			return errorWrapper(errors.New("field messages is required"), "required_field_missing", http.StatusBadRequest)
 		}
 	case RelayModeEmbeddings:
@@ -194,9 +194,6 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 			action = "streamGenerateContent"
 		}
 		fullRequestURL = fmt.Sprintf("%s/%s/models/%s:%s", requestBaseURL, version, textRequest.Model, action)
-		apiKey := c.Request.Header.Get("Authorization")
-		apiKey = strings.TrimPrefix(apiKey, "Bearer ")
-		fullRequestURL += "?key=" + apiKey
 	case APITypeZhipu:
 		method := "invoke"
 		if textRequest.Stream {
@@ -218,20 +215,6 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 	switch relayMode {
 	case RelayModeChatCompletions:
 		promptTokens = countTokenMessages(textRequest.Messages, textRequest.Model)
-		// first try to parse as text messages
-		// if messages, err := textRequest.TextMessages(); err != nil {
-		// 	// then try to parse as vision messages
-		// 	if messages, err := textRequest.VisionMessages(); err != nil {
-		// 		return errorWrapper(err, "parse_text_messages_failed", http.StatusBadRequest)
-		// 	} else {
-		// 		// vision message
-		// 		if promptTokens, err = countVisonTokenMessages(messages, textRequest.Model); err != nil {
-		// 			return errorWrapper(err, "count_token_messages_failed", http.StatusInternalServerError)
-		// 		}
-		// 	}
-		// } else {
-		// 	promptTokens = countTokenMessages(messages, textRequest.Model)
-		// }
 	case RelayModeCompletions:
 		promptTokens = countTokenInput(textRequest.Prompt, textRequest.Model)
 	case RelayModeModerations:
