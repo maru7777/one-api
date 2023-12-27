@@ -2,6 +2,7 @@ package controller
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -117,7 +118,12 @@ func requestOpenAI2Gemini(textRequest GeneralOpenAIRequest) *GeminiChatRequest {
 				if imageNum > GeminiVisionMaxImageNum {
 					continue
 				}
-				mimeType, data, _ := image.GetImageFromUrl(part.ImageURL.Url)
+
+				mimeType, data, err := image.GetImageFromUrl(part.ImageURL.Url)
+				if err != nil {
+					common.LogError(context.TODO(),
+						fmt.Sprintf("get image from url %s got %+v", part.ImageURL.Url, err))
+				}
 				parts = append(parts, GeminiPart{
 					InlineData: &GeminiInlineData{
 						MimeType: mimeType,

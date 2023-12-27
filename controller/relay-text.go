@@ -262,7 +262,9 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 		requestBody = c.Request.Body
 	}
 
-	common.LogInfo(c.Request.Context(), fmt.Sprintf("convert to apitype %d", apiType))
+	common.LogInfo(c.Request.Context(), fmt.Sprintf(
+		"convert to apitype %d, channel_type %d, channel_id %d",
+		apiType, channelType, channelId))
 	switch apiType {
 	case APITypeClaude:
 		claudeRequest := requestOpenAI2Claude(textRequest)
@@ -300,6 +302,7 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 			return errorWrapper(err, "marshal_text_request_failed", http.StatusInternalServerError)
 		}
 		requestBody = bytes.NewBuffer(jsonStr)
+		fmt.Println(">> convert request body to gemini: " + string(jsonStr)) // FIXME
 	// case APITypeZhipu:
 	// 	zhipuRequest := requestOpenAI2Zhipu(textRequest)
 	// 	jsonStr, err := json.Marshal(zhipuRequest)
@@ -431,7 +434,7 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 			}
 
 			{ // more error info
-				if reqdata, err := json.Marshal(textRequest); err != nil {
+				if reqdata, err := json.Marshal(req.Body); err != nil {
 					fmt.Printf("[ERROR] marshal relay text error: %s\n", err.Error())
 				} else {
 					if respdata, err := io.ReadAll(resp.Body); err != nil {
