@@ -261,6 +261,8 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 	} else {
 		requestBody = c.Request.Body
 	}
+
+	common.LogInfo(c.Request.Context(), fmt.Sprintf("convert to apitype %d", apiType))
 	switch apiType {
 	case APITypeClaude:
 		claudeRequest := requestOpenAI2Claude(textRequest)
@@ -358,6 +360,7 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 		}
 		apiKey := c.Request.Header.Get("Authorization")
 		apiKey = strings.TrimPrefix(apiKey, "Bearer ")
+
 		switch apiType {
 		case APITypeOpenAI:
 			if channelType == common.ChannelTypeAzure {
