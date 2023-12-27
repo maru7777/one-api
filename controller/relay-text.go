@@ -180,9 +180,6 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 		if baseURL != "" {
 			fullRequestURL = fmt.Sprintf("%s/v1beta2/models/chat-bison-001:generateMessage", baseURL)
 		}
-		apiKey := c.Request.Header.Get("Authorization")
-		apiKey = strings.TrimPrefix(apiKey, "Bearer ")
-		fullRequestURL += "?key=" + apiKey
 	case APITypeGemini:
 		requestBaseURL := "https://generativelanguage.googleapis.com"
 		if baseURL != "" {
@@ -200,21 +197,21 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 		apiKey := c.Request.Header.Get("Authorization")
 		apiKey = strings.TrimPrefix(apiKey, "Bearer ")
 		fullRequestURL += "?key=" + apiKey
-		// case APITypeZhipu:
-		// 	method := "invoke"
-		// 	if textRequest.Stream {
-		// 		method = "sse-invoke"
-		// 	}
-		// 	fullRequestURL = fmt.Sprintf("https://open.bigmodel.cn/api/paas/v3/model-api/%s/%s", textRequest.Model, method)
-		// case APITypeAli:
-		// 	fullRequestURL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation"
-		// 	if relayMode == RelayModeEmbeddings {
-		// 		fullRequestURL = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding"
-		// 	}
-		// case APITypeTencent:
-		// 	fullRequestURL = "https://hunyuan.cloud.tencent.com/hyllm/v1/chat/completions"
-		// case APITypeAIProxyLibrary:
-		// 	fullRequestURL = fmt.Sprintf("%s/api/library/ask", baseURL)
+	case APITypeZhipu:
+		method := "invoke"
+		if textRequest.Stream {
+			method = "sse-invoke"
+		}
+		fullRequestURL = fmt.Sprintf("https://open.bigmodel.cn/api/paas/v3/model-api/%s/%s", textRequest.Model, method)
+	case APITypeAli:
+		fullRequestURL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation"
+		if relayMode == RelayModeEmbeddings {
+			fullRequestURL = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding"
+		}
+	case APITypeTencent:
+		fullRequestURL = "https://hunyuan.cloud.tencent.com/hyllm/v1/chat/completions"
+	case APITypeAIProxyLibrary:
+		fullRequestURL = fmt.Sprintf("%s/api/library/ask", baseURL)
 	}
 	var promptTokens int
 	var completionTokens int
@@ -410,9 +407,9 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 		// case APITypeTencent:
 		// 	req.Header.Set("Authorization", apiKey)
 		case APITypePaLM:
-			// do not set Authorization header
+			req.Header.Set("x-goog-api-key", apiKey)
 		case APITypeGemini:
-			// do not set Authorization header
+			req.Header.Set("x-goog-api-key", apiKey)
 		default:
 			req.Header.Set("Authorization", "Bearer "+apiKey)
 		}
