@@ -121,9 +121,11 @@ func requestOpenAI2Gemini(textRequest GeneralOpenAIRequest) *GeminiChatRequest {
 
 				mimeType, data, err := image.GetImageFromUrl(part.ImageURL.Url)
 				if err != nil {
-					common.LogError(context.TODO(),
+					common.LogWarn(context.TODO(),
 						fmt.Sprintf("get image from url %s got %+v", part.ImageURL.Url, err))
+					continue
 				}
+
 				parts = append(parts, GeminiPart{
 					InlineData: &GeminiInlineData{
 						MimeType: mimeType,
@@ -132,6 +134,8 @@ func requestOpenAI2Gemini(textRequest GeneralOpenAIRequest) *GeminiChatRequest {
 				})
 			}
 		}
+		common.LogInfo(context.TODO(),
+			fmt.Sprintf("send %d images to gemini-pro-vision", len(parts)))
 		content.Parts = parts
 
 		// there's no assistant role in gemini and API shall vomit if Role is not user or model
