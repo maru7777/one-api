@@ -1,11 +1,9 @@
 FROM node:18 as builder
 
 WORKDIR /build
-COPY web/package.json .
-RUN npm install
 COPY ./web .
 COPY ./VERSION .
-RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat VERSION) npm run build
+RUN chmod u+x ./build.sh && ./build.sh
 
 FROM golang:1.21.5-bullseye AS builder2
 
