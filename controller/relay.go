@@ -328,6 +328,7 @@ type TextResponse struct {
 	Choices []OpenAITextResponseChoice `json:"choices"`
 	Usage   `json:"usage"`
 	Error   OpenAIError `json:"error"`
+	Content string      `json:"-"`
 }
 
 type OpenAITextResponseChoice struct {

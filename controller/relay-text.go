@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"one-api/common"
 	"one-api/model"
+	"os"
 	"strings"
 	"time"
 
@@ -488,6 +489,45 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 				model.UpdateChannelUsedQuota(channelId, quota)
 			}
 
+			if os.Getenv("LLM_CONSERVATION_AUDIT") != "" {
+				go func() {
+					ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+					defer cancel()
+
+					body, err := json.Marshal(map[string]any{
+						"model":      textRequest.Model,
+						"max_tokens": textRequest.MaxTokens,
+						"messages":   textRequest.Messages,
+						"response":   textResponse.Content,
+					})
+					if err != nil {
+						common.LogError(ctx, "error marshal conservation audit: "+err.Error())
+						return
+					}
+
+					req, err := http.NewRequestWithContext(ctx, http.MethodPost, os.Getenv("LLM_CONSERVATION_AUDIT"), bytes.NewBuffer(body))
+					if err != nil {
+						common.LogError(ctx, "error new request conservation audit: "+err.Error())
+						return
+					}
+
+					resp, err := http.DefaultClient.Do(req)
+					if err != nil {
+						common.LogError(ctx, "error do conservation audit: "+err.Error())
+						return
+					}
+					defer resp.Body.Close()
+					if resp.StatusCode != http.StatusOK {
+						respBody, err := io.ReadAll(resp.Body)
+						if err != nil {
+							common.LogError(ctx, "error conservation audit: "+err.Error())
+							return
+						}
+
+						common.LogError(ctx, fmt.Sprintf("error conservation audit: [%d]%s", resp.StatusCode, string(respBody)))
+					}
+				}()
+			}
 		}()
 	}(c.Request.Context())
 	switch apiType {
@@ -497,6 +537,7 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 			if err != nil {
 				return err
 			}
+			textResponse.Content = responseText
 			textResponse.Usage.PromptTokens = promptTokens
 			textResponse.Usage.CompletionTokens = countTokenText(responseText, textRequest.Model)
 			return nil
@@ -516,6 +557,7 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 			if err != nil {
 				return err
 			}
+			textResponse.Content = responseText
 			textResponse.Usage.PromptTokens = promptTokens
 			textResponse.Usage.CompletionTokens = countTokenText(responseText, textRequest.Model)
 			return nil
@@ -562,6 +604,7 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 			if err != nil {
 				return err
 			}
+			textResponse.Content = responseText
 			textResponse.Usage.PromptTokens = promptTokens
 			textResponse.Usage.CompletionTokens = countTokenText(responseText, textRequest.Model)
 			return nil
@@ -581,6 +624,7 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 			if err != nil {
 				return err
 			}
+			textResponse.Content = responseText
 			textResponse.Usage.PromptTokens = promptTokens
 			textResponse.Usage.CompletionTokens = countTokenText(responseText, textRequest.Model)
 			return nil
