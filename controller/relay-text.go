@@ -489,7 +489,11 @@ func relayTextHelper(c *gin.Context, relayMode int) *OpenAIErrorWithStatusCode {
 				model.UpdateChannelUsedQuota(channelId, quota)
 			}
 
-			if os.Getenv("LLM_CONSERVATION_AUDIT") != "" {
+			if os.Getenv("LLM_CONSERVATION_AUDIT") != "" &&
+				textRequest.Model != "" ||
+				textRequest.MaxTokens != 0 ||
+				len(textRequest.Messages) != 0 ||
+				textResponse.Content != "" {
 				go func() {
 					ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 					defer cancel()
