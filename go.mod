@@ -1,9 +1,8 @@
-module one-api
+module github.com/songquanpeng/one-api
 
 go 1.21
 
 require (
-	github.com/Laisky/errors/v2 v2.0.1
 	github.com/gin-contrib/cors v1.5.0
 	github.com/gin-contrib/gzip v0.0.6
 	github.com/gin-contrib/sessions v0.0.5
@@ -12,6 +11,7 @@ require (
 	github.com/go-playground/validator/v10 v10.16.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/google/uuid v1.5.0
+	github.com/pkg/errors v0.9.1
 	github.com/pkoukk/tiktoken-go v0.1.6
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/crypto v0.17.0

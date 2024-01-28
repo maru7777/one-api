@@ -3,11 +3,13 @@ package controller
 import (
 	"fmt"
 	"net/http"
-	"one-api/common"
-	"one-api/model"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/helper"
+	"github.com/songquanpeng/one-api/model"
 )
 
 func GetAllTokens(c *gin.Context) {
@@ -16,7 +18,7 @@ func GetAllTokens(c *gin.Context) {
 	if p < 0 {
 		p = 0
 	}
-	tokens, err := model.GetAllUserTokens(userId, p*common.ItemsPerPage, common.ItemsPerPage)
+	tokens, err := model.GetAllUserTokens(userId, p*config.ItemsPerPage, config.ItemsPerPage)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -121,9 +123,9 @@ func AddToken(c *gin.Context) {
 	cleanToken := model.Token{
 		UserId:         c.GetInt("id"),
 		Name:           token.Name,
-		Key:            common.GenerateKey(),
-		CreatedTime:    common.GetTimestamp(),
-		AccessedTime:   common.GetTimestamp(),
+		Key:            helper.GenerateKey(),
+		CreatedTime:    helper.GetTimestamp(),
+		AccessedTime:   helper.GetTimestamp(),
 		ExpiredTime:    token.ExpiredTime,
 		RemainQuota:    token.RemainQuota,
 		UnlimitedQuota: token.UnlimitedQuota,
@@ -194,7 +196,7 @@ func UpdateToken(c *gin.Context) {
 		return
 	}
 
-	cleanToken, err := model.GetTokenByIds(tokenPatch.Id, userId)
+	tokenInDB, err := model.GetTokenByIds(tokenPatch.Id, userId)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -204,18 +206,16 @@ func UpdateToken(c *gin.Context) {
 	}
 
 	if tokenPatch.Status == common.TokenStatusEnabled {
-		if cleanToken.Status == common.TokenStatusExpired &&
-			cleanToken.ExpiredTime <= common.GetTimestamp() &&
-			cleanToken.ExpiredTime != -1 {
+		if tokenInDB.Status == common.TokenStatusExpired && tokenInDB.ExpiredTime <= helper.GetTimestamp() && tokenInDB.ExpiredTime != -1 {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": "令牌已过期，无法启用，请先修改令牌过期时间，或者设置为永不过期",
 			})
 			return
 		}
-		if cleanToken.Status == common.TokenStatusExhausted &&
-			cleanToken.RemainQuota <= 0 &&
-			!cleanToken.UnlimitedQuota {
+		if tokenInDB.Status == common.TokenStatusExhausted &&
+			tokenInDB.RemainQuota <= 0 &&
+			!tokenInDB.UnlimitedQuota {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": "令牌可用额度已用尽，无法启用，请先修改令牌剩余额度，或者设置为无限额度",
@@ -224,31 +224,31 @@ func UpdateToken(c *gin.Context) {
 		}
 	}
 	if statusOnly != "" {
-		cleanToken.Status = tokenPatch.Status
+		tokenInDB.Status = tokenPatch.Status
 	} else {
 		// If you add more fields, please also update tokenPatch.Update()
 		if tokenPatch.Name != nil {
-			cleanToken.Name = *tokenPatch.Name
+			tokenInDB.Name = *tokenPatch.Name
 		}
 		if tokenPatch.ExpiredTime != nil {
-			cleanToken.ExpiredTime = *tokenPatch.ExpiredTime
+			tokenInDB.ExpiredTime = *tokenPatch.ExpiredTime
 		}
 		if tokenPatch.RemainQuota != nil {
-			cleanToken.RemainQuota = *tokenPatch.RemainQuota
+			tokenInDB.RemainQuota = *tokenPatch.RemainQuota
 		}
 		if tokenPatch.UnlimitedQuota != nil {
-			cleanToken.UnlimitedQuota = *tokenPatch.UnlimitedQuota
+			tokenInDB.UnlimitedQuota = *tokenPatch.UnlimitedQuota
 		}
 	}
 
-	cleanToken.RemainQuota -= tokenPatch.AddUsedQuota
-	cleanToken.UsedQuota += tokenPatch.AddUsedQuota
+	tokenInDB.RemainQuota -= tokenPatch.AddUsedQuota
+	tokenInDB.UsedQuota += tokenPatch.AddUsedQuota
 
 	if tokenPatch.AddUsedQuota != 0 {
 		model.RecordLog(userId, model.LogTypeConsume, fmt.Sprintf("外部(%s)消耗 %s", tokenPatch.AddReason, common.LogQuota(tokenPatch.AddUsedQuota)))
 	}
 
-	if err = cleanToken.Update(); err != nil {
+	if err = tokenInDB.Update(); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "update token: " + err.Error(),
@@ -259,7 +259,7 @@ func UpdateToken(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    cleanToken,
+		"data":    tokenInDB,
 	})
 	return
 }
