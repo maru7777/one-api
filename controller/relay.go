@@ -50,7 +50,7 @@ func Relay(c *gin.Context) {
 			})
 		}
 		channelId := c.GetInt("channel_id")
-		logger.Error(c.Request.Context(), fmt.Sprintf("relay error (channel #%d): %s", channelId, err.Message))
+		logger.Error(c.Request.Context(), fmt.Sprintf("relay error (channel #%d): %+v", channelId, err))
 		// https://platform.openai.com/docs/guides/error-codes/api-errors
 		if util.ShouldDisableChannel(&err.Error, err.StatusCode) {
 			channelId := c.GetInt("channel_id")
