@@ -58,6 +58,9 @@ func init() {
 	})
 	// https://platform.openai.com/docs/models/model-endpoint-compatibility
 	for i := 0; i < constant.APITypeDummy; i++ {
+		if i == constant.APITypeAIProxyLibrary {
+			continue
+		}
 		adaptor := helper.GetAdaptor(i)
 		if adaptor == nil {
 			continue
