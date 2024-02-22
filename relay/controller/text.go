@@ -53,7 +53,6 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 
 	// get request body
 	var requestBody io.Reader
-	var jsonData []byte
 	if meta.APIType == constant.APITypeOpenAI {
 		// no need to convert request for openai
 		if isModelMapped {
@@ -70,12 +69,16 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 		if err != nil {
 			return openai.ErrorWrapper(err, "convert_request_failed", http.StatusInternalServerError)
 		}
-		jsonData, err = json.Marshal(convertedRequest)
+		jsonData, err := json.Marshal(convertedRequest)
 		if err != nil {
 			return openai.ErrorWrapper(err, "json_marshal_failed", http.StatusInternalServerError)
 		}
 		requestBody = bytes.NewBuffer(jsonData)
 	}
+
+	// for debug
+	requestBodyBytes, _ := io.ReadAll(requestBody)
+	requestBody = bytes.NewBuffer(requestBodyBytes)
 
 	// do request
 	resp, err := adaptor.DoRequest(c, meta, requestBody)
@@ -86,7 +89,7 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	meta.IsStream = meta.IsStream || strings.HasPrefix(resp.Header.Get("Content-Type"), "text/event-stream")
 	if resp.StatusCode != http.StatusOK {
 		util.ReturnPreConsumedQuota(ctx, preConsumedQuota, meta.TokenId)
-		logger.Error(ctx, fmt.Sprintf("relay text [%d] <- %q", resp.StatusCode, string(jsonData)))
+		logger.Error(ctx, fmt.Sprintf("relay text [%d] <- %q", resp.StatusCode, string(requestBodyBytes)))
 		return util.RelayErrorHandler(resp)
 	}
 
