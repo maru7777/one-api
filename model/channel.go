@@ -126,7 +126,7 @@ func (channel *Channel) Update() (err error) {
 		models := strings.Split(channel.Models, ",")
 		var filteredModels []string
 		for _, model := range models {
-			if _, ok := mapping[model]; ok {
+			if _, ok := mapping[model]; !ok {
 				filteredModels = append(filteredModels, model)
 			}
 		}
