@@ -4,15 +4,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/songquanpeng/one-api/common"
-	"github.com/songquanpeng/one-api/common/config"
-	"github.com/songquanpeng/one-api/common/logger"
 	"math/rand"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	gutils "github.com/Laisky/go-utils/v4"
+	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/logger"
 )
 
 var (
@@ -154,11 +156,13 @@ func InitChannelCache() {
 	for group := range groups {
 		newGroup2model2channels[group] = make(map[string][]*Channel)
 	}
+	var supportedModels []string
 	for _, channel := range channels {
 		groups := strings.Split(channel.Group, ",")
 		for _, group := range groups {
 			models := strings.Split(channel.Models, ",")
 			for _, model := range models {
+				supportedModels = append(supportedModels, model)
 				if _, ok := newGroup2model2channels[group][model]; !ok {
 					newGroup2model2channels[group][model] = make([]*Channel, 0)
 				}
@@ -180,7 +184,9 @@ func InitChannelCache() {
 	channelSyncLock.Lock()
 	group2model2channels = newGroup2model2channels
 	channelSyncLock.Unlock()
-	logger.SysLog("channels synced from database")
+
+	supportedModels = gutils.UniqueStrings(supportedModels)
+	logger.SysLog(fmt.Sprintf("channels synced from database, support models: %q", strings.Join(supportedModels, ",")))
 }
 
 func SyncChannelCache(frequency int) {
