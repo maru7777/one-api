@@ -29,9 +29,16 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	meta.IsStream = textRequest.Stream
 
 	// map model name
-	var isModelMapped bool
+	var (
+		originRequestModel = textRequest.Model
+		isModelMapped      bool
+	)
 	meta.OriginModelName = textRequest.Model
 	textRequest.Model, isModelMapped = util.GetMappedModelName(textRequest.Model, meta.ModelMapping)
+	if isModelMapped {
+		logger.Info(c.Request.Context(), fmt.Sprintf("rewrite model name from %s to %s", originRequestModel, textRequest.Model))
+	}
+
 	meta.ActualModelName = textRequest.Model
 	// get model ratio & group ratio
 	modelRatio := common.GetModelRatio(textRequest.Model)

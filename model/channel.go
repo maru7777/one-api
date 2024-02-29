@@ -3,6 +3,8 @@ package model
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/helper"
@@ -122,8 +124,12 @@ func (channel *Channel) Update() error {
 		return err
 	}
 	DB.Model(channel).First(channel, "id = ?", channel.Id)
-	err = channel.UpdateAbilities()
-	return err
+	if err = channel.UpdateAbilities(); err != nil {
+		logger.SysError("failed to update abilities: " + err.Error())
+		return errors.Wrap(err, "failed to update abilities")
+	}
+
+	return nil
 }
 
 func (channel *Channel) UpdateResponseTime(responseTime int64) {
