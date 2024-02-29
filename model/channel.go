@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common"
@@ -117,8 +118,23 @@ func (channel *Channel) Insert() error {
 	return err
 }
 
-func (channel *Channel) Update() error {
-	var err error
+func (channel *Channel) Update() (err error) {
+	// https://github.com/songquanpeng/one-api/issues/1054
+	// for compatability, filter models by model-mapping.
+	mapping := channel.GetModelMapping()
+	if len(mapping) != 0 {
+		models := strings.Split(channel.Models, ",")
+		var filteredModels []string
+		for _, model := range models {
+			if _, ok := mapping[model]; ok {
+				filteredModels = append(filteredModels, model)
+			}
+		}
+
+		channel.Models = strings.Join(filteredModels, ",")
+	}
+
+	// update
 	err = DB.Model(channel).Updates(channel).Error
 	if err != nil {
 		return err

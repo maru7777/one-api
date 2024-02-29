@@ -56,7 +56,7 @@ func (channel *Channel) AddAbilities() error {
 		}
 	}
 
-	// add model mappings
+	// add keys of model mapping to abilities
 	for model := range channel.GetModelMapping() {
 		for _, group := range groups_ {
 			ability := Ability{
