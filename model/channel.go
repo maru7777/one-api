@@ -3,9 +3,6 @@ package model
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
-
-	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/helper"
@@ -118,34 +115,15 @@ func (channel *Channel) Insert() error {
 	return err
 }
 
-func (channel *Channel) Update() (err error) {
-	// https://github.com/songquanpeng/one-api/issues/1054
-	// for compatability, filter models by model-mapping.
-	mapping := channel.GetModelMapping()
-	if len(mapping) != 0 {
-		models := strings.Split(channel.Models, ",")
-		var filteredModels []string
-		for _, model := range models {
-			if _, ok := mapping[model]; !ok {
-				filteredModels = append(filteredModels, model)
-			}
-		}
-
-		channel.Models = strings.Join(filteredModels, ",")
-	}
-
-	// update
+func (channel *Channel) Update() error {
+	var err error
 	err = DB.Model(channel).Updates(channel).Error
 	if err != nil {
 		return err
 	}
 	DB.Model(channel).First(channel, "id = ?", channel.Id)
-	if err = channel.UpdateAbilities(); err != nil {
-		logger.SysError("failed to update abilities: " + err.Error())
-		return errors.Wrap(err, "failed to update abilities")
-	}
-
-	return nil
+	err = channel.UpdateAbilities()
+	return err
 }
 
 func (channel *Channel) UpdateResponseTime(responseTime int64) {
