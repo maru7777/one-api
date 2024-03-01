@@ -6,15 +6,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"strings"
+
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/relay/channel/openai"
 	relaymodel "github.com/songquanpeng/one-api/relay/model"
 	"github.com/songquanpeng/one-api/relay/util"
-	"io"
-	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -37,7 +38,7 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	channelType := c.GetInt("channel")
 	channelId := c.GetInt("channel_id")
 	userId := c.GetInt("id")
-	group := c.GetString("group")
+	// group := c.GetString("group")
 
 	var imageRequest openai.ImageRequest
 	err := common.UnmarshalBodyReusable(c, &imageRequest)
@@ -131,7 +132,8 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	}
 
 	modelRatio := common.GetModelRatio(imageModel)
-	groupRatio := common.GetGroupRatio(group)
+	// groupRatio := common.GetGroupRatio(group)
+	groupRatio := c.GetFloat64("channel_ratio")
 	ratio := modelRatio * groupRatio
 	userQuota, err := model.CacheGetUserQuota(userId)
 

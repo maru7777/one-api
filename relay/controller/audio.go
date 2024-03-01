@@ -28,7 +28,7 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	channelType := c.GetInt("channel")
 	channelId := c.GetInt("channel_id")
 	userId := c.GetInt("id")
-	group := c.GetString("group")
+	// group := c.GetString("group")
 	tokenName := c.GetString("token_name")
 
 	var ttsRequest openai.TextToSpeechRequest
@@ -47,7 +47,8 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	}
 
 	modelRatio := common.GetModelRatio(audioModel)
-	groupRatio := common.GetGroupRatio(group)
+	// groupRatio := common.GetGroupRatio(group)
+	groupRatio := c.GetFloat64("channel_ratio")
 	ratio := modelRatio * groupRatio
 	var quota int
 	var preConsumedQuota int

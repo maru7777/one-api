@@ -26,6 +26,7 @@ type RelayMeta struct {
 	ActualModelName string
 	RequestURLPath  string
 	PromptTokens    int // only for DoResponse
+	ChannelRatio    float64
 }
 
 func GetRelayMeta(c *gin.Context) *RelayMeta {
@@ -43,6 +44,7 @@ func GetRelayMeta(c *gin.Context) *RelayMeta {
 		APIKey:         strings.TrimPrefix(c.Request.Header.Get("Authorization"), "Bearer "),
 		Config:         nil,
 		RequestURLPath: c.Request.URL.String(),
+		ChannelRatio:   c.GetFloat64("channel_ratio"),
 	}
 	if meta.ChannelType == common.ChannelTypeAzure {
 		meta.APIVersion = GetAzureAPIVersion(c)

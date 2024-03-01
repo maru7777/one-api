@@ -35,7 +35,8 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	meta.ActualModelName = textRequest.Model
 	// get model ratio & group ratio
 	modelRatio := common.GetModelRatio(textRequest.Model)
-	groupRatio := common.GetGroupRatio(meta.Group)
+	// groupRatio := common.GetGroupRatio(meta.Group)
+	groupRatio := meta.ChannelRatio
 	ratio := modelRatio * groupRatio
 	// pre-consume quota
 	promptTokens := getPromptTokens(textRequest, meta.Mode)
