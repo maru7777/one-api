@@ -86,13 +86,14 @@ func Distribute() func(c *gin.Context) {
 
 func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, modelName string) {
 	// set minimal group ratio as channel_ratio
-	var minimalRatio float64
+	var minimalRatio float64 = -1
 	for _, grp := range strings.Split(channel.Group, ",") {
 		v := common.GetGroupRatio(grp)
-		if minimalRatio == 0 || v < minimalRatio {
+		if minimalRatio < 0 || v < minimalRatio {
 			minimalRatio = v
 		}
 	}
+	logger.Info(c.Request.Context(), fmt.Sprintf("set channel %s ratio to %f", channel.Name, minimalRatio))
 	c.Set("channel_ratio", minimalRatio)
 
 	c.Set("channel", channel.Type)
