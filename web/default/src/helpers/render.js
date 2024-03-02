@@ -38,6 +38,10 @@ export function renderNumber(num) {
 }
 
 export function renderQuota(quota, digits = 2) {
+  if (quota === 0) {
+    return 'free';
+  }
+
   let quotaPerUnit = localStorage.getItem('quota_per_unit');
   let displayInCurrency = localStorage.getItem('display_in_currency');
   quotaPerUnit = parseFloat(quotaPerUnit);

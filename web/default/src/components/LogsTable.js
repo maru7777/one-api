@@ -319,7 +319,7 @@ const LogsTable = () => {
                 }}
                 width={1}
               >
-                额度
+                费用
               </Table.HeaderCell>
               <Table.HeaderCell
                 style={{ cursor: 'pointer' }}
