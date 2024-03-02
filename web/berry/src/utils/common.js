@@ -125,10 +125,6 @@ export function timestamp2string(timestamp) {
 }
 
 export function calculateQuota(quota = 0, digits = 2) {
-  if (!quota || quota === 0) {
-    return 'free';
-  }
-
   let quotaPerUnit = localStorage.getItem('quota_per_unit');
   quotaPerUnit = parseFloat(quotaPerUnit);
 
