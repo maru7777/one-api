@@ -169,6 +169,9 @@ func UpdateCompletionRatioByJSONString(jsonStr string) error {
 	return json.Unmarshal([]byte(jsonStr), &CompletionRatio)
 }
 
+// GetCompletionRatio returns the completion ratio of a model
+//
+// completion ratio is the ratio comparing to the ratio of prompt
 func GetCompletionRatio(name string) float64 {
 	if ratio, ok := CompletionRatio[name]; ok {
 		return ratio
