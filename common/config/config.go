@@ -1,14 +1,28 @@
 package config
 
 import (
-	"github.com/songquanpeng/one-api/common/helper"
+	"crypto/rand"
+	"encoding/base64"
+	"fmt"
 	"os"
 	"strconv"
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/songquanpeng/one-api/common/helper"
 )
+
+func init() {
+	if SessionSecret == "" {
+		fmt.Println("SESSION_SECRET not set, using random secret")
+		key := make([]byte, 32)
+		if _, err := rand.Read(key); err != nil {
+			panic(fmt.Sprintf("failed to generate random secret: %v", err))
+		}
+
+		SessionSecret = base64.StdEncoding.EncodeToString(key)
+	}
+}
 
 var SystemName = "One API"
 var ServerAddress = "http://localhost:3000"
@@ -22,7 +36,7 @@ var DisplayTokenStatEnabled = true
 
 // Any options with "Secret", "Token" in its key won't be return by GetOptions
 
-var SessionSecret = uuid.New().String()
+var SessionSecret = os.Getenv("SESSION_SECRET")
 
 var OptionMap map[string]string
 var OptionMapRWMutex sync.RWMutex

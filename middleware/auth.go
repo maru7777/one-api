@@ -1,12 +1,14 @@
 package middleware
 
 import (
+	"net/http"
+	"strings"
+
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/model"
-	"net/http"
-	"strings"
 )
 
 func authHelper(c *gin.Context, minRole int) {
@@ -16,6 +18,7 @@ func authHelper(c *gin.Context, minRole int) {
 	id := session.Get("id")
 	status := session.Get("status")
 	if username == nil {
+		logger.SysLog("no user session found, try to use access token")
 		// Check access token
 		accessToken := c.Request.Header.Get("Authorization")
 		if accessToken == "" {
@@ -26,6 +29,7 @@ func authHelper(c *gin.Context, minRole int) {
 			c.Abort()
 			return
 		}
+
 		user := model.ValidateAccessToken(accessToken)
 		if user != nil && user.Username != "" {
 			// Token is valid
@@ -42,6 +46,7 @@ func authHelper(c *gin.Context, minRole int) {
 			return
 		}
 	}
+
 	if status.(int) == common.UserStatusDisabled {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,

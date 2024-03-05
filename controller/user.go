@@ -76,6 +76,12 @@ func setupLogin(user *model.User, c *gin.Context) {
 		})
 		return
 	}
+
+	// set auth header
+	// c.Set("id", user.Id)
+	// GenerateAccessToken(c)
+	// c.Header("Authorization", user.AccessToken)
+
 	cleanUser := model.User{
 		Id:          user.Id,
 		Username:    user.Username,

@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"encoding/base64"
 	"fmt"
 	"os"
 	"strconv"
@@ -94,7 +95,12 @@ func main() {
 	server.Use(middleware.RequestId())
 	middleware.SetUpLogger(server)
 	// Initialize session store
-	store := cookie.NewStore([]byte(config.SessionSecret))
+	sessionSecret, err := base64.StdEncoding.DecodeString(config.SessionSecret)
+	if err != nil {
+		panic(fmt.Sprintf("failed to decode session secret: %v", err))
+	}
+
+	store := cookie.NewStore(sessionSecret, sessionSecret)
 	server.Use(sessions.Sessions("session", store))
 
 	router.SetRouter(server, buildFS)
