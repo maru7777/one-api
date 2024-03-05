@@ -28,37 +28,25 @@ func stopReasonClaude2OpenAI(reason string) string {
 
 func ConvertRequest(textRequest model.GeneralOpenAIRequest) *Request {
 	claudeRequest := Request{
-		Model:             textRequest.Model,
-		Prompt:            "",
-		MaxTokensToSample: textRequest.MaxTokens,
-		StopSequences:     nil,
-		Temperature:       textRequest.Temperature,
-		TopP:              textRequest.TopP,
-		Stream:            textRequest.Stream,
+		GeneralOpenAIRequest: textRequest,
 	}
-	if claudeRequest.MaxTokensToSample == 0 {
-		claudeRequest.MaxTokensToSample = 1000000
+
+	if claudeRequest.MaxTokens == 0 {
+		claudeRequest.MaxTokens = 500 // max_tokens is required
 	}
-	prompt := ""
 
-	// messages, err := textRequest.TextMessages()
-	// if err != nil {
-	// 	log.Panicf("invalid message type: %T", textRequest.Messages)
-	// }
-
-	for _, message := range textRequest.Messages {
-		if message.Role == "user" {
-			prompt += fmt.Sprintf("\n\nHuman: %s", message.Content)
-		} else if message.Role == "assistant" {
-			prompt += fmt.Sprintf("\n\nAssistant: %s", message.Content)
-		} else if message.Role == "system" {
-			if prompt == "" {
-				prompt = message.StringContent()
-			}
+	// anthropic's new messages API use system to represent the system prompt
+	var filteredMessages []model.Message
+	for _, msg := range claudeRequest.Messages {
+		if msg.Role != "system" {
+			filteredMessages = append(filteredMessages, msg)
+			continue
 		}
+
+		claudeRequest.System += msg.Content.(string)
 	}
-	prompt += "\n\nAssistant:"
-	claudeRequest.Prompt = prompt
+	claudeRequest.Messages = filteredMessages
+
 	return &claudeRequest
 }
 

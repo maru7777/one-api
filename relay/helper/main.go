@@ -3,7 +3,7 @@ package helper
 import (
 	"github.com/songquanpeng/one-api/relay/channel"
 	"github.com/songquanpeng/one-api/relay/channel/aiproxy"
-	// "github.com/songquanpeng/one-api/relay/channel/anthropic"
+	"github.com/songquanpeng/one-api/relay/channel/anthropic"
 	"github.com/songquanpeng/one-api/relay/channel/gemini"
 	"github.com/songquanpeng/one-api/relay/channel/openai"
 	"github.com/songquanpeng/one-api/relay/channel/palm"
@@ -17,8 +17,7 @@ func GetAdaptor(apiType int) channel.Adaptor {
 	// case constant.APITypeAli:
 	// 	return &ali.Adaptor{}
 	case constant.APITypeAnthropic:
-		// return &anthropic.Adaptor{}
-		return &openai.Adaptor{}
+		return &anthropic.Adaptor{}
 	// case constant.APITypeBaidu:
 	// 	return &baidu.Adaptor{}
 	case constant.APITypeGemini:
