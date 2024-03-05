@@ -4,15 +4,17 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"regexp"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/relay/channel/openai"
 	"github.com/songquanpeng/one-api/relay/model"
-	"io"
-	"net/http"
-	"strings"
 )
 
 func stopReasonClaude2OpenAI(reason string) string {
@@ -84,34 +86,40 @@ func responseClaude2OpenAI(claudeResponse *Response) *openai.TextResponse {
 	return &fullTextResponse
 }
 
+var dataRegexp = regexp.MustCompile(`^data: (\{.*\})\B`)
+
 func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusCode, string) {
 	responseText := ""
 	responseId := fmt.Sprintf("chatcmpl-%s", helper.GetUUID())
 	createdTime := helper.GetTimestamp()
 	scanner := bufio.NewScanner(resp.Body)
-	scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
-		if atEOF && len(data) == 0 {
-			return 0, nil, nil
-		}
-		if i := strings.Index(string(data), "\r\n\r\n"); i >= 0 {
-			return i + 4, data[0:i], nil
-		}
-		if atEOF {
-			return len(data), data, nil
-		}
-		return 0, nil, nil
-	})
+	// scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	// 	if atEOF && len(data) == 0 {
+	// 		return 0, nil, nil
+	// 	}
+	// 	if i := strings.Index(string(data), "\r\n\r\n"); i >= 0 {
+	// 		return i + 4, data[0:i], nil
+	// 	}
+	// 	if atEOF {
+	// 		return len(data), data, nil
+	// 	}
+	// 	return 0, nil, nil
+	// })
 	dataChan := make(chan string)
 	stopChan := make(chan bool)
 	go func() {
 		for scanner.Scan() {
-			data := scanner.Text()
-			if !strings.HasPrefix(data, "event: completion") {
-				continue
+			data := strings.TrimSpace(scanner.Text())
+			// logger.SysLog(fmt.Sprintf("stream response: %s", data))
+
+			matched := dataRegexp.FindAllStringSubmatch(data, -1)
+			for _, match := range matched {
+				data = match[1]
+				// logger.SysLog(fmt.Sprintf("chunk response: %s", data))
+				dataChan <- data
 			}
-			data = strings.TrimPrefix(data, "event: completion\r\ndata: ")
-			dataChan <- data
 		}
+
 		stopChan <- true
 	}()
 	common.SetEventStreamHeaders(c)
