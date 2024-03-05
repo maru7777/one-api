@@ -3,7 +3,7 @@ package helper
 import (
 	"github.com/songquanpeng/one-api/relay/channel"
 	"github.com/songquanpeng/one-api/relay/channel/aiproxy"
-	"github.com/songquanpeng/one-api/relay/channel/anthropic"
+	// "github.com/songquanpeng/one-api/relay/channel/anthropic"
 	"github.com/songquanpeng/one-api/relay/channel/gemini"
 	"github.com/songquanpeng/one-api/relay/channel/openai"
 	"github.com/songquanpeng/one-api/relay/channel/palm"
