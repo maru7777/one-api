@@ -53,14 +53,14 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *Request {
 
 func streamResponseClaude2OpenAI(claudeResponse *Response) *openai.ChatCompletionsStreamResponse {
 	var choice openai.ChatCompletionsStreamResponseChoice
-	choice.Delta.Content = claudeResponse.Completion
-	finishReason := stopReasonClaude2OpenAI(claudeResponse.StopReason)
+	choice.Delta.Content = claudeResponse.Delta.Text
+	finishReason := stopReasonClaude2OpenAI(claudeResponse.Delta.StopReason)
 	if finishReason != "null" {
 		choice.FinishReason = &finishReason
 	}
 	var response openai.ChatCompletionsStreamResponse
 	response.Object = "chat.completion.chunk"
-	response.Model = claudeResponse.Model
+	// response.Model = claudeResponse.Model
 	response.Choices = []openai.ChatCompletionsStreamResponseChoice{choice}
 	return &response
 }
@@ -70,10 +70,10 @@ func responseClaude2OpenAI(claudeResponse *Response) *openai.TextResponse {
 		Index: 0,
 		Message: model.Message{
 			Role:    "assistant",
-			Content: strings.TrimPrefix(claudeResponse.Completion, " "),
+			Content: strings.TrimPrefix(claudeResponse.Delta.Text, " "),
 			Name:    nil,
 		},
-		FinishReason: stopReasonClaude2OpenAI(claudeResponse.StopReason),
+		FinishReason: stopReasonClaude2OpenAI(claudeResponse.Delta.StopReason),
 	}
 	fullTextResponse := openai.TextResponse{
 		Id:      fmt.Sprintf("chatcmpl-%s", helper.GetUUID()),
@@ -121,12 +121,31 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 			// some implementations may add \r at the end of data
 			data = strings.TrimSuffix(data, "\r")
 			var claudeResponse Response
+
 			err := json.Unmarshal([]byte(data), &claudeResponse)
 			if err != nil {
 				logger.SysError("error unmarshalling stream response: " + err.Error())
 				return true
 			}
-			responseText += claudeResponse.Completion
+
+			switch claudeResponse.Type {
+			case TypeContentStart, TypePing, TypeMessageDelta:
+				return true
+			case TypeContentStop, TypeMessageStop:
+				if claudeResponse.Delta.StopReason == "" {
+					claudeResponse.Delta.StopReason = "end_turn"
+				}
+			case TypeContent:
+				claudeResponse.Delta.StopReason = "null"
+			case TypeError:
+				logger.SysError("error response: " + claudeResponse.Error.Message)
+				return false
+			default:
+				logger.SysError("unknown response type: " + string(data))
+				return true
+			}
+
+			responseText += claudeResponse.Delta.Text
 			response := streamResponseClaude2OpenAI(&claudeResponse)
 			response.Id = responseId
 			response.Created = createdTime
@@ -176,7 +195,7 @@ func Handler(c *gin.Context, resp *http.Response, promptTokens int, modelName st
 	}
 	fullTextResponse := responseClaude2OpenAI(&claudeResponse)
 	fullTextResponse.Model = modelName
-	completionTokens := openai.CountTokenText(claudeResponse.Completion, modelName)
+	completionTokens := openai.CountTokenText(claudeResponse.Delta.Text, modelName)
 	usage := model.Usage{
 		PromptTokens:     promptTokens,
 		CompletionTokens: completionTokens,

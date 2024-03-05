@@ -19,9 +19,30 @@ type Error struct {
 	Message string `json:"message"`
 }
 
+type ResponseType string
+
+const (
+	TypeError        ResponseType = "error"
+	TypeStart        ResponseType = "message_start"
+	TypeContentStart ResponseType = "content_block_start"
+	TypeContent      ResponseType = "content_block_delta"
+	TypePing         ResponseType = "ping"
+	TypeContentStop  ResponseType = "content_block_stop"
+	TypeMessageDelta ResponseType = "message_delta"
+	TypeMessageStop  ResponseType = "message_stop"
+)
+
+// https://docs.anthropic.com/claude/reference/messages-streaming
 type Response struct {
-	Completion string `json:"completion"`
-	StopReason string `json:"stop_reason"`
-	Model      string `json:"model"`
-	Error      Error  `json:"error"`
+	Type  ResponseType `json:"type"`
+	Index int          `json:"index,omitempty"`
+	Delta struct {
+		Type       string `json:"type,omitempty"`
+		Text       string `json:"text,omitempty"`
+		StopReason string `json:"stop_reason,omitempty"`
+	} `json:"delta,omitempty"`
+	Error struct {
+		Type    string `json:"type"`
+		Message string `json:"message"`
+	} `json:"error,omitempty"`
 }
