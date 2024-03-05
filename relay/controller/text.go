@@ -91,7 +91,8 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	meta.IsStream = meta.IsStream || strings.HasPrefix(resp.Header.Get("Content-Type"), "text/event-stream")
 	if resp.StatusCode != http.StatusOK {
 		util.ReturnPreConsumedQuota(ctx, preConsumedQuota, meta.TokenId)
-		logger.Error(ctx, fmt.Sprintf("relay text [%d] <- %q", resp.StatusCode, string(requestBodyBytes)))
+		logger.Error(ctx, fmt.Sprintf("relay text [%d] <- %q %q",
+			resp.StatusCode, resp.Request.URL.String(), string(requestBodyBytes)))
 		return util.RelayErrorHandler(resp)
 	}
 
