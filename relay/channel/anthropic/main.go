@@ -47,6 +47,7 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *Request {
 	}
 	claudeRequest.Messages = filteredMessages
 
+	claudeRequest.N = 0 // anthropic's messages API not support n
 	return &claudeRequest
 }
 
