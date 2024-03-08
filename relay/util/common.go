@@ -147,13 +147,14 @@ func PostConsumeQuota(ctx context.Context, tokenId int, quotaDelta int, totalQuo
 		logger.SysError("error update user quota cache: " + err.Error())
 	}
 	// totalQuota is total quota consumed
-	if totalQuota != 0 {
+	if totalQuota >= 0 {
 		logContent := fmt.Sprintf("模型倍率 %.2f，分组倍率 %.2f", modelRatio, groupRatio)
 		model.RecordConsumeLog(ctx, userId, channelId, totalQuota, 0, modelName, tokenName, totalQuota, logContent)
 		model.UpdateUserUsedQuotaAndRequestCount(userId, totalQuota)
 		model.UpdateChannelUsedQuota(channelId, totalQuota)
 	}
-	if totalQuota <= 0 {
+
+	if totalQuota < 0 {
 		logger.Error(ctx, fmt.Sprintf("totalQuota consumed is %d, something is wrong", totalQuota))
 	}
 }
