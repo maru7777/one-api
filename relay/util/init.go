@@ -10,15 +10,24 @@ var HTTPClient *http.Client
 var ImpatientHTTPClient *http.Client
 
 func init() {
+
+	tp := &http.Transport{
+		IdleConnTimeout: time.Duration(config.IdleTimeout) * time.Second,
+	}
+
 	if config.RelayTimeout == 0 {
-		HTTPClient = &http.Client{}
+		HTTPClient = &http.Client{
+			Transport: tp,
+		}
 	} else {
 		HTTPClient = &http.Client{
-			Timeout: time.Duration(config.RelayTimeout) * time.Second,
+			Transport: tp,
+			Timeout:   time.Duration(config.RelayTimeout) * time.Second,
 		}
 	}
 
 	ImpatientHTTPClient = &http.Client{
-		Timeout: 5 * time.Second,
+		Transport: tp,
+		Timeout:   5 * time.Second,
 	}
 }

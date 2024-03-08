@@ -110,6 +110,7 @@ var BatchUpdateEnabled = false
 var BatchUpdateInterval = helper.GetOrDefaultEnvInt("BATCH_UPDATE_INTERVAL", 5)
 
 var RelayTimeout = helper.GetOrDefaultEnvInt("RELAY_TIMEOUT", 0) // unit is second
+var IdleTimeout = helper.GetOrDefaultEnvInt("IDLE_TIMEOUT", 30)  // unit is second
 
 var GeminiSafetySetting = helper.GetOrDefaultEnvString("GEMINI_SAFETY_SETTING", "BLOCK_NONE")
 
