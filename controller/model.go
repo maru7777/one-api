@@ -149,6 +149,10 @@ func init() {
 	channelId2Models = make(map[int][]string)
 	for i := 1; i < common.ChannelTypeDummy; i++ {
 		adaptor := helper.GetAdaptor(constant.ChannelType2APIType(i))
+		if adaptor == nil {
+			continue
+		}
+
 		meta := &util.RelayMeta{
 			ChannelType: i,
 		}
