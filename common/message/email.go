@@ -5,15 +5,17 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
-	"github.com/songquanpeng/one-api/common/config"
 	"net/smtp"
 	"strings"
 	"time"
+
+	"github.com/Laisky/errors/v2"
+	"github.com/songquanpeng/one-api/common/config"
 )
 
 func SendEmail(subject string, receiver string, content string) error {
 	if receiver == "" {
-		return fmt.Errorf("receiver is empty")
+		return errors.Errorf("receiver is empty")
 	}
 	if config.SMTPFrom == "" { // for compatibility
 		config.SMTPFrom = config.SMTPAccount

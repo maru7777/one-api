@@ -6,6 +6,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"strings"
+
 	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common"
@@ -16,9 +20,6 @@ import (
 	"github.com/songquanpeng/one-api/relay/constant"
 	relaymodel "github.com/songquanpeng/one-api/relay/model"
 	"github.com/songquanpeng/one-api/relay/util"
-	"io"
-	"net/http"
-	"strings"
 )
 
 func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatusCode {
@@ -162,7 +163,7 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 		var openAIErr openai.SlimTextResponse
 		if err = json.Unmarshal(responseBody, &openAIErr); err == nil {
 			if openAIErr.Error.Message != "" {
-				return openai.ErrorWrapper(fmt.Errorf("type %s, code %v, message %s", openAIErr.Error.Type, openAIErr.Error.Code, openAIErr.Error.Message), "request_error", http.StatusInternalServerError)
+				return openai.ErrorWrapper(errors.Errorf("type %s, code %v, message %s", openAIErr.Error.Type, openAIErr.Error.Code, openAIErr.Error.Message), "request_error", http.StatusInternalServerError)
 			}
 		}
 
@@ -230,8 +231,9 @@ func getTextFromVTT(body []byte) (string, error) {
 func getTextFromVerboseJSON(body []byte) (string, error) {
 	var whisperResponse openai.WhisperVerboseJSONResponse
 	if err := json.Unmarshal(body, &whisperResponse); err != nil {
-		return "", fmt.Errorf("unmarshal_response_body_failed err :%w", err)
+		return "", errors.Wrap(err, "unmarshal_response_body_failed")
 	}
+
 	return whisperResponse.Text, nil
 }
 
@@ -263,7 +265,7 @@ func getTextFromText(body []byte) (string, error) {
 func getTextFromJSON(body []byte) (string, error) {
 	var whisperResponse openai.WhisperJSONResponse
 	if err := json.Unmarshal(body, &whisperResponse); err != nil {
-		return "", fmt.Errorf("unmarshal_response_body_failed err :%w", err)
+		return "", errors.Wrap(err, "unmarshal_response_body_failed")
 	}
 	return whisperResponse.Text, nil
 }

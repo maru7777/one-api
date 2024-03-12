@@ -110,6 +110,7 @@ func shouldRetry(c *gin.Context, statusCode int) error {
 	if statusCode/100 == 2 {
 		return errors.Errorf("status code = %d", statusCode)
 	}
+
 	return nil
 }
 

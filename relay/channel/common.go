@@ -1,12 +1,12 @@
 package channel
 
 import (
-	"fmt"
+	"io"
+	"net/http"
+
 	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/relay/util"
-	"io"
-	"net/http"
 )
 
 func SetupCommonRequestHeader(c *gin.Context, req *http.Request, meta *util.RelayMeta) {
@@ -20,19 +20,19 @@ func SetupCommonRequestHeader(c *gin.Context, req *http.Request, meta *util.Rela
 func DoRequestHelper(a Adaptor, c *gin.Context, meta *util.RelayMeta, requestBody io.Reader) (*http.Response, error) {
 	fullRequestURL, err := a.GetRequestURL(meta)
 	if err != nil {
-		return nil, fmt.Errorf("get request url failed: %w", err)
+		return nil, errors.Wrap(err, "get request url failed")
 	}
 	req, err := http.NewRequest(c.Request.Method, fullRequestURL, requestBody)
 	if err != nil {
-		return nil, fmt.Errorf("new request failed: %w", err)
+		return nil, errors.Wrap(err, "new request failed")
 	}
 	err = a.SetupRequestHeader(c, req, meta)
 	if err != nil {
-		return nil, fmt.Errorf("setup request header failed: %w", err)
+		return nil, errors.Wrap(err, "setup request header failed")
 	}
 	resp, err := DoRequest(c, req)
 	if err != nil {
-		return nil, fmt.Errorf("do request failed: %w", err)
+		return nil, errors.Wrap(err, "do request failed")
 	}
 	return resp, nil
 }

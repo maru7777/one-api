@@ -60,7 +60,7 @@ func testChannel(channel *model.Channel) (err error, openaiErr *relaymodel.Error
 	apiType := constant.ChannelType2APIType(channel.Type)
 	adaptor := helper.GetAdaptor(apiType)
 	if adaptor == nil {
-		return fmt.Errorf("invalid api type: %d, adaptor is nil", apiType), nil
+		return errors.Errorf("invalid api type: %d, adaptor is nil", apiType), nil
 	}
 	adaptor.Init(meta)
 	modelName := adaptor.GetModelList()[0]
@@ -89,11 +89,11 @@ func testChannel(channel *model.Channel) (err error, openaiErr *relaymodel.Error
 	}
 	if resp.StatusCode != http.StatusOK {
 		err := util.RelayErrorHandler(resp)
-		return fmt.Errorf("status code %d: %s", resp.StatusCode, err.Error.Message), &err.Error
+		return errors.Errorf("status code %d: %s", resp.StatusCode, err.Error.Message), &err.Error
 	}
 	usage, respErr := adaptor.DoResponse(c, resp, meta)
 	if respErr != nil {
-		return fmt.Errorf("%s", respErr.Error.Message), &respErr.Error
+		return errors.Errorf("%s", respErr.Error.Message), &respErr.Error
 	}
 	if usage == nil {
 		return errors.New("usage is nil"), nil

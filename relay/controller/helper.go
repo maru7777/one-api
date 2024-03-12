@@ -83,7 +83,7 @@ func getImageCostRatio(imageRequest *openai.ImageRequest) (float64, error) {
 	}
 	imageCostRatio, hasValidSize := constant.DalleSizeRatios[imageRequest.Model][imageRequest.Size]
 	if !hasValidSize {
-		return 0, fmt.Errorf("size not supported for this image model: %s", imageRequest.Size)
+		return 0, errors.Errorf("size not supported for this image model: %s", imageRequest.Size)
 	}
 	if imageRequest.Quality == "hd" && imageRequest.Model == "dall-e-3" {
 		if imageRequest.Size == "1024x1024" {

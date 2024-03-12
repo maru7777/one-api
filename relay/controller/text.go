@@ -4,6 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"strings"
+
+	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/logger"
@@ -12,9 +17,6 @@ import (
 	"github.com/songquanpeng/one-api/relay/helper"
 	"github.com/songquanpeng/one-api/relay/model"
 	"github.com/songquanpeng/one-api/relay/util"
-	"io"
-	"net/http"
-	"strings"
 )
 
 func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
@@ -49,7 +51,7 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 
 	adaptor := helper.GetAdaptor(meta.APIType)
 	if adaptor == nil {
-		return openai.ErrorWrapper(fmt.Errorf("invalid api type: %d", meta.APIType), "invalid_api_type", http.StatusBadRequest)
+		return openai.ErrorWrapper(errors.Errorf("invalid api type: %d", meta.APIType), "invalid_api_type", http.StatusBadRequest)
 	}
 
 	// get request body
