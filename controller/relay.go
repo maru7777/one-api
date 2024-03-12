@@ -98,16 +98,12 @@ func Relay(c *gin.Context) {
 	}
 }
 
+// shouldRetry returns nil if should retry, otherwise returns error
 func shouldRetry(c *gin.Context, statusCode int) error {
 	if v, ok := c.Get("specific_channel_id"); ok {
 		return errors.Errorf("specific channel = %v", v)
 	}
-	if statusCode == http.StatusTooManyRequests {
-		return nil
-	}
-	if statusCode/100 == 5 {
-		return nil
-	}
+
 	if statusCode == http.StatusBadRequest {
 		return errors.Errorf("status code = %d", statusCode)
 	}

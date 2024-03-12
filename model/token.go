@@ -1,8 +1,9 @@
 package model
 
 import (
-	"errors"
 	"fmt"
+
+	"github.com/Laisky/errors/v2"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/helper"
@@ -45,10 +46,12 @@ func ValidateUserToken(key string) (token *Token, err error) {
 	if err != nil {
 		logger.SysError("CacheGetTokenByKey failed: " + err.Error())
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("无效的令牌")
+			return nil, errors.Wrap(err, "token not found")
 		}
-		return nil, errors.New("令牌验证失败")
+
+		return nil, errors.Wrap(err, "failed to get token by key")
 	}
+
 	if token.Status == common.TokenStatusExhausted {
 		return nil, errors.New("该令牌额度已用尽")
 	} else if token.Status == common.TokenStatusExpired {

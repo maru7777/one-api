@@ -3,7 +3,7 @@ package baidu
 // import (
 // 	"bufio"
 // 	"encoding/json"
-// 	"errors"
+// 	"github.com/Laisky/errors/v2"
 // 	"fmt"
 // 	"github.com/gin-gonic/gin"
 // 	"io"

@@ -1,7 +1,7 @@
 package zhipu
 
 // import (
-// 	"errors"
+// 	"github.com/Laisky/errors/v2"
 // 	"fmt"
 // 	"github.com/gin-gonic/gin"
 // 	"github.com/songquanpeng/one-api/relay/channel"

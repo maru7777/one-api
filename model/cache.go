@@ -2,8 +2,8 @@ package model
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
+	"github.com/Laisky/errors/v2"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/logger"
@@ -48,6 +48,7 @@ func CacheGetTokenByKey(key string) (*Token, error) {
 		}
 		return &token, nil
 	}
+
 	err = json.Unmarshal([]byte(tokenObjectString), &token)
 	return &token, err
 }

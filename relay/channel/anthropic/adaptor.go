@@ -1,8 +1,8 @@
 package anthropic
 
 import (
-	"errors"
 	"fmt"
+	"github.com/Laisky/errors/v2"
 	"io"
 	"net/http"
 
