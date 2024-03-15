@@ -12,7 +12,7 @@ const COPY_OPTIONS = [
 ];
 
 const OPEN_LINK_OPTIONS = [
-  { key: 'ama', text: 'AMA 问天', value: 'ama' },
+  { key: 'ama', text: 'BotGem', value: 'ama' },
   { key: 'opencat', text: 'OpenCat', value: 'opencat' },
 ];
 

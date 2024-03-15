@@ -234,18 +234,18 @@ func UpdateToken(c *gin.Context) {
 			tokenInDB.ExpiredTime = *tokenPatch.ExpiredTime
 		}
 		if tokenPatch.RemainQuota != nil {
-			tokenInDB.RemainQuota = *tokenPatch.RemainQuota
+			tokenInDB.RemainQuota = int64(*tokenPatch.RemainQuota)
 		}
 		if tokenPatch.UnlimitedQuota != nil {
 			tokenInDB.UnlimitedQuota = *tokenPatch.UnlimitedQuota
 		}
 	}
 
-	tokenInDB.RemainQuota -= tokenPatch.AddUsedQuota
-	tokenInDB.UsedQuota += tokenPatch.AddUsedQuota
+	tokenInDB.RemainQuota -= int64(tokenPatch.AddUsedQuota)
+	tokenInDB.UsedQuota += int64(tokenPatch.AddUsedQuota)
 
 	if tokenPatch.AddUsedQuota != 0 {
-		model.RecordLog(userId, model.LogTypeConsume, fmt.Sprintf("外部(%s)消耗 %s", tokenPatch.AddReason, common.LogQuota(tokenPatch.AddUsedQuota)))
+		model.RecordLog(userId, model.LogTypeConsume, fmt.Sprintf("外部(%s)消耗 %s", tokenPatch.AddReason, common.LogQuota(int64(tokenPatch.AddUsedQuota))))
 	}
 
 	if err = tokenInDB.Update(); err != nil {

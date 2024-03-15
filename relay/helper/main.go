@@ -5,6 +5,7 @@ import (
 	"github.com/songquanpeng/one-api/relay/channel/aiproxy"
 	"github.com/songquanpeng/one-api/relay/channel/anthropic"
 	"github.com/songquanpeng/one-api/relay/channel/gemini"
+	"github.com/songquanpeng/one-api/relay/channel/ollama"
 	"github.com/songquanpeng/one-api/relay/channel/openai"
 	"github.com/songquanpeng/one-api/relay/channel/palm"
 	"github.com/songquanpeng/one-api/relay/constant"
@@ -26,12 +27,14 @@ func GetAdaptor(apiType int) channel.Adaptor {
 		return &openai.Adaptor{}
 	case constant.APITypePaLM:
 		return &palm.Adaptor{}
-		// case constant.APITypeTencent:
-		// 	return &tencent.Adaptor{}
-		// case constant.APITypeXunfei:
-		// 	return &xunfei.Adaptor{}
-		// case constant.APITypeZhipu:
-		// 	return &zhipu.Adaptor{}
+	// case constant.APITypeTencent:
+	// 	return &tencent.Adaptor{}
+	// case constant.APITypeXunfei:
+	// 	return &xunfei.Adaptor{}
+	// case constant.APITypeZhipu:
+	// 	return &zhipu.Adaptor{}
+	case constant.APITypeOllama:
+		return &ollama.Adaptor{}
 	}
 	return nil
 }
