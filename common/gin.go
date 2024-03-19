@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 )
 
 const KeyRequestBody = "key_request_body"
@@ -18,7 +19,7 @@ func GetRequestBody(c *gin.Context) ([]byte, error) {
 	}
 	requestBody, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "read request body failed")
 	}
 	_ = c.Request.Body.Close()
 	c.Set(KeyRequestBody, requestBody)
@@ -28,18 +29,18 @@ func GetRequestBody(c *gin.Context) ([]byte, error) {
 func UnmarshalBodyReusable(c *gin.Context, v any) error {
 	requestBody, err := GetRequestBody(c)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "get request body failed")
 	}
 	contentType := c.Request.Header.Get("Content-Type")
 	if strings.HasPrefix(contentType, "application/json") {
-		err = json.Unmarshal(requestBody, &v)
+		if err = json.Unmarshal(requestBody, &v); err != nil {
+			return errors.Wrap(err, "unmarshal request body failed")
+		}
 	} else {
 		// skip for now
 		// TODO: someday non json request have variant model, we will need to implementation this
 	}
-	if err != nil {
-		return err
-	}
+
 	// Reset request body
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody))
 	return nil
