@@ -1,33 +1,36 @@
 package util
 
 import (
-	"github.com/songquanpeng/one-api/common/config"
 	"net/http"
+	"os"
 	"time"
+
+	gutils "github.com/Laisky/go-utils/v4"
+	"github.com/songquanpeng/one-api/common/config"
 )
 
 var HTTPClient *http.Client
 var ImpatientHTTPClient *http.Client
 
 func init() {
+	var opts []gutils.HTTPClientOptFunc
 
-	tp := &http.Transport{
-		IdleConnTimeout: time.Duration(config.IdleTimeout) * time.Second,
+	timeout := time.Duration(max(config.IdleTimeout, 30)) * time.Second
+	opts = append(opts, gutils.WithHTTPClientTimeout(timeout))
+	if os.Getenv("RELAY_PROXY") != "" {
+		opts = append(opts, gutils.WithHTTPClientProxy(os.Getenv("RELAY_PROXY")))
 	}
 
-	if config.RelayTimeout == 0 {
-		HTTPClient = &http.Client{
-			Transport: tp,
-		}
-	} else {
-		HTTPClient = &http.Client{
-			Transport: tp,
-			Timeout:   time.Duration(config.RelayTimeout) * time.Second,
-		}
+	var err error
+	HTTPClient, err = gutils.NewHTTPClient(opts...)
+	if err != nil {
+		panic(err)
 	}
 
-	ImpatientHTTPClient = &http.Client{
-		Transport: tp,
-		Timeout:   5 * time.Second,
+	ImpatientHTTPClient, err = gutils.NewHTTPClient(
+		gutils.WithHTTPClientTimeout(5 * time.Second),
+	)
+	if err != nil {
+		panic(err)
 	}
 }

@@ -22,10 +22,15 @@ func DoRequestHelper(a Adaptor, c *gin.Context, meta *util.RelayMeta, requestBod
 	if err != nil {
 		return nil, errors.Wrap(err, "get request url failed")
 	}
-	req, err := http.NewRequest(c.Request.Method, fullRequestURL, requestBody)
+
+	req, err := http.NewRequestWithContext(c.Request.Context(),
+		c.Request.Method, fullRequestURL, requestBody)
 	if err != nil {
 		return nil, errors.Wrap(err, "new request failed")
 	}
+
+	req.Header.Add("Content-Type", "application/json")
+
 	err = a.SetupRequestHeader(c, req, meta)
 	if err != nil {
 		return nil, errors.Wrap(err, "setup request header failed")
@@ -47,5 +52,6 @@ func DoRequest(c *gin.Context, req *http.Request) (*http.Response, error) {
 	}
 	_ = req.Body.Close()
 	_ = c.Request.Body.Close()
+
 	return resp, nil
 }

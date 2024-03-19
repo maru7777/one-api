@@ -1,10 +1,13 @@
 package gemini
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/helper"
@@ -13,11 +16,6 @@ import (
 	"github.com/songquanpeng/one-api/relay/channel/openai"
 	"github.com/songquanpeng/one-api/relay/constant"
 	"github.com/songquanpeng/one-api/relay/model"
-	"io"
-	"net/http"
-	"strings"
-
-	"github.com/gin-gonic/gin"
 )
 
 // https://ai.google.dev/docs/gemini_api_overview?hl=zh-cn
@@ -99,8 +97,9 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *ChatRequest {
 				})
 			}
 		}
+
 		logger.Info(context.TODO(),
-			fmt.Sprintf("send %d images to gemini-pro-vision", len(parts)))
+			fmt.Sprintf("send %d messages to gemini with %d images", len(parts), imageNum))
 		content.Parts = parts
 
 		// there's no assistant role in gemini and API shall vomit if Role is not user or model
@@ -197,73 +196,182 @@ func streamResponseGeminiChat2OpenAI(geminiResponse *ChatResponse) *openai.ChatC
 	return &response
 }
 
+//	[{
+//		"candidates": [
+//		  {
+//			"content": {
+//			  "parts": [
+//				{
+//				  "text": "```go  \n\n// Package ratelimit implements tokens bucket algorithm.\npackage rate"
+//				}
+//			  ],
+//			  "role": "model"
+//			},
+//			"finishReason": "STOP",
+//			"index": 0,
+//			"safetyRatings": [
+//			  {
+//				"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+//				"probability": "NEGLIGIBLE"
+//			  },
+//			  {
+//				"category": "HARM_CATEGORY_HATE_SPEECH",
+//				"probability": "NEGLIGIBLE"
+//			  },
+//			  {
+//				"category": "HARM_CATEGORY_HARASSMENT",
+//				"probability": "NEGLIGIBLE"
+//			  },
+//			  {
+//				"category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+//				"probability": "NEGLIGIBLE"
+//			  }
+//			]
+//		  }
+//		],
+//		"promptFeedback": {
+//		  "safetyRatings": [
+//			{
+//			  "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+//			  "probability": "NEGLIGIBLE"
+//			},
+//			{
+//			  "category": "HARM_CATEGORY_HATE_SPEECH",
+//			  "probability": "NEGLIGIBLE"
+//			},
+//			{
+//			  "category": "HARM_CATEGORY_HARASSMENT",
+//			  "probability": "NEGLIGIBLE"
+//			},
+//			{
+//			  "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+//			  "probability": "NEGLIGIBLE"
+//			}
+//		  ]
+//		}
+//	  }]
+type GeminiStreamResp struct {
+	Candidates []struct {
+		Content struct {
+			Parts []struct {
+				Text string `json:"text"`
+			} `json:"parts"`
+			Role string `json:"role"`
+		} `json:"content"`
+		FinishReason string `json:"finishReason"`
+		Index        int64  `json:"index"`
+	} `json:"candidates"`
+}
+
 func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusCode, string) {
 	responseText := ""
-	dataChan := make(chan string)
-	stopChan := make(chan bool)
-	scanner := bufio.NewScanner(resp.Body)
-	scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
-		if atEOF && len(data) == 0 {
-			return 0, nil, nil
-		}
-		if i := strings.Index(string(data), "\n"); i >= 0 {
-			return i + 1, data[0:i], nil
-		}
-		if atEOF {
-			return len(data), data, nil
-		}
-		return 0, nil, nil
-	})
-	go func() {
-		for scanner.Scan() {
-			data := scanner.Text()
-			data = strings.TrimSpace(data)
-			if !strings.HasPrefix(data, "\"text\": \"") {
-				continue
-			}
-			data = strings.TrimPrefix(data, "\"text\": \"")
-			data = strings.TrimSuffix(data, "\"")
-			dataChan <- data
-		}
-		stopChan <- true
-	}()
-	common.SetEventStreamHeaders(c)
-	c.Stream(func(w io.Writer) bool {
-		select {
-		case data := <-dataChan:
-			// this is used to prevent annoying \ related format bug
-			data = fmt.Sprintf("{\"content\": \"%s\"}", data)
-			type dummyStruct struct {
-				Content string `json:"content"`
-			}
-			var dummy dummyStruct
-			err := json.Unmarshal([]byte(data), &dummy)
-			responseText += dummy.Content
-			var choice openai.ChatCompletionsStreamResponseChoice
-			choice.Delta.Content = dummy.Content
-			response := openai.ChatCompletionsStreamResponse{
-				Id:      fmt.Sprintf("chatcmpl-%s", helper.GetUUID()),
-				Object:  "chat.completion.chunk",
-				Created: helper.GetTimestamp(),
-				Model:   "gemini-pro",
-				Choices: []openai.ChatCompletionsStreamResponseChoice{choice},
-			}
-			jsonResponse, err := json.Marshal(response)
-			if err != nil {
-				logger.SysError("error marshalling stream response: " + err.Error())
-				return true
-			}
-			c.Render(-1, common.CustomEvent{Data: "data: " + string(jsonResponse)})
-			return true
-		case <-stopChan:
-			c.Render(-1, common.CustomEvent{Data: "data: [DONE]"})
-			return false
-		}
-	})
-	err := resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
+		return openai.ErrorWrapper(err, "read upstream's body", http.StatusInternalServerError), responseText
+	}
+
+	var respData []GeminiStreamResp
+	if err = json.Unmarshal(respBody, &respData); err != nil {
+		return openai.ErrorWrapper(err, "unmarshal upstream's body", http.StatusInternalServerError), responseText
+	}
+
+	for _, chunk := range respData {
+		for _, cad := range chunk.Candidates {
+			for _, part := range cad.Content.Parts {
+				responseText += part.Text
+			}
+		}
+	}
+
+	var choice openai.ChatCompletionsStreamResponseChoice
+	choice.Delta.Content = responseText
+	resp2cli, err := json.Marshal(&openai.ChatCompletionsStreamResponse{
+		Id:      fmt.Sprintf("chatcmpl-%s", helper.GetUUID()),
+		Object:  "chat.completion.chunk",
+		Created: helper.GetTimestamp(),
+		Model:   "gemini-pro",
+		Choices: []openai.ChatCompletionsStreamResponseChoice{choice},
+	})
+	if err != nil {
+		return openai.ErrorWrapper(err, "marshal upstream's body", http.StatusInternalServerError), responseText
+	}
+
+	c.Render(-1, common.CustomEvent{Data: "data: " + string(resp2cli)})
+	c.Render(-1, common.CustomEvent{Data: "data: [DONE]"})
+
+	// dataChan := make(chan string)
+	// stopChan := make(chan bool)
+	// scanner := bufio.NewScanner(resp.Body)
+	// scanner.Split(bufio.ScanLines)
+	// // scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	// // 	if atEOF && len(data) == 0 {
+	// // 		return 0, nil, nil
+	// // 	}
+	// // 	if i := strings.Index(string(data), "\n"); i >= 0 {
+	// // 		return i + 1, data[0:i], nil
+	// // 	}
+	// // 	if atEOF {
+	// // 		return len(data), data, nil
+	// // 	}
+	// // 	return 0, nil, nil
+	// // })
+	// go func() {
+	// 	var content string
+	// 	for scanner.Scan() {
+	// 		line := strings.TrimSpace(scanner.Text())
+	// 		fmt.Printf("> gemini got line: %s\n", line)
+	// 		content += line
+	// 		// if !strings.HasPrefix(data, "\"text\": \"") {
+	// 		// 	continue
+	// 		// }
+
+	// 		// data = strings.TrimPrefix(data, "\"text\": \"")
+	// 		// data = strings.TrimSuffix(data, "\"")
+	// 		// dataChan <- data
+	// 	}
+
+	// 	dataChan <- content
+	// 	stopChan <- true
+	// }()
+	// common.SetEventStreamHeaders(c)
+	// c.Stream(func(w io.Writer) bool {
+	// 	select {
+	// 	case data := <-dataChan:
+	// 		// this is used to prevent annoying \ related format bug
+	// 		data = fmt.Sprintf("{\"content\": \"%s\"}", data)
+	// 		type dummyStruct struct {
+	// 			Content string `json:"content"`
+	// 		}
+	// 		var dummy dummyStruct
+	// 		err := json.Unmarshal([]byte(data), &dummy)
+	// 		responseText += dummy.Content
+	// 		var choice openai.ChatCompletionsStreamResponseChoice
+	// 		choice.Delta.Content = dummy.Content
+	// 		response := openai.ChatCompletionsStreamResponse{
+	// 			Id:      fmt.Sprintf("chatcmpl-%s", helper.GetUUID()),
+	// 			Object:  "chat.completion.chunk",
+	// 			Created: helper.GetTimestamp(),
+	// 			Model:   "gemini-pro",
+	// 			Choices: []openai.ChatCompletionsStreamResponseChoice{choice},
+	// 		}
+	// 		jsonResponse, err := json.Marshal(response)
+	// 		if err != nil {
+	// 			logger.SysError("error marshalling stream response: " + err.Error())
+	// 			return true
+	// 		}
+	// 		c.Render(-1, common.CustomEvent{Data: "data: " + string(jsonResponse)})
+	// 		return true
+	// 	case <-stopChan:
+	// 		c.Render(-1, common.CustomEvent{Data: "data: [DONE]"})
+	// 		return false
+	// 	}
+	// })
+
+	if err := resp.Body.Close(); err != nil {
 		return openai.ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), ""
 	}
+
 	return nil, responseText
 }
 

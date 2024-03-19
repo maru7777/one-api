@@ -2,6 +2,9 @@ package gemini
 
 import (
 	"fmt"
+	"io"
+	"net/http"
+
 	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common/helper"
@@ -9,8 +12,6 @@ import (
 	"github.com/songquanpeng/one-api/relay/channel/openai"
 	"github.com/songquanpeng/one-api/relay/model"
 	"github.com/songquanpeng/one-api/relay/util"
-	"io"
-	"net/http"
 )
 
 type Adaptor struct {
@@ -21,17 +22,18 @@ func (a *Adaptor) Init(meta *util.RelayMeta) {
 }
 
 func (a *Adaptor) GetRequestURL(meta *util.RelayMeta) (string, error) {
-	version := helper.AssignOrDefault(meta.APIVersion, "v1")
+	version := helper.AssignOrDefault(meta.APIVersion, "v1beta")
 	action := "generateContent"
 	if meta.IsStream {
 		action = "streamGenerateContent"
 	}
-	return fmt.Sprintf("%s/%s/models/%s:%s", meta.BaseURL, version, meta.ActualModelName, action), nil
+	return fmt.Sprintf("%s/%s/models/%s:%s?key=%s", meta.BaseURL, version, meta.ActualModelName, action, meta.APIKey), nil
 }
 
 func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Request, meta *util.RelayMeta) error {
 	channelhelper.SetupCommonRequestHeader(c, req, meta)
 	req.Header.Set("x-goog-api-key", meta.APIKey)
+	req.URL.Query().Add("key", meta.APIKey)
 	return nil
 }
 
