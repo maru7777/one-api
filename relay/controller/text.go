@@ -10,18 +10,20 @@ import (
 
 	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
-	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/logger"
-	"github.com/songquanpeng/one-api/relay/channel/openai"
-	"github.com/songquanpeng/one-api/relay/constant"
-	"github.com/songquanpeng/one-api/relay/helper"
+	"github.com/songquanpeng/one-api/relay"
+	"github.com/songquanpeng/one-api/relay/adaptor/openai"
+	"github.com/songquanpeng/one-api/relay/apitype"
+	"github.com/songquanpeng/one-api/relay/billing"
+	billingratio "github.com/songquanpeng/one-api/relay/billing/ratio"
+	"github.com/songquanpeng/one-api/relay/channeltype"
+	"github.com/songquanpeng/one-api/relay/meta"
 	"github.com/songquanpeng/one-api/relay/model"
-	"github.com/songquanpeng/one-api/relay/util"
 )
 
 func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	ctx := c.Request.Context()
-	meta := util.GetRelayMeta(c)
+	meta := meta.GetByContext(c)
 	// get & validate textRequest
 	textRequest, err := getAndValidateTextRequest(c, meta.Mode)
 	if err != nil {
@@ -33,12 +35,13 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	// map model name
 	var isModelMapped bool
 	meta.OriginModelName = textRequest.Model
-	textRequest.Model, isModelMapped = util.GetMappedModelName(textRequest.Model, meta.ModelMapping)
+	textRequest.Model, isModelMapped = getMappedModelName(textRequest.Model, meta.ModelMapping)
 	meta.ActualModelName = textRequest.Model
 	// get model ratio & group ratio
-	modelRatio := common.GetModelRatio(textRequest.Model)
-	// groupRatio := common.GetGroupRatio(meta.Group)
+	modelRatio := billingratio.GetModelRatio(textRequest.Model)
+	// groupRatio := billingratio.GetGroupRatio(meta.Group)
 	groupRatio := meta.ChannelRatio
+
 	ratio := modelRatio * groupRatio
 	// pre-consume quota
 	promptTokens := getPromptTokens(textRequest, meta.Mode)
@@ -49,16 +52,16 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 		return bizErr
 	}
 
-	adaptor := helper.GetAdaptor(meta.APIType)
+	adaptor := relay.GetAdaptor(meta.APIType)
 	if adaptor == nil {
 		return openai.ErrorWrapper(errors.Errorf("invalid api type: %d", meta.APIType), "invalid_api_type", http.StatusBadRequest)
 	}
 
 	// get request body
 	var requestBody io.Reader
-	if meta.APIType == constant.APITypeOpenAI {
+	if meta.APIType == apitype.OpenAI {
 		// no need to convert request for openai
-		shouldResetRequestBody := isModelMapped || meta.ChannelType == common.ChannelTypeBaichuan // frequency_penalty 0 is not acceptable for baichuan
+		shouldResetRequestBody := isModelMapped || meta.ChannelType == channeltype.Baichuan // frequency_penalty 0 is not acceptable for baichuan
 		if shouldResetRequestBody {
 			jsonStr, err := json.Marshal(textRequest)
 			if err != nil {
@@ -93,10 +96,10 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	}
 	errorHappened := (resp.StatusCode != http.StatusOK) || (meta.IsStream && resp.Header.Get("Content-Type") == "application/json")
 	if errorHappened {
-		util.ReturnPreConsumedQuota(ctx, preConsumedQuota, meta.TokenId)
+		billing.ReturnPreConsumedQuota(ctx, preConsumedQuota, meta.TokenId)
 		logger.Error(ctx, fmt.Sprintf("relay text [%d] <- %q %q",
 			resp.StatusCode, resp.Request.URL.String(), string(requestBodyBytes)))
-		return util.RelayErrorHandler(resp)
+		return RelayErrorHandler(resp)
 	}
 	meta.IsStream = meta.IsStream || strings.HasPrefix(resp.Header.Get("Content-Type"), "text/event-stream")
 
@@ -104,7 +107,7 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	usage, respErr := adaptor.DoResponse(c, resp, meta)
 	if respErr != nil {
 		logger.Errorf(ctx, "respErr is not nil: %+v", respErr)
-		util.ReturnPreConsumedQuota(ctx, preConsumedQuota, meta.TokenId)
+		billing.ReturnPreConsumedQuota(ctx, preConsumedQuota, meta.TokenId)
 		return respErr
 	}
 	// post-consume quota

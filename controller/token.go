@@ -6,9 +6,12 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/copier"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/helper"
+	"github.com/songquanpeng/one-api/common/network"
+	"github.com/songquanpeng/one-api/common/random"
 	"github.com/songquanpeng/one-api/model"
 )
 
@@ -106,9 +109,24 @@ func GetTokenStatus(c *gin.Context) {
 	})
 }
 
+func validateToken(c *gin.Context, token *model.Token) error {
+	if len(token.Name) > 30 {
+		return fmt.Errorf("令牌名称过长")
+	}
+
+	if token.Subnet != nil && *token.Subnet != "" {
+		err := network.IsValidSubnets(*token.Subnet)
+		if err != nil {
+			return fmt.Errorf("无效的网段：%s", err.Error())
+		}
+	}
+
+	return nil
+}
+
 func AddToken(c *gin.Context) {
-	token := model.Token{}
-	err := c.ShouldBindJSON(&token)
+	token := new(model.Token)
+	err := c.ShouldBindJSON(token)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -116,22 +134,27 @@ func AddToken(c *gin.Context) {
 		})
 		return
 	}
-	if len(token.Name) > 30 {
+
+	err = validateToken(c, token)
+	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "令牌名称过长",
+			"message": fmt.Sprintf("参数错误：%s", err.Error()),
 		})
 		return
 	}
+
 	cleanToken := model.Token{
 		UserId:         c.GetInt("id"),
 		Name:           token.Name,
-		Key:            helper.GenerateKey(),
+		Key:            random.GenerateKey(),
 		CreatedTime:    helper.GetTimestamp(),
 		AccessedTime:   helper.GetTimestamp(),
 		ExpiredTime:    token.ExpiredTime,
 		RemainQuota:    token.RemainQuota,
 		UnlimitedQuota: token.UnlimitedQuota,
+		Models:         token.Models,
+		Subnet:         token.Subnet,
 	}
 	err = cleanToken.Insert()
 	if err != nil {
@@ -168,12 +191,7 @@ func DeleteToken(c *gin.Context) {
 }
 
 type updateTokenDto struct {
-	Id             int     `json:"id"`
-	Status         int     `json:"status" gorm:"default:1"`
-	Name           *string `json:"name" gorm:"index" `
-	ExpiredTime    *int64  `json:"expired_time" gorm:"bigint;default:-1"` // -1 means never expired
-	RemainQuota    *int    `json:"remain_quota" gorm:"default:0"`
-	UnlimitedQuota *bool   `json:"unlimited_quota" gorm:"default:false"`
+	model.Token
 	// AddUsedQuota add or subtract used quota
 	AddUsedQuota int    `json:"add_used_quota" gorm:"-"`
 	AddReason    string `json:"add_reason" gorm:"-"`
@@ -183,43 +201,51 @@ func UpdateToken(c *gin.Context) {
 	userId := c.GetInt("id")
 	statusOnly := c.Query("status_only")
 	tokenPatch := new(updateTokenDto)
-	if err := c.ShouldBindJSON(tokenPatch); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "parse request join: " + err.Error(),
-		})
-		return
-	}
-
-	if tokenPatch.Name != nil &&
-		(len(*tokenPatch.Name) > 30 || len(*tokenPatch.Name) == 0) {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "令牌名称错误，长度应在 1-30 之间",
-		})
-		return
-	}
-
-	tokenInDB, err := model.GetTokenByIds(tokenPatch.Id, userId)
+	err := c.ShouldBindJSON(tokenPatch)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": fmt.Sprintf("get token by id %d: %s", tokenPatch.Id, err.Error()),
+			"message": err.Error(),
 		})
 		return
 	}
 
-	if tokenPatch.Status == common.TokenStatusEnabled {
-		if tokenInDB.Status == common.TokenStatusExpired && tokenInDB.ExpiredTime <= helper.GetTimestamp() && tokenInDB.ExpiredTime != -1 {
+	token := new(model.Token)
+	if err = copier.Copy(token, tokenPatch); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	err = validateToken(c, token)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": fmt.Sprintf("参数错误：%s", err.Error()),
+		})
+		return
+	}
+
+	cleanToken, err := model.GetTokenByIds(token.Id, userId)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	if token.Status == model.TokenStatusEnabled {
+		if cleanToken.Status == model.TokenStatusExpired && cleanToken.ExpiredTime <= helper.GetTimestamp() && cleanToken.ExpiredTime != -1 {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": "令牌已过期，无法启用，请先修改令牌过期时间，或者设置为永不过期",
 			})
 			return
 		}
-		if tokenInDB.Status == common.TokenStatusExhausted &&
-			tokenInDB.RemainQuota <= 0 &&
-			!tokenInDB.UnlimitedQuota {
+		if cleanToken.Status == model.TokenStatusExhausted && cleanToken.RemainQuota <= 0 && !cleanToken.UnlimitedQuota {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": "令牌可用额度已用尽，无法启用，请先修改令牌剩余额度，或者设置为无限额度",
@@ -228,42 +254,33 @@ func UpdateToken(c *gin.Context) {
 		}
 	}
 	if statusOnly != "" {
-		tokenInDB.Status = tokenPatch.Status
+		cleanToken.Status = token.Status
 	} else {
-		// If you add more fields, please also update tokenPatch.Update()
-		if tokenPatch.Name != nil {
-			tokenInDB.Name = *tokenPatch.Name
-		}
-		if tokenPatch.ExpiredTime != nil {
-			tokenInDB.ExpiredTime = *tokenPatch.ExpiredTime
-		}
-		if tokenPatch.RemainQuota != nil {
-			tokenInDB.RemainQuota = int64(*tokenPatch.RemainQuota)
-		}
-		if tokenPatch.UnlimitedQuota != nil {
-			tokenInDB.UnlimitedQuota = *tokenPatch.UnlimitedQuota
-		}
+		// If you add more fields, please also update token.Update()
+		cleanToken.Name = token.Name
+		cleanToken.ExpiredTime = token.ExpiredTime
+		cleanToken.RemainQuota = token.RemainQuota
+		cleanToken.UnlimitedQuota = token.UnlimitedQuota
+		cleanToken.Models = token.Models
+		cleanToken.Subnet = token.Subnet
 	}
-
-	tokenInDB.RemainQuota -= int64(tokenPatch.AddUsedQuota)
-	tokenInDB.UsedQuota += int64(tokenPatch.AddUsedQuota)
 
 	if tokenPatch.AddUsedQuota != 0 {
 		model.RecordLog(userId, model.LogTypeConsume, fmt.Sprintf("外部(%s)消耗 %s", tokenPatch.AddReason, common.LogQuota(int64(tokenPatch.AddUsedQuota))))
 	}
 
-	if err = tokenInDB.Update(); err != nil {
+	err = cleanToken.Update()
+	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "update token: " + err.Error(),
+			"message": err.Error(),
 		})
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    tokenInDB,
+		"data":    cleanToken,
 	})
 	return
 }
