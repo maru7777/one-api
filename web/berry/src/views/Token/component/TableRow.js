@@ -28,11 +28,11 @@ const COPY_OPTIONS = [
   {
     key: 'next',
     text: 'ChatGPT Next',
-    url: 'https://chat.oneapi.pro/#/?settings={"key":"sk-{key}","url":"{serverAddress}"}',
+    url: 'https://app.nextchat.dev/#/?settings={"key":"laisky-{key}","url":"{serverAddress}"}',
     encode: false
   },
-  { key: 'ama', text: 'BotGem', url: 'ama://set-api-key?server={serverAddress}&key=sk-{key}', encode: true },
-  { key: 'opencat', text: 'OpenCat', url: 'opencat://team/join?domain={serverAddress}&token=sk-{key}', encode: true }
+  { key: 'ama', text: 'BotGem', url: 'ama://set-api-key?server={serverAddress}&key=laisky-{key}', encode: true },
+  { key: 'opencat', text: 'OpenCat', url: 'opencat://team/join?domain={serverAddress}&token=laisky-{key}', encode: true }
 ];
 
 function replacePlaceholders(text, key, serverAddress) {
@@ -133,7 +133,7 @@ export default function TokensTableRow({ item, manageToken, handleOpenModal, set
     let url = option.url;
 
     if (option.key === 'next' && siteInfo?.chat_link) {
-      url = siteInfo.chat_link + `/#/?settings={"key":"sk-{key}","url":"{serverAddress}"}`;
+      url = siteInfo.chat_link + `/#/?settings={"key":"laisky-{key}","url":"{serverAddress}"}`;
     }
 
     const key = item.key;
@@ -211,7 +211,7 @@ export default function TokensTableRow({ item, manageToken, handleOpenModal, set
               <Button
                 color="primary"
                 onClick={() => {
-                  navigator.clipboard.writeText(`sk-${item.key}`);
+                  navigator.clipboard.writeText(`laisky-${item.key}`);
                   showSuccess('已复制到剪贴板！');
                 }}
               >
