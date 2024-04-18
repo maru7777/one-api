@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -65,9 +66,9 @@ var EmailDomainWhitelist = []string{
 	"foxmail.com",
 }
 
-var DebugEnabled = os.Getenv("DEBUG") == "true"
-var DebugSQLEnabled = os.Getenv("DEBUG_SQL") == "true"
-var MemoryCacheEnabled = os.Getenv("MEMORY_CACHE_ENABLED") == "true"
+var DebugEnabled = strings.ToLower(os.Getenv("DEBUG")) == "true"
+var DebugSQLEnabled = strings.ToLower(os.Getenv("DEBUG_SQL")) == "true"
+var MemoryCacheEnabled = strings.ToLower(os.Getenv("MEMORY_CACHE_ENABLED")) == "true"
 
 var LogConsumeEnabled = true
 

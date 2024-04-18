@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/model"
@@ -73,6 +74,7 @@ func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, mode
 	}
 	logger.Info(c.Request.Context(), fmt.Sprintf("set channel %s ratio to %f", channel.Name, minimalRatio))
 	c.Set("channel_ratio", minimalRatio)
+	c.Set(common.CtxKeyChannel, channel)
 	c.Set("channel", channel.Type)
 	c.Set("channel_id", channel.Id)
 	c.Set("channel_name", channel.Name)

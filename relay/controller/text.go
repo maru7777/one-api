@@ -94,14 +94,16 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 		logger.Errorf(ctx, "DoRequest failed: %s", err.Error())
 		return openai.ErrorWrapper(err, "do_request_failed", http.StatusInternalServerError)
 	}
-	errorHappened := (resp.StatusCode != http.StatusOK) || (meta.IsStream && resp.Header.Get("Content-Type") == "application/json")
-	if errorHappened {
-		billing.ReturnPreConsumedQuota(ctx, preConsumedQuota, meta.TokenId)
-		logger.Error(ctx, fmt.Sprintf("relay text [%d] <- %q %q",
-			resp.StatusCode, resp.Request.URL.String(), string(requestBodyBytes)))
-		return RelayErrorHandler(resp)
+	if resp != nil {
+		errorHappened := (resp.StatusCode != http.StatusOK) || (meta.IsStream && resp.Header.Get("Content-Type") == "application/json")
+		if errorHappened {
+			billing.ReturnPreConsumedQuota(ctx, preConsumedQuota, meta.TokenId)
+			logger.Error(ctx, fmt.Sprintf("relay text [%d] <- %q %q",
+				resp.StatusCode, resp.Request.URL.String(), string(requestBodyBytes)))
+			return RelayErrorHandler(resp)
+		}
+		meta.IsStream = meta.IsStream || strings.HasPrefix(resp.Header.Get("Content-Type"), "text/event-stream")
 	}
-	meta.IsStream = meta.IsStream || strings.HasPrefix(resp.Header.Get("Content-Type"), "text/event-stream")
 
 	// do response
 	usage, respErr := adaptor.DoResponse(c, resp, meta)
