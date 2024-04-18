@@ -12,7 +12,7 @@ WORKDIR /web/air
 RUN npm install
 RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat VERSION) npm run build
 
-FROM golang:1.22.1-bullseye AS builder2
+FROM golang:1.22.2-bullseye AS builder2
 
 ENV GO111MODULE=on \
     CGO_ENABLED=1 \
