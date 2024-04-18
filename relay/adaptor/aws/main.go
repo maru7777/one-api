@@ -81,7 +81,7 @@ func Handler(c *gin.Context, resp *http.Response, promptTokens int, modelName st
 		return wrapErr(errors.Wrap(err, "newAwsClient")), nil
 	}
 
-	awsModelId, err := awsModelID(c.GetString(common.CtxKeyOriginModel))
+	awsModelId, err := awsModelID(c.GetString(common.CtxKeyRequestModel))
 	if err != nil {
 		return wrapErr(errors.Wrap(err, "awsModelID")), nil
 	}
@@ -148,7 +148,7 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*relaymodel.ErrorWithSt
 		return wrapErr(errors.Wrap(err, "newAwsClient")), nil
 	}
 
-	awsModelId, err := awsModelID(c.GetString(common.CtxKeyOriginModel))
+	awsModelId, err := awsModelID(c.GetString(common.CtxKeyRequestModel))
 	if err != nil {
 		return wrapErr(errors.Wrap(err, "awsModelID")), nil
 	}
