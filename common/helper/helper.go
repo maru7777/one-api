@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/songquanpeng/one-api/common/random"
+	"github.com/Laisky/one-api/common/random"
 )
 
 func OpenBrowser(url string) {

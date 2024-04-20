@@ -4,15 +4,16 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
-	"github.com/gin-gonic/gin"
-	"github.com/songquanpeng/one-api/common"
-	"github.com/songquanpeng/one-api/common/conv"
-	"github.com/songquanpeng/one-api/common/logger"
-	"github.com/songquanpeng/one-api/relay/model"
-	"github.com/songquanpeng/one-api/relay/relaymode"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/Laisky/one-api/common"
+	"github.com/Laisky/one-api/common/conv"
+	"github.com/Laisky/one-api/common/logger"
+	"github.com/Laisky/one-api/relay/model"
+	"github.com/Laisky/one-api/relay/relaymode"
+	"github.com/gin-gonic/gin"
 )
 
 func StreamHandler(c *gin.Context, resp *http.Response, relayMode int) (*model.ErrorWithStatusCode, string, *model.Usage) {

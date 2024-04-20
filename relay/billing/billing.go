@@ -3,8 +3,8 @@ package billing
 import (
 	"context"
 	"fmt"
-	"github.com/songquanpeng/one-api/common/logger"
-	"github.com/songquanpeng/one-api/model"
+	"github.com/Laisky/one-api/common/logger"
+	"github.com/Laisky/one-api/model"
 )
 
 func ReturnPreConsumedQuota(ctx context.Context, preConsumedQuota int64, tokenId int) {

@@ -3,12 +3,12 @@ package openai
 import (
 	"fmt"
 	"github.com/Laisky/errors/v2"
+	"github.com/Laisky/one-api/common/config"
+	"github.com/Laisky/one-api/common/image"
+	"github.com/Laisky/one-api/common/logger"
+	billingratio "github.com/Laisky/one-api/relay/billing/ratio"
+	"github.com/Laisky/one-api/relay/model"
 	"github.com/pkoukk/tiktoken-go"
-	"github.com/songquanpeng/one-api/common/config"
-	"github.com/songquanpeng/one-api/common/image"
-	"github.com/songquanpeng/one-api/common/logger"
-	billingratio "github.com/songquanpeng/one-api/relay/billing/ratio"
-	"github.com/songquanpeng/one-api/relay/model"
 	"math"
 	"strings"
 )

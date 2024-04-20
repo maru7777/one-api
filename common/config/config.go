@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/songquanpeng/one-api/common/env"
+	"github.com/Laisky/one-api/common/env"
 )
 
 func init() {

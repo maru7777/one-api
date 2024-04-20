@@ -1,11 +1,11 @@
 package meta
 
 import (
+	"github.com/Laisky/one-api/common/config"
+	"github.com/Laisky/one-api/relay/adaptor/azure"
+	"github.com/Laisky/one-api/relay/channeltype"
+	"github.com/Laisky/one-api/relay/relaymode"
 	"github.com/gin-gonic/gin"
-	"github.com/songquanpeng/one-api/common/config"
-	"github.com/songquanpeng/one-api/relay/adaptor/azure"
-	"github.com/songquanpeng/one-api/relay/channeltype"
-	"github.com/songquanpeng/one-api/relay/relaymode"
 	"strings"
 )
 

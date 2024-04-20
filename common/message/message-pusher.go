@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/Laisky/errors/v2"
-	"github.com/songquanpeng/one-api/common/config"
+	"github.com/Laisky/one-api/common/config"
 	"net/http"
 )
 

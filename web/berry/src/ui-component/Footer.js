@@ -15,7 +15,7 @@ const Footer = () => {
           <div className="custom-footer" dangerouslySetInnerHTML={{ __html: siteInfo.footer_html }}></div>
         ) : (
           <>
-            <Link href="https://github.com/songquanpeng/one-api" target="_blank">
+            <Link href="https://github.com/Laisky/one-api" target="_blank">
               {siteInfo.system_name} {process.env.REACT_APP_VERSION}{' '}
             </Link>
             由{' '}

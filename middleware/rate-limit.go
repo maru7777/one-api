@@ -3,9 +3,9 @@ package middleware
 import (
 	"context"
 	"fmt"
+	"github.com/Laisky/one-api/common"
+	"github.com/Laisky/one-api/common/config"
 	"github.com/gin-gonic/gin"
-	"github.com/songquanpeng/one-api/common"
-	"github.com/songquanpeng/one-api/common/config"
 	"net/http"
 	"time"
 )

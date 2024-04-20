@@ -14,18 +14,18 @@ import (
 	"time"
 
 	"github.com/Laisky/errors/v2"
-	"github.com/songquanpeng/one-api/common/config"
-	"github.com/songquanpeng/one-api/common/logger"
-	"github.com/songquanpeng/one-api/common/message"
-	"github.com/songquanpeng/one-api/middleware"
-	"github.com/songquanpeng/one-api/model"
-	"github.com/songquanpeng/one-api/monitor"
-	relay "github.com/songquanpeng/one-api/relay"
-	"github.com/songquanpeng/one-api/relay/channeltype"
-	"github.com/songquanpeng/one-api/relay/controller"
-	"github.com/songquanpeng/one-api/relay/meta"
-	relaymodel "github.com/songquanpeng/one-api/relay/model"
-	"github.com/songquanpeng/one-api/relay/relaymode"
+	"github.com/Laisky/one-api/common/config"
+	"github.com/Laisky/one-api/common/logger"
+	"github.com/Laisky/one-api/common/message"
+	"github.com/Laisky/one-api/middleware"
+	"github.com/Laisky/one-api/model"
+	"github.com/Laisky/one-api/monitor"
+	relay "github.com/Laisky/one-api/relay"
+	"github.com/Laisky/one-api/relay/channeltype"
+	"github.com/Laisky/one-api/relay/controller"
+	"github.com/Laisky/one-api/relay/meta"
+	relaymodel "github.com/Laisky/one-api/relay/model"
+	"github.com/Laisky/one-api/relay/relaymode"
 
 	"github.com/gin-gonic/gin"
 )
@@ -89,7 +89,7 @@ func testChannel(channel *model.Channel) (err error, openaiErr *relaymodel.Error
 	if err != nil {
 		return err, nil
 	}
-	if resp.StatusCode != http.StatusOK {
+	if resp != nil && resp.StatusCode != http.StatusOK {
 		err := controller.RelayErrorHandler(resp)
 		return fmt.Errorf("status code %d: %s", resp.StatusCode, err.Error.Message), &err.Error
 	}

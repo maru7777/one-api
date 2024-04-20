@@ -1,10 +1,10 @@
 package controller
 
 import (
+	"github.com/Laisky/one-api/common/config"
+	"github.com/Laisky/one-api/model"
+	relaymodel "github.com/Laisky/one-api/relay/model"
 	"github.com/gin-gonic/gin"
-	"github.com/songquanpeng/one-api/common/config"
-	"github.com/songquanpeng/one-api/model"
-	relaymodel "github.com/songquanpeng/one-api/relay/model"
 )
 
 func GetSubscription(c *gin.Context) {

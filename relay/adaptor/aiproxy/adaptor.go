@@ -3,11 +3,11 @@ package aiproxy
 import (
 	"fmt"
 	"github.com/Laisky/errors/v2"
+	"github.com/Laisky/one-api/common/config"
+	"github.com/Laisky/one-api/relay/adaptor"
+	"github.com/Laisky/one-api/relay/meta"
+	"github.com/Laisky/one-api/relay/model"
 	"github.com/gin-gonic/gin"
-	"github.com/songquanpeng/one-api/common/config"
-	"github.com/songquanpeng/one-api/relay/adaptor"
-	"github.com/songquanpeng/one-api/relay/meta"
-	"github.com/songquanpeng/one-api/relay/model"
 	"io"
 	"net/http"
 )

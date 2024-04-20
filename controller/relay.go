@@ -4,20 +4,22 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
-	"github.com/songquanpeng/one-api/common"
-	"github.com/songquanpeng/one-api/common/config"
-	"github.com/songquanpeng/one-api/common/helper"
-	"github.com/songquanpeng/one-api/common/logger"
-	"github.com/songquanpeng/one-api/middleware"
-	dbmodel "github.com/songquanpeng/one-api/model"
-	"github.com/songquanpeng/one-api/monitor"
-	"github.com/songquanpeng/one-api/relay/controller"
-	"github.com/songquanpeng/one-api/relay/model"
-	"github.com/songquanpeng/one-api/relay/relaymode"
 	"io"
 	"net/http"
+
+	"github.com/Laisky/one-api/common"
+	"github.com/Laisky/one-api/common/config"
+	"github.com/Laisky/one-api/common/ctxkey"
+	"github.com/Laisky/one-api/common/helper"
+	"github.com/Laisky/one-api/common/logger"
+	"github.com/Laisky/one-api/middleware"
+	dbmodel "github.com/Laisky/one-api/model"
+	"github.com/Laisky/one-api/monitor"
+	"github.com/Laisky/one-api/relay/controller"
+	"github.com/Laisky/one-api/relay/model"
+	"github.com/Laisky/one-api/relay/relaymode"
+	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 )
 
 // https://platform.openai.com/docs/api-reference/chat
@@ -55,7 +57,7 @@ func Relay(c *gin.Context) {
 	lastFailedChannelId := channelId
 	channelName := c.GetString("channel_name")
 	group := c.GetString("group")
-	originalModel := c.GetString(common.CtxKeyOriginModel)
+	originalModel := c.GetString(ctxkey.OriginalModel)
 	go processChannelRelayError(ctx, channelId, channelName, bizErr)
 	requestId := c.GetString(logger.RequestIdKey)
 	retryTimes := config.RetryTimes

@@ -1,9 +1,9 @@
 package model
 
 import (
-	"github.com/songquanpeng/one-api/common/config"
-	"github.com/songquanpeng/one-api/common/logger"
-	billingratio "github.com/songquanpeng/one-api/relay/billing/ratio"
+	"github.com/Laisky/one-api/common/config"
+	"github.com/Laisky/one-api/common/logger"
+	billingratio "github.com/Laisky/one-api/relay/billing/ratio"
 	"strconv"
 	"strings"
 	"time"

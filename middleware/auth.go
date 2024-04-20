@@ -2,12 +2,12 @@ package middleware
 
 import (
 	"fmt"
+	"github.com/Laisky/one-api/common/blacklist"
+	"github.com/Laisky/one-api/common/logger"
+	"github.com/Laisky/one-api/common/network"
+	"github.com/Laisky/one-api/model"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	"github.com/songquanpeng/one-api/common/blacklist"
-	"github.com/songquanpeng/one-api/common/logger"
-	"github.com/songquanpeng/one-api/common/network"
-	"github.com/songquanpeng/one-api/model"
 	"net/http"
 	"strings"
 )

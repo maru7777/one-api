@@ -7,3 +7,4 @@ docker image: `ppcelery/one-api:latest`
 - update token usage by API
 - support gpt-vision
 - support update user's remained quota
+- support aws claude
