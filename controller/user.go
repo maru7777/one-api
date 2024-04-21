@@ -3,14 +3,15 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Laisky/one-api/common"
-	"github.com/Laisky/one-api/common/config"
-	"github.com/Laisky/one-api/common/random"
-	"github.com/Laisky/one-api/model"
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/Laisky/one-api/common"
+	"github.com/Laisky/one-api/common/config"
+	"github.com/Laisky/one-api/common/ctxkey"
+	"github.com/Laisky/one-api/common/random"
+	"github.com/Laisky/one-api/model"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
@@ -244,7 +245,7 @@ func GetUser(c *gin.Context) {
 		})
 		return
 	}
-	myRole := c.GetInt("role")
+	myRole := c.GetInt(ctxkey.Role)
 	if myRole <= user.Role && myRole != model.RoleRootUser {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -261,7 +262,7 @@ func GetUser(c *gin.Context) {
 }
 
 func GetUserDashboard(c *gin.Context) {
-	id := c.GetInt("id")
+	id := c.GetInt(ctxkey.Id)
 	now := time.Now()
 	startOfDay := now.Truncate(24*time.Hour).AddDate(0, 0, -6).Unix()
 	endOfDay := now.Truncate(24 * time.Hour).Add(24*time.Hour - time.Second).Unix()
@@ -284,7 +285,7 @@ func GetUserDashboard(c *gin.Context) {
 }
 
 func GenerateAccessToken(c *gin.Context) {
-	id := c.GetInt("id")
+	id := c.GetInt(ctxkey.Id)
 	user, err := model.GetUserById(id, true)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -320,7 +321,7 @@ func GenerateAccessToken(c *gin.Context) {
 }
 
 func GetAffCode(c *gin.Context) {
-	id := c.GetInt("id")
+	id := c.GetInt(ctxkey.Id)
 	user, err := model.GetUserById(id, true)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -358,7 +359,7 @@ func GetSelfByToken(c *gin.Context) {
 }
 
 func GetSelf(c *gin.Context) {
-	id := c.GetInt("id")
+	id := c.GetInt(ctxkey.Id)
 	user, err := model.GetUserById(id, false)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -403,7 +404,7 @@ func UpdateUser(c *gin.Context) {
 		})
 		return
 	}
-	myRole := c.GetInt("role")
+	myRole := c.GetInt(ctxkey.Role)
 	if myRole <= originUser.Role && myRole != model.RoleRootUser {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -461,7 +462,7 @@ func UpdateSelf(c *gin.Context) {
 	}
 
 	cleanUser := model.User{
-		Id:          c.GetInt("id"),
+		Id:          c.GetInt(ctxkey.Id),
 		Username:    user.Username,
 		Password:    user.Password,
 		DisplayName: user.DisplayName,

@@ -6,8 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Laisky/one-api/common"
-	"github.com/Laisky/one-api/common/config"
 	"github.com/Laisky/one-api/common/ctxkey"
 	"github.com/Laisky/one-api/common/logger"
 	"github.com/Laisky/one-api/model"
@@ -22,12 +20,12 @@ type ModelRequest struct {
 
 func Distribute() func(c *gin.Context) {
 	return func(c *gin.Context) {
-		userId := c.GetInt("id")
+		userId := c.GetInt(ctxkey.Id)
 		userGroup, _ := model.CacheGetUserGroup(userId)
-		c.Set("group", userGroup)
+		c.Set(ctxkey.Group, userGroup)
 		var requestModel string
 		var channel *model.Channel
-		channelId, ok := c.Get("specific_channel_id")
+		channelId, ok := c.Get(ctxkey.SpecificChannelId)
 		if ok {
 			id, err := strconv.Atoi(channelId.(string))
 			if err != nil {
@@ -44,7 +42,7 @@ func Distribute() func(c *gin.Context) {
 				return
 			}
 		} else {
-			requestModel = c.GetString("request_model")
+			requestModel = c.GetString(ctxkey.RequestModel)
 			var err error
 			channel, err = model.CacheGetRandomSatisfiedChannel(userGroup, requestModel, false)
 			if err != nil {
@@ -74,30 +72,31 @@ func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, mode
 		}
 	}
 	logger.Info(c.Request.Context(), fmt.Sprintf("set channel %s ratio to %f", channel.Name, minimalRatio))
-	c.Set("channel_ratio", minimalRatio)
-	c.Set(common.CtxKeyChannel, channel)
-	c.Set("channel", channel.Type)
-	c.Set("channel_id", channel.Id)
-	c.Set("channel_name", channel.Name)
-	c.Set("model_mapping", channel.GetModelMapping())
+	c.Set(ctxkey.ChannelRatio, minimalRatio)
+	c.Set(ctxkey.ChannelModel, channel)
+
+	c.Set(ctxkey.Channel, channel.Type)
+	c.Set(ctxkey.ChannelId, channel.Id)
+	c.Set(ctxkey.ChannelName, channel.Name)
+	c.Set(ctxkey.ModelMapping, channel.GetModelMapping())
 	c.Set(ctxkey.OriginalModel, modelName) // for retry
 	c.Request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.Key))
-	c.Set("base_url", channel.GetBaseURL())
+	c.Set(ctxkey.BaseURL, channel.GetBaseURL())
 	// this is for backward compatibility
 	switch channel.Type {
 	case channeltype.Azure:
-		c.Set(config.KeyAPIVersion, channel.Other)
+		c.Set(ctxkey.ConfigAPIVersion, channel.Other)
 	case channeltype.Xunfei:
-		c.Set(config.KeyAPIVersion, channel.Other)
+		c.Set(ctxkey.ConfigAPIVersion, channel.Other)
 	case channeltype.Gemini:
-		c.Set(config.KeyAPIVersion, channel.Other)
+		c.Set(ctxkey.ConfigAPIVersion, channel.Other)
 	case channeltype.AIProxyLibrary:
-		c.Set(config.KeyLibraryID, channel.Other)
+		c.Set(ctxkey.ConfigLibraryID, channel.Other)
 	case channeltype.Ali:
-		c.Set(config.KeyPlugin, channel.Other)
+		c.Set(ctxkey.ConfigPlugin, channel.Other)
 	}
 	cfg, _ := channel.LoadConfig()
 	for k, v := range cfg {
-		c.Set(config.KeyPrefix+k, v)
+		c.Set(ctxkey.ConfigPrefix+k, v)
 	}
 }

@@ -3,14 +3,16 @@ package auth
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Laisky/errors/v2"
-	"github.com/Laisky/one-api/common/config"
-	"github.com/Laisky/one-api/controller"
-	"github.com/Laisky/one-api/model"
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/Laisky/errors/v2"
+	"github.com/Laisky/one-api/common/config"
+	"github.com/Laisky/one-api/common/ctxkey"
+	"github.com/Laisky/one-api/controller"
+	"github.com/Laisky/one-api/model"
+	"github.com/gin-gonic/gin"
 )
 
 type wechatLoginResponse struct {
@@ -136,7 +138,7 @@ func WeChatBind(c *gin.Context) {
 		})
 		return
 	}
-	id := c.GetInt("id")
+	id := c.GetInt(ctxkey.Id)
 	user := model.User{
 		Id: id,
 	}

@@ -1,12 +1,13 @@
 package meta
 
 import (
-	"github.com/Laisky/one-api/common/config"
+	"strings"
+
+	"github.com/Laisky/one-api/common/ctxkey"
 	"github.com/Laisky/one-api/relay/adaptor/azure"
 	"github.com/Laisky/one-api/relay/channeltype"
 	"github.com/Laisky/one-api/relay/relaymode"
 	"github.com/gin-gonic/gin"
-	"strings"
 )
 
 type Meta struct {
@@ -34,19 +35,19 @@ type Meta struct {
 func GetByContext(c *gin.Context) *Meta {
 	meta := Meta{
 		Mode:           relaymode.GetByPath(c.Request.URL.Path),
-		ChannelType:    c.GetInt("channel"),
-		ChannelId:      c.GetInt("channel_id"),
-		TokenId:        c.GetInt("token_id"),
-		TokenName:      c.GetString("token_name"),
-		UserId:         c.GetInt("id"),
-		Group:          c.GetString("group"),
-		ModelMapping:   c.GetStringMapString("model_mapping"),
-		BaseURL:        c.GetString("base_url"),
-		APIVersion:     c.GetString(config.KeyAPIVersion),
+		ChannelType:    c.GetInt(ctxkey.Channel),
+		ChannelId:      c.GetInt(ctxkey.ChannelId),
+		TokenId:        c.GetInt(ctxkey.TokenId),
+		TokenName:      c.GetString(ctxkey.TokenName),
+		UserId:         c.GetInt(ctxkey.Id),
+		Group:          c.GetString(ctxkey.Group),
+		ModelMapping:   c.GetStringMapString(ctxkey.ModelMapping),
+		BaseURL:        c.GetString(ctxkey.BaseURL),
+		APIVersion:     c.GetString(ctxkey.ConfigAPIVersion),
 		APIKey:         strings.TrimPrefix(c.Request.Header.Get("Authorization"), "Bearer "),
 		Config:         nil,
 		RequestURLPath: c.Request.URL.String(),
-		ChannelRatio:   c.GetFloat64("channel_ratio"),
+		ChannelRatio:   c.GetFloat64(ctxkey.ChannelRatio),
 	}
 	if meta.ChannelType == channeltype.Azure {
 		meta.APIVersion = azure.GetAPIVersion(c)

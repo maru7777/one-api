@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/Laisky/one-api/common/config"
+	"github.com/Laisky/one-api/common/ctxkey"
 	"github.com/Laisky/one-api/relay/adaptor"
 	"github.com/Laisky/one-api/relay/meta"
 	"github.com/Laisky/one-api/relay/model"
@@ -48,8 +48,8 @@ func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Request, meta *me
 	if meta.Mode == relaymode.ImagesGenerations {
 		req.Header.Set("X-DashScope-Async", "enable")
 	}
-	if c.GetString(config.KeyPlugin) != "" {
-		req.Header.Set("X-DashScope-Plugin", c.GetString(config.KeyPlugin))
+	if c.GetString(ctxkey.ConfigPlugin) != "" {
+		req.Header.Set("X-DashScope-Plugin", c.GetString(ctxkey.ConfigPlugin))
 	}
 	return nil
 }

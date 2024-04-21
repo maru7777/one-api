@@ -9,7 +9,6 @@ import (
 	"net/http"
 
 	"github.com/Laisky/one-api/common"
-	"github.com/Laisky/one-api/common/config"
 	"github.com/Laisky/one-api/common/ctxkey"
 	"github.com/Laisky/one-api/common/helper"
 	"github.com/Laisky/one-api/common/logger"
@@ -25,9 +24,9 @@ import (
 )
 
 func newAwsClient(c *gin.Context) (*bedrockruntime.Client, error) {
-	ak := c.GetString(config.KeyAK)
-	sk := c.GetString(config.KeySK)
-	region := c.GetString(config.KeyRegion)
+	ak := c.GetString(ctxkey.ConfigAK)
+	sk := c.GetString(ctxkey.ConfigSK)
+	region := c.GetString(ctxkey.ConfigRegion)
 	client := bedrockruntime.New(bedrockruntime.Options{
 		Region:      region,
 		Credentials: aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(ak, sk, "")),

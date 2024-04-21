@@ -57,7 +57,8 @@ const EditChannel = () => {
   const [config, setConfig] = useState({
     region: '',
     sk: '',
-    ak: ''
+    ak: '',
+    user_id: ''
   });
   const handleInputChange = (e, { name, value }) => {
     setInputs((inputs) => ({ ...inputs, [name]: value }));
@@ -156,13 +157,11 @@ const EditChannel = () => {
   }, []);
 
   const submit = async () => {
-    // some provider as AWS need both AK and SK rather than a single key,
-    // so we need to combine them into a single key to achieve the best compatibility.
-    if (inputs.ak && inputs.sk) {
-      console.log(`combine ak ${inputs.ak} and sk ${inputs.sk}`, inputs.ak, inputs.sk);
-      inputs.key = `${inputs.ak}\n${inputs.sk}`;
+    if (inputs.key === '') {
+      if (config.ak !== '' && config.sk !== '' && config.region !== '') {
+        inputs.key = `${config.ak}|${config.sk}|${config.region}`;
+      }
     }
-
     if (!isEdit && (inputs.name === '' || inputs.key === '')) {
       showInfo('请填写渠道名称和渠道密钥！');
       return;
@@ -356,6 +355,13 @@ const EditChannel = () => {
               </Form.Field>
             )
           }
+          {
+            inputs.type === 34 && (
+              <Message>
+                对于 Coze 而言，模型名称即 Bot ID，你可以添加一个前缀 `bot-`，例如：`bot-123456`。
+              </Message>
+            )
+          }
           <Form.Field>
             <Form.Dropdown
               label='模型'
@@ -445,6 +451,18 @@ const EditChannel = () => {
                 />
               </Form.Field>
             )
+          }
+          {
+            inputs.type === 34 && (
+              <Form.Input
+                label='User ID'
+                name='user_id'
+                required
+                placeholder={'生成该密钥的用户 ID'}
+                onChange={handleConfigChange}
+                value={config.user_id}
+                autoComplete=''
+              />)
           }
           {
             inputs.type !== 33 && (batch ? <Form.Field>

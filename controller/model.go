@@ -2,6 +2,10 @@ package controller
 
 import (
 	"fmt"
+	"net/http"
+	"strings"
+
+	"github.com/Laisky/one-api/common/ctxkey"
 	"github.com/Laisky/one-api/model"
 	relay "github.com/Laisky/one-api/relay"
 	"github.com/Laisky/one-api/relay/adaptor/openai"
@@ -10,8 +14,6 @@ import (
 	"github.com/Laisky/one-api/relay/meta"
 	relaymodel "github.com/Laisky/one-api/relay/model"
 	"github.com/gin-gonic/gin"
-	"net/http"
-	"strings"
 )
 
 // https://platform.openai.com/docs/api-reference/models/list
@@ -139,10 +141,10 @@ func ListAllModels(c *gin.Context) {
 func ListModels(c *gin.Context) {
 	ctx := c.Request.Context()
 	var availableModels []string
-	if c.GetString("available_models") != "" {
-		availableModels = strings.Split(c.GetString("available_models"), ",")
+	if c.GetString(ctxkey.AvailableModels) != "" {
+		availableModels = strings.Split(c.GetString(ctxkey.AvailableModels), ",")
 	} else {
-		userId := c.GetInt("id")
+		userId := c.GetInt(ctxkey.Id)
 		userGroup, _ := model.CacheGetUserGroup(userId)
 		availableModels, _ = model.CacheGetGroupModels(ctx, userGroup)
 	}
@@ -194,7 +196,7 @@ func RetrieveModel(c *gin.Context) {
 
 func GetUserAvailableModels(c *gin.Context) {
 	ctx := c.Request.Context()
-	id := c.GetInt("id")
+	id := c.GetInt(ctxkey.Id)
 	userGroup, err := model.CacheGetUserGroup(id)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{

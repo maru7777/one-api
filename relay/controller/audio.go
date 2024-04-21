@@ -6,9 +6,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"strings"
+
 	"github.com/Laisky/errors/v2"
 	"github.com/Laisky/one-api/common"
 	"github.com/Laisky/one-api/common/config"
+	"github.com/Laisky/one-api/common/ctxkey"
 	"github.com/Laisky/one-api/common/logger"
 	"github.com/Laisky/one-api/model"
 	"github.com/Laisky/one-api/relay/adaptor/azure"
@@ -20,21 +25,18 @@ import (
 	relaymodel "github.com/Laisky/one-api/relay/model"
 	"github.com/Laisky/one-api/relay/relaymode"
 	"github.com/gin-gonic/gin"
-	"io"
-	"net/http"
-	"strings"
 )
 
 func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatusCode {
 	ctx := c.Request.Context()
 	audioModel := "whisper-1"
 
-	tokenId := c.GetInt("token_id")
-	channelType := c.GetInt("channel")
-	channelId := c.GetInt("channel_id")
-	userId := c.GetInt("id")
-	// group := c.GetString("group")
-	tokenName := c.GetString("token_name")
+	tokenId := c.GetInt(ctxkey.TokenId)
+	channelType := c.GetInt(ctxkey.Channel)
+	channelId := c.GetInt(ctxkey.ChannelId)
+	userId := c.GetInt(ctxkey.Id)
+	// group := c.GetString(ctxkey.Group)
+	tokenName := c.GetString(ctxkey.TokenName)
 
 	var ttsRequest openai.TextToSpeechRequest
 	if relayMode == relaymode.AudioSpeech {
@@ -53,7 +55,7 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 
 	modelRatio := billingratio.GetModelRatio(audioModel)
 	// groupRatio := billingratio.GetGroupRatio(group)
-	groupRatio := c.GetFloat64("channel_ratio") // get minimal ratio from multiple groups
+	groupRatio := c.GetFloat64(ctxkey.ChannelRatio) // get minimal ratio from multiple groups
 
 	ratio := modelRatio * groupRatio
 	var quota int64
@@ -109,7 +111,7 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	}()
 
 	// map model name
-	modelMapping := c.GetString("model_mapping")
+	modelMapping := c.GetString(ctxkey.ModelMapping)
 	if modelMapping != "" {
 		modelMap := make(map[string]string)
 		err := json.Unmarshal([]byte(modelMapping), &modelMap)
@@ -123,8 +125,8 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 
 	baseURL := channeltype.ChannelBaseURLs[channelType]
 	requestURL := c.Request.URL.String()
-	if c.GetString("base_url") != "" {
-		baseURL = c.GetString("base_url")
+	if c.GetString(ctxkey.BaseURL) != "" {
+		baseURL = c.GetString(ctxkey.BaseURL)
 	}
 
 	fullRequestURL := openai.GetFullRequestURL(baseURL, requestURL, channelType)

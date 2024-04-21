@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/Laisky/errors/v2"
+	"github.com/Laisky/one-api/common/ctxkey"
 	"github.com/Laisky/one-api/common/logger"
 	"github.com/Laisky/one-api/model"
 	"github.com/Laisky/one-api/relay"
@@ -90,7 +91,7 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 
 	modelRatio := billingratio.GetModelRatio(imageRequest.Model)
 	// groupRatio := billingratio.GetGroupRatio(meta.Group)
-	groupRatio := c.GetFloat64("channel_ratio") // pre-selected cheapest channel ratio
+	groupRatio := c.GetFloat64(ctxkey.ChannelRatio) // pre-selected cheapest channel ratio
 
 	ratio := modelRatio * groupRatio
 	userQuota, err := model.CacheGetUserQuota(ctx, meta.UserId)
@@ -122,11 +123,11 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 			logger.SysError("error update user quota cache: " + err.Error())
 		}
 		if quota >= 0 {
-			tokenName := c.GetString("token_name")
+			tokenName := c.GetString(ctxkey.TokenName)
 			logContent := fmt.Sprintf("模型倍率 %.2f，分组倍率 %.2f", modelRatio, groupRatio)
 			model.RecordConsumeLog(ctx, meta.UserId, meta.ChannelId, 0, 0, imageRequest.Model, tokenName, quota, logContent)
 			model.UpdateUserUsedQuotaAndRequestCount(meta.UserId, quota)
-			channelId := c.GetInt("channel_id")
+			channelId := c.GetInt(ctxkey.ChannelId)
 			model.UpdateChannelUsedQuota(channelId, quota)
 		}
 	}(c.Request.Context())

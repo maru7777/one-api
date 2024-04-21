@@ -1,13 +1,15 @@
 package controller
 
 import (
+	"net/http"
+	"strconv"
+
 	"github.com/Laisky/one-api/common/config"
+	"github.com/Laisky/one-api/common/ctxkey"
 	"github.com/Laisky/one-api/common/helper"
 	"github.com/Laisky/one-api/common/random"
 	"github.com/Laisky/one-api/model"
 	"github.com/gin-gonic/gin"
-	"net/http"
-	"strconv"
 )
 
 func GetAllRedemptions(c *gin.Context) {
@@ -109,7 +111,7 @@ func AddRedemption(c *gin.Context) {
 	for i := 0; i < redemption.Count; i++ {
 		key := random.GetUUID()
 		cleanRedemption := model.Redemption{
-			UserId:      c.GetInt("id"),
+			UserId:      c.GetInt(ctxkey.Id),
 			Name:        redemption.Name,
 			Key:         key,
 			CreatedTime: helper.GetTimestamp(),

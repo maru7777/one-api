@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/Laisky/one-api/common"
-	"github.com/Laisky/one-api/common/config"
+	"github.com/Laisky/one-api/common/ctxkey"
 	"github.com/Laisky/one-api/common/helper"
 	"github.com/Laisky/one-api/common/logger"
 	"github.com/Laisky/one-api/common/random"
@@ -281,7 +281,7 @@ func getAPIVersion(c *gin.Context, modelName string) string {
 		return apiVersion
 
 	}
-	apiVersion = c.GetString(config.KeyAPIVersion)
+	apiVersion = c.GetString(ctxkey.ConfigAPIVersion)
 	if apiVersion != "" {
 		return apiVersion
 	}
