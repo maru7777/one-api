@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	gutils "github.com/Laisky/go-utils/v4"
 	"github.com/Laisky/one-api/common/ctxkey"
 	"github.com/Laisky/one-api/common/logger"
 	"github.com/Laisky/one-api/model"
@@ -74,6 +75,11 @@ func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, mode
 	logger.Info(c.Request.Context(), fmt.Sprintf("set channel %s ratio to %f", channel.Name, minimalRatio))
 	c.Set(ctxkey.ChannelRatio, minimalRatio)
 	c.Set(ctxkey.ChannelModel, channel)
+
+	// generate an unique cost id for each request
+	if _, ok := c.Get(ctxkey.RequestId); !ok {
+		c.Set(ctxkey.RequestId, gutils.UUID7())
+	}
 
 	c.Set(ctxkey.Channel, channel.Type)
 	c.Set(ctxkey.ChannelId, channel.Id)

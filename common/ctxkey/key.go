@@ -2,6 +2,7 @@ package ctxkey
 
 const (
 	Id                = "id"
+	RequestId         = "X-Oneapi-Request-Id"
 	Username          = "username"
 	Role              = "role"
 	Status            = "status"

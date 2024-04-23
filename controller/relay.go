@@ -59,7 +59,7 @@ func Relay(c *gin.Context) {
 	group := c.GetString(ctxkey.Group)
 	originalModel := c.GetString(ctxkey.OriginalModel)
 	go processChannelRelayError(ctx, channelId, channelName, bizErr)
-	requestId := c.GetString(logger.RequestIdKey)
+	requestId := c.GetString(ctxkey.RequestId)
 	retryTimes := config.RetryTimes
 	if err := shouldRetry(c, bizErr.StatusCode); err != nil {
 		logger.Errorf(ctx, "relay error happen, won't retry since of %v", err.Error())

@@ -121,6 +121,10 @@ func InitDB(envName string) (db *gorm.DB, err error) {
 		if err != nil {
 			return nil, err
 		}
+		err = db.AutoMigrate(&UserRequestCost{})
+		if err != nil {
+			return nil, err
+		}
 		err = db.AutoMigrate(&Token{})
 		if err != nil {
 			return nil, err

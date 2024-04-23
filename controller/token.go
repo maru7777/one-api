@@ -16,6 +16,28 @@ import (
 	"github.com/jinzhu/copier"
 )
 
+func GetRequestCost(c *gin.Context) {
+	reqId := c.Param("request_id")
+	if reqId == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "request_id 不能为空",
+		})
+		return
+	}
+
+	docu, err := model.GetCostByRequestId(reqId)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, docu)
+}
+
 func GetAllTokens(c *gin.Context) {
 	userId := c.GetInt(ctxkey.Id)
 	p, _ := strconv.Atoi(c.Query("p"))

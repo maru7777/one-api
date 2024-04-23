@@ -2,7 +2,8 @@ package middleware
 
 import (
 	"fmt"
-	"github.com/Laisky/one-api/common/logger"
+
+	"github.com/Laisky/one-api/common/ctxkey"
 	"github.com/gin-gonic/gin"
 )
 
@@ -10,7 +11,7 @@ func SetUpLogger(server *gin.Engine) {
 	server.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
 		var requestID string
 		if param.Keys != nil {
-			requestID = param.Keys[logger.RequestIdKey].(string)
+			requestID = param.Keys[ctxkey.RequestId].(string)
 		}
 		return fmt.Sprintf("[GIN] %s | %s | %3d | %13v | %15s | %7s %s\n",
 			param.TimeStamp.Format("2006/01/02 - 15:04:05"),
