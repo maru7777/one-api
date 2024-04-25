@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Laisky/errors/v2"
+	"github.com/Laisky/one-api/common/ctxkey"
 	"github.com/Laisky/one-api/relay/client"
 	"github.com/Laisky/one-api/relay/meta"
 	"github.com/gin-gonic/gin"
@@ -30,7 +31,7 @@ func DoRequestHelper(a Adaptor, c *gin.Context, meta *meta.Meta, requestBody io.
 		return nil, errors.Wrap(err, "new request failed")
 	}
 
-	req.Header.Add("Content-Type", "application/json")
+	req.Header.Set("Content-Type", c.GetString(ctxkey.ContentType))
 
 	err = a.SetupRequestHeader(c, req, meta)
 	if err != nil {

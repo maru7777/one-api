@@ -2,9 +2,7 @@ package common
 
 import (
 	"bytes"
-	"encoding/json"
 	"io"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
@@ -31,18 +29,17 @@ func UnmarshalBodyReusable(c *gin.Context, v any) error {
 	if err != nil {
 		return errors.Wrap(err, "get request body failed")
 	}
-	contentType := c.Request.Header.Get("Content-Type")
-	if strings.HasPrefix(contentType, "application/json") {
-		if err = json.Unmarshal(requestBody, &v); err != nil {
-			return errors.Wrap(err, "unmarshal request body failed")
-		}
-	} else {
-		// skip for now
-		// TODO: someday non json request have variant model, we will need to implementation this
-	}
 
 	// Reset request body
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody))
+	defer func() {
+		c.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody))
+	}()
+
+	if err = c.Bind(v); err != nil {
+		return errors.Wrap(err, "bind request body failed")
+	}
+
 	return nil
 }
 
