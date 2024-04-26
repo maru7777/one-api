@@ -8,3 +8,4 @@ docker image: `ppcelery/one-api:latest`
 - support gpt-vision
 - support update user's remained quota
 - support aws claude
+- support openai images edits
