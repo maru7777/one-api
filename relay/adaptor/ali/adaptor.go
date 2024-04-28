@@ -6,21 +6,21 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/Laisky/one-api/common/ctxkey"
-	"github.com/Laisky/one-api/relay/adaptor"
-	"github.com/Laisky/one-api/relay/meta"
-	"github.com/Laisky/one-api/relay/model"
-	"github.com/Laisky/one-api/relay/relaymode"
+	"github.com/songquanpeng/one-api/relay/adaptor"
+	"github.com/songquanpeng/one-api/relay/meta"
+	"github.com/songquanpeng/one-api/relay/model"
+	"github.com/songquanpeng/one-api/relay/relaymode"
 	"github.com/gin-gonic/gin"
 )
 
 // https://help.aliyun.com/zh/dashscope/developer-reference/api-details
 
 type Adaptor struct {
+	meta *meta.Meta
 }
 
 func (a *Adaptor) Init(meta *meta.Meta) {
-
+	a.meta = meta
 }
 
 func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
@@ -48,8 +48,8 @@ func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Request, meta *me
 	if meta.Mode == relaymode.ImagesGenerations {
 		req.Header.Set("X-DashScope-Async", "enable")
 	}
-	if c.GetString(ctxkey.ConfigPlugin) != "" {
-		req.Header.Set("X-DashScope-Plugin", c.GetString(ctxkey.ConfigPlugin))
+	if a.meta.Config.Plugin != "" {
+		req.Header.Set("X-DashScope-Plugin", a.meta.Config.Plugin)
 	}
 	return nil
 }

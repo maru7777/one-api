@@ -1,7 +1,7 @@
 package model
 
 import (
-	"github.com/Laisky/one-api/common/helper"
+	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/pkg/errors"
 )
 

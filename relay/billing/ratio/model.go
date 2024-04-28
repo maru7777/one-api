@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/Laisky/one-api/common/logger"
+	"github.com/songquanpeng/one-api/common/logger"
 )
 
 const (
@@ -173,6 +173,10 @@ var ModelRatio = map[string]float64{
 	// https://platform.deepseek.com/api-docs/pricing/
 	"deepseek-chat":  1.0 / 1000 * RMB,
 	"deepseek-coder": 1.0 / 1000 * RMB,
+	// https://www.deepl.com/pro?cta=header-prices
+	"deepl-zh": 25.0 / 1000 * USD,
+	"deepl-en": 25.0 / 1000 * USD,
+	"deepl-ja": 25.0 / 1000 * USD,
 }
 
 var CompletionRatio = map[string]float64{}
@@ -226,6 +230,9 @@ func UpdateModelRatioByJSONString(jsonStr string) error {
 
 func GetModelRatio(name string) float64 {
 	if strings.HasPrefix(name, "qwen-") && strings.HasSuffix(name, "-internet") {
+		name = strings.TrimSuffix(name, "-internet")
+	}
+	if strings.HasPrefix(name, "command-") && strings.HasSuffix(name, "-internet") {
 		name = strings.TrimSuffix(name, "-internet")
 	}
 	ratio, ok := ModelRatio[name]

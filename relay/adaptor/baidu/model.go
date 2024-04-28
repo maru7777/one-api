@@ -3,7 +3,7 @@ package baidu
 import (
 	"time"
 
-	"github.com/Laisky/one-api/relay/model"
+	"github.com/songquanpeng/one-api/relay/model"
 )
 
 type ChatResponse struct {

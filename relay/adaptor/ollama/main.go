@@ -5,17 +5,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/Laisky/one-api/common/helper"
-	"github.com/Laisky/one-api/common/random"
 	"io"
 	"net/http"
 	"strings"
 
-	"github.com/Laisky/one-api/common"
-	"github.com/Laisky/one-api/common/logger"
-	"github.com/Laisky/one-api/relay/adaptor/openai"
-	"github.com/Laisky/one-api/relay/constant"
-	"github.com/Laisky/one-api/relay/model"
+	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/helper"
+	"github.com/songquanpeng/one-api/common/image"
+	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/common/random"
+	"github.com/songquanpeng/one-api/relay/adaptor/openai"
+	"github.com/songquanpeng/one-api/relay/constant"
+	"github.com/songquanpeng/one-api/relay/model"
 	"github.com/gin-gonic/gin"
 )
 
@@ -32,9 +33,22 @@ func ConvertRequest(request model.GeneralOpenAIRequest) *ChatRequest {
 		Stream: request.Stream,
 	}
 	for _, message := range request.Messages {
+		openaiContent := message.ParseContent()
+		var imageUrls []string
+		var contentText string
+		for _, part := range openaiContent {
+			switch part.Type {
+			case model.ContentTypeText:
+				contentText = part.Text
+			case model.ContentTypeImageURL:
+				_, data, _ := image.GetImageFromUrl(part.ImageURL.Url)
+				imageUrls = append(imageUrls, data)
+			}
+		}
 		ollamaRequest.Messages = append(ollamaRequest.Messages, Message{
 			Role:    message.Role,
-			Content: message.StringContent(),
+			Content: contentText,
+			Images:  imageUrls,
 		})
 	}
 	return &ollamaRequest

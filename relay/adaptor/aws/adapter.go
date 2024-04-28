@@ -4,11 +4,14 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/Laisky/one-api/common/ctxkey"
-	"github.com/Laisky/one-api/relay/adaptor"
-	"github.com/Laisky/one-api/relay/adaptor/anthropic"
-	"github.com/Laisky/one-api/relay/meta"
-	"github.com/Laisky/one-api/relay/model"
+	"github.com/songquanpeng/one-api/common/ctxkey"
+	"github.com/songquanpeng/one-api/relay/adaptor"
+	"github.com/songquanpeng/one-api/relay/adaptor/anthropic"
+	"github.com/songquanpeng/one-api/relay/meta"
+	"github.com/songquanpeng/one-api/relay/model"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 )
@@ -16,10 +19,16 @@ import (
 var _ adaptor.Adaptor = new(Adaptor)
 
 type Adaptor struct {
+	meta      *meta.Meta
+	awsClient *bedrockruntime.Client
 }
 
 func (a *Adaptor) Init(meta *meta.Meta) {
-
+	a.meta = meta
+	a.awsClient = bedrockruntime.New(bedrockruntime.Options{
+		Region:      meta.Config.Region,
+		Credentials: aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(meta.Config.AK, meta.Config.SK, "")),
+	})
 }
 
 func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
@@ -54,9 +63,9 @@ func (a *Adaptor) DoRequest(c *gin.Context, meta *meta.Meta, requestBody io.Read
 
 func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Meta) (usage *model.Usage, err *model.ErrorWithStatusCode) {
 	if meta.IsStream {
-		err, usage = StreamHandler(c, resp)
+		err, usage = StreamHandler(c, a.awsClient)
 	} else {
-		err, usage = Handler(c, resp, meta.PromptTokens, meta.ActualModelName)
+		err, usage = Handler(c, a.awsClient, meta.ActualModelName)
 	}
 	return
 }
@@ -65,7 +74,6 @@ func (a *Adaptor) GetModelList() (models []string) {
 	for n := range awsModelIDMap {
 		models = append(models, n)
 	}
-
 	return
 }
 

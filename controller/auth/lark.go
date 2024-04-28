@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/Laisky/errors/v2"
-	"github.com/Laisky/one-api/common/config"
-	"github.com/Laisky/one-api/common/logger"
-	"github.com/Laisky/one-api/controller"
-	"github.com/Laisky/one-api/model"
+	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/controller"
+	"github.com/songquanpeng/one-api/model"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )

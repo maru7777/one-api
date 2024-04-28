@@ -3,8 +3,8 @@ package router
 import (
 	"embed"
 	"fmt"
-	"github.com/Laisky/one-api/common/config"
-	"github.com/Laisky/one-api/common/logger"
+	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"os"

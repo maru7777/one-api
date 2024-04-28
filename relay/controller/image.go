@@ -10,15 +10,15 @@ import (
 	"strings"
 
 	"github.com/Laisky/errors/v2"
-	"github.com/Laisky/one-api/common/ctxkey"
-	"github.com/Laisky/one-api/common/logger"
-	"github.com/Laisky/one-api/model"
-	"github.com/Laisky/one-api/relay"
-	"github.com/Laisky/one-api/relay/adaptor/openai"
-	billingratio "github.com/Laisky/one-api/relay/billing/ratio"
-	"github.com/Laisky/one-api/relay/channeltype"
-	"github.com/Laisky/one-api/relay/meta"
-	relaymodel "github.com/Laisky/one-api/relay/model"
+	"github.com/songquanpeng/one-api/common/ctxkey"
+	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/model"
+	"github.com/songquanpeng/one-api/relay"
+	"github.com/songquanpeng/one-api/relay/adaptor/openai"
+	billingratio "github.com/songquanpeng/one-api/relay/billing/ratio"
+	"github.com/songquanpeng/one-api/relay/channeltype"
+	"github.com/songquanpeng/one-api/relay/meta"
+	relaymodel "github.com/songquanpeng/one-api/relay/model"
 	"github.com/gin-gonic/gin"
 )
 
@@ -73,6 +73,7 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	if adaptor == nil {
 		return openai.ErrorWrapper(fmt.Errorf("invalid api type: %d", meta.APIType), "invalid_api_type", http.StatusBadRequest)
 	}
+	adaptor.Init(meta)
 
 	switch meta.ChannelType {
 	case channeltype.Ali:

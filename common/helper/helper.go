@@ -10,7 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Laisky/one-api/common/random"
+	"github.com/songquanpeng/one-api/common/random"
+	"github.com/gin-gonic/gin"
 )
 
 func OpenBrowser(url string) {
@@ -104,6 +105,11 @@ func IntMax(a int, b int) int {
 
 func GenRequestID() string {
 	return GetTimeString() + random.GetRandomNumberString(8)
+}
+
+func GetResponseID(c *gin.Context) string {
+	logID := c.GetString(RequestIdKey)
+	return fmt.Sprintf("chatcmpl-%s", logID)
 }
 
 func Max(a int, b int) int {

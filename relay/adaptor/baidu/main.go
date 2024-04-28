@@ -11,12 +11,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Laisky/one-api/common"
-	"github.com/Laisky/one-api/common/logger"
-	"github.com/Laisky/one-api/relay/adaptor/openai"
-	"github.com/Laisky/one-api/relay/client"
-	"github.com/Laisky/one-api/relay/constant"
-	"github.com/Laisky/one-api/relay/model"
+	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/relay/adaptor/openai"
+	"github.com/songquanpeng/one-api/relay/client"
+	"github.com/songquanpeng/one-api/relay/constant"
+	"github.com/songquanpeng/one-api/relay/model"
 	"github.com/gin-gonic/gin"
 )
 

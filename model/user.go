@@ -5,11 +5,11 @@ import (
 	"strings"
 
 	"github.com/Laisky/errors/v2"
-	"github.com/Laisky/one-api/common"
-	"github.com/Laisky/one-api/common/blacklist"
-	"github.com/Laisky/one-api/common/config"
-	"github.com/Laisky/one-api/common/logger"
-	"github.com/Laisky/one-api/common/random"
+	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/blacklist"
+	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/common/random"
 	"gorm.io/gorm"
 )
 

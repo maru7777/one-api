@@ -6,18 +6,18 @@ import (
 	"net/http"
 
 	"github.com/Laisky/errors/v2"
-	"github.com/Laisky/one-api/common/ctxkey"
-	"github.com/Laisky/one-api/relay/adaptor"
-	"github.com/Laisky/one-api/relay/meta"
-	"github.com/Laisky/one-api/relay/model"
+	"github.com/songquanpeng/one-api/relay/adaptor"
+	"github.com/songquanpeng/one-api/relay/meta"
+	"github.com/songquanpeng/one-api/relay/model"
 	"github.com/gin-gonic/gin"
 )
 
 type Adaptor struct {
+	meta *meta.Meta
 }
 
 func (a *Adaptor) Init(meta *meta.Meta) {
-
+	a.meta = meta
 }
 
 func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
@@ -35,7 +35,7 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 		return nil, errors.New("request is nil")
 	}
 	aiProxyLibraryRequest := ConvertRequest(*request)
-	aiProxyLibraryRequest.LibraryId = c.GetString(ctxkey.ConfigLibraryID)
+	aiProxyLibraryRequest.LibraryId = a.meta.Config.LibraryID
 	return aiProxyLibraryRequest, nil
 }
 

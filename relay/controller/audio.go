@@ -11,24 +11,25 @@ import (
 	"strings"
 
 	"github.com/Laisky/errors/v2"
-	"github.com/Laisky/one-api/common"
-	"github.com/Laisky/one-api/common/config"
-	"github.com/Laisky/one-api/common/ctxkey"
-	"github.com/Laisky/one-api/common/logger"
-	"github.com/Laisky/one-api/model"
-	"github.com/Laisky/one-api/relay/adaptor/azure"
-	"github.com/Laisky/one-api/relay/adaptor/openai"
-	"github.com/Laisky/one-api/relay/billing"
-	billingratio "github.com/Laisky/one-api/relay/billing/ratio"
-	"github.com/Laisky/one-api/relay/channeltype"
-	"github.com/Laisky/one-api/relay/client"
-	relaymodel "github.com/Laisky/one-api/relay/model"
-	"github.com/Laisky/one-api/relay/relaymode"
+	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/ctxkey"
+	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/model"
+	"github.com/songquanpeng/one-api/relay/adaptor/openai"
+	"github.com/songquanpeng/one-api/relay/billing"
+	billingratio "github.com/songquanpeng/one-api/relay/billing/ratio"
+	"github.com/songquanpeng/one-api/relay/channeltype"
+	"github.com/songquanpeng/one-api/relay/client"
+	"github.com/songquanpeng/one-api/relay/meta"
+	relaymodel "github.com/songquanpeng/one-api/relay/model"
+	"github.com/songquanpeng/one-api/relay/relaymode"
 	"github.com/gin-gonic/gin"
 )
 
 func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatusCode {
 	ctx := c.Request.Context()
+	meta := meta.GetByContext(c)
 	audioModel := "whisper-1"
 
 	tokenId := c.GetInt(ctxkey.TokenId)
@@ -131,7 +132,7 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 
 	fullRequestURL := openai.GetFullRequestURL(baseURL, requestURL, channelType)
 	if channelType == channeltype.Azure {
-		apiVersion := azure.GetAPIVersion(c)
+		apiVersion := meta.Config.APIVersion
 		if relayMode == relaymode.AudioTranscription {
 			// https://learn.microsoft.com/en-us/azure/ai-services/openai/whisper-quickstart?tabs=command-line#rest-api
 			fullRequestURL = fmt.Sprintf("%s/openai/deployments/%s/audio/transcriptions?api-version=%s", baseURL, audioModel, apiVersion)

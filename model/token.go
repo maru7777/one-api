@@ -4,11 +4,11 @@ import (
 	"fmt"
 
 	"github.com/Laisky/errors/v2"
-	"github.com/Laisky/one-api/common"
-	"github.com/Laisky/one-api/common/config"
-	"github.com/Laisky/one-api/common/helper"
-	"github.com/Laisky/one-api/common/logger"
-	"github.com/Laisky/one-api/common/message"
+	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/helper"
+	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/common/message"
 	"gorm.io/gorm"
 )
 

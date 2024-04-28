@@ -6,12 +6,12 @@ import (
 	"net/http"
 
 	"github.com/Laisky/errors/v2"
-	"github.com/Laisky/one-api/common/config"
-	"github.com/Laisky/one-api/common/helper"
-	channelhelper "github.com/Laisky/one-api/relay/adaptor"
-	"github.com/Laisky/one-api/relay/adaptor/openai"
-	"github.com/Laisky/one-api/relay/meta"
-	"github.com/Laisky/one-api/relay/model"
+	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/helper"
+	channelhelper "github.com/songquanpeng/one-api/relay/adaptor"
+	"github.com/songquanpeng/one-api/relay/adaptor/openai"
+	"github.com/songquanpeng/one-api/relay/meta"
+	"github.com/songquanpeng/one-api/relay/model"
 	"github.com/gin-gonic/gin"
 )
 
@@ -23,10 +23,10 @@ func (a *Adaptor) Init(meta *meta.Meta) {
 }
 
 func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
-	version := helper.AssignOrDefault(meta.APIVersion, config.GeminiVersion)
+	version := helper.AssignOrDefault(meta.Config.APIVersion, config.GeminiVersion)
 	action := "generateContent"
 	if meta.IsStream {
-		action = "streamGenerateContent"
+		action = "streamGenerateContent?alt=sse"
 	}
 	return fmt.Sprintf("%s/%s/models/%s:%s?key=%s", meta.BaseURL, version, meta.ActualModelName, action, meta.APIKey), nil
 }

@@ -1,22 +1,24 @@
 package relay
 
 import (
-	"github.com/Laisky/one-api/relay/adaptor"
-	"github.com/Laisky/one-api/relay/adaptor/aiproxy"
-	"github.com/Laisky/one-api/relay/adaptor/ali"
-	"github.com/Laisky/one-api/relay/adaptor/anthropic"
-	"github.com/Laisky/one-api/relay/adaptor/aws"
-	"github.com/Laisky/one-api/relay/adaptor/baidu"
-	"github.com/Laisky/one-api/relay/adaptor/cohere"
-	"github.com/Laisky/one-api/relay/adaptor/coze"
-	"github.com/Laisky/one-api/relay/adaptor/gemini"
-	"github.com/Laisky/one-api/relay/adaptor/ollama"
-	"github.com/Laisky/one-api/relay/adaptor/openai"
-	"github.com/Laisky/one-api/relay/adaptor/palm"
-	"github.com/Laisky/one-api/relay/adaptor/tencent"
-	"github.com/Laisky/one-api/relay/adaptor/xunfei"
-	"github.com/Laisky/one-api/relay/adaptor/zhipu"
-	"github.com/Laisky/one-api/relay/apitype"
+	"github.com/songquanpeng/one-api/relay/adaptor"
+	"github.com/songquanpeng/one-api/relay/adaptor/aiproxy"
+	"github.com/songquanpeng/one-api/relay/adaptor/ali"
+	"github.com/songquanpeng/one-api/relay/adaptor/anthropic"
+	"github.com/songquanpeng/one-api/relay/adaptor/aws"
+	"github.com/songquanpeng/one-api/relay/adaptor/baidu"
+	"github.com/songquanpeng/one-api/relay/adaptor/cloudflare"
+	"github.com/songquanpeng/one-api/relay/adaptor/cohere"
+	"github.com/songquanpeng/one-api/relay/adaptor/coze"
+	"github.com/songquanpeng/one-api/relay/adaptor/deepl"
+	"github.com/songquanpeng/one-api/relay/adaptor/gemini"
+	"github.com/songquanpeng/one-api/relay/adaptor/ollama"
+	"github.com/songquanpeng/one-api/relay/adaptor/openai"
+	"github.com/songquanpeng/one-api/relay/adaptor/palm"
+	"github.com/songquanpeng/one-api/relay/adaptor/tencent"
+	"github.com/songquanpeng/one-api/relay/adaptor/xunfei"
+	"github.com/songquanpeng/one-api/relay/adaptor/zhipu"
+	"github.com/songquanpeng/one-api/relay/apitype"
 )
 
 func GetAdaptor(apiType int) adaptor.Adaptor {
@@ -49,6 +51,10 @@ func GetAdaptor(apiType int) adaptor.Adaptor {
 		return &coze.Adaptor{}
 	case apitype.Cohere:
 		return &cohere.Adaptor{}
+	case apitype.Cloudflare:
+		return &cloudflare.Adaptor{}
+	case apitype.DeepL:
+		return &deepl.Adaptor{}
 	}
 
 	return nil

@@ -10,9 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Laisky/one-api/common/config"
-	"github.com/Laisky/one-api/common/ctxkey"
-	"github.com/Laisky/one-api/common/helper"
+	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/gin-gonic/gin"
 )
 
@@ -88,7 +87,7 @@ func logHelper(ctx context.Context, level string, msg string) {
 	if level == loggerINFO {
 		writer = gin.DefaultWriter
 	}
-	id := ctx.Value(ctxkey.RequestId)
+	id := ctx.Value(helper.RequestIdKey)
 	if id == nil {
 		id = helper.GenRequestID()
 	}

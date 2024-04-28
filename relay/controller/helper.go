@@ -4,20 +4,21 @@ import (
 	"context"
 	"fmt"
 	"github.com/Laisky/errors/v2"
-	"github.com/Laisky/one-api/common"
-	"github.com/Laisky/one-api/common/config"
-	"github.com/Laisky/one-api/common/logger"
-	"github.com/Laisky/one-api/model"
-	"github.com/Laisky/one-api/relay/adaptor/openai"
-	billingratio "github.com/Laisky/one-api/relay/billing/ratio"
-	"github.com/Laisky/one-api/relay/channeltype"
-	"github.com/Laisky/one-api/relay/controller/validator"
-	"github.com/Laisky/one-api/relay/meta"
-	relaymodel "github.com/Laisky/one-api/relay/model"
-	"github.com/Laisky/one-api/relay/relaymode"
+	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/model"
+	"github.com/songquanpeng/one-api/relay/adaptor/openai"
+	billingratio "github.com/songquanpeng/one-api/relay/billing/ratio"
+	"github.com/songquanpeng/one-api/relay/channeltype"
+	"github.com/songquanpeng/one-api/relay/controller/validator"
+	"github.com/songquanpeng/one-api/relay/meta"
+	relaymodel "github.com/songquanpeng/one-api/relay/model"
+	"github.com/songquanpeng/one-api/relay/relaymode"
 	"github.com/gin-gonic/gin"
 	"math"
 	"net/http"
+	"strings"
 )
 
 func getAndValidateTextRequest(c *gin.Context, relayMode int) (*relaymodel.GeneralOpenAIRequest, error) {
@@ -124,9 +125,9 @@ func getPromptTokens(textRequest *relaymodel.GeneralOpenAIRequest, relayMode int
 }
 
 func getPreConsumedQuota(textRequest *relaymodel.GeneralOpenAIRequest, promptTokens int, ratio float64) int64 {
-	preConsumedTokens := config.PreConsumedQuota
+	preConsumedTokens := config.PreConsumedQuota + int64(promptTokens)
 	if textRequest.MaxTokens != 0 {
-		preConsumedTokens = int64(promptTokens) + int64(textRequest.MaxTokens)
+		preConsumedTokens += int64(textRequest.MaxTokens)
 	}
 	return int64(float64(preConsumedTokens) * ratio)
 }
@@ -205,4 +206,21 @@ func getMappedModelName(modelName string, mapping map[string]string) (string, bo
 		return mappedModelName, true
 	}
 	return modelName, false
+}
+
+func isErrorHappened(meta *meta.Meta, resp *http.Response) bool {
+	if resp == nil {
+		return true
+	}
+	if resp.StatusCode != http.StatusOK {
+		return true
+	}
+	if meta.ChannelType == channeltype.DeepL {
+		// skip stream check for deepl
+		return false
+	}
+	if meta.IsStream && strings.HasPrefix(resp.Header.Get("Content-Type"), "application/json") {
+		return true
+	}
+	return false
 }

@@ -6,9 +6,9 @@ import (
 	"net/http"
 
 	"github.com/Laisky/errors/v2"
-	"github.com/Laisky/one-api/relay/adaptor"
-	"github.com/Laisky/one-api/relay/meta"
-	"github.com/Laisky/one-api/relay/model"
+	"github.com/songquanpeng/one-api/relay/adaptor"
+	"github.com/songquanpeng/one-api/relay/meta"
+	"github.com/songquanpeng/one-api/relay/model"
 	"github.com/gin-gonic/gin"
 )
 

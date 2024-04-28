@@ -7,11 +7,11 @@ import (
 	"strings"
 
 	gutils "github.com/Laisky/go-utils/v4"
-	"github.com/Laisky/one-api/common/ctxkey"
-	"github.com/Laisky/one-api/common/logger"
-	"github.com/Laisky/one-api/model"
-	"github.com/Laisky/one-api/relay/billing/ratio"
-	"github.com/Laisky/one-api/relay/channeltype"
+	"github.com/songquanpeng/one-api/common/ctxkey"
+	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/model"
+	"github.com/songquanpeng/one-api/relay/billing/ratio"
+	"github.com/songquanpeng/one-api/relay/channeltype"
 	"github.com/gin-gonic/gin"
 )
 
@@ -89,21 +89,29 @@ func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, mode
 	c.Set(ctxkey.OriginalModel, modelName) // for retry
 	c.Request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.Key))
 	c.Set(ctxkey.BaseURL, channel.GetBaseURL())
+	cfg, _ := channel.LoadConfig()
 	// this is for backward compatibility
 	switch channel.Type {
 	case channeltype.Azure:
-		c.Set(ctxkey.ConfigAPIVersion, channel.Other)
+		if cfg.APIVersion == "" {
+			cfg.APIVersion = channel.Other
+		}
 	case channeltype.Xunfei:
-		c.Set(ctxkey.ConfigAPIVersion, channel.Other)
+		if cfg.APIVersion == "" {
+			cfg.APIVersion = channel.Other
+		}
 	case channeltype.Gemini:
-		c.Set(ctxkey.ConfigAPIVersion, channel.Other)
+		if cfg.APIVersion == "" {
+			cfg.APIVersion = channel.Other
+		}
 	case channeltype.AIProxyLibrary:
-		c.Set(ctxkey.ConfigLibraryID, channel.Other)
+		if cfg.LibraryID == "" {
+			cfg.LibraryID = channel.Other
+		}
 	case channeltype.Ali:
-		c.Set(ctxkey.ConfigPlugin, channel.Other)
+		if cfg.Plugin == "" {
+			cfg.Plugin = channel.Other
+		}
 	}
-	cfg, _ := channel.LoadConfig()
-	for k, v := range cfg {
-		c.Set(ctxkey.ConfigPrefix+k, v)
-	}
+	c.Set(ctxkey.Config, cfg)
 }

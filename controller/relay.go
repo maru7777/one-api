@@ -7,17 +7,17 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/Laisky/one-api/common"
-	"github.com/Laisky/one-api/common/config"
-	"github.com/Laisky/one-api/common/ctxkey"
-	"github.com/Laisky/one-api/common/helper"
-	"github.com/Laisky/one-api/common/logger"
-	"github.com/Laisky/one-api/middleware"
-	dbmodel "github.com/Laisky/one-api/model"
-	"github.com/Laisky/one-api/monitor"
-	"github.com/Laisky/one-api/relay/controller"
-	"github.com/Laisky/one-api/relay/model"
-	"github.com/Laisky/one-api/relay/relaymode"
+	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/ctxkey"
+	"github.com/songquanpeng/one-api/common/helper"
+	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/middleware"
+	dbmodel "github.com/songquanpeng/one-api/model"
+	"github.com/songquanpeng/one-api/monitor"
+	"github.com/songquanpeng/one-api/relay/controller"
+	"github.com/songquanpeng/one-api/relay/model"
+	"github.com/songquanpeng/one-api/relay/relaymode"
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 )
@@ -55,9 +55,9 @@ func Relay(c *gin.Context) {
 	channelName := c.GetString(ctxkey.ChannelName)
 	group := c.GetString(ctxkey.Group)
 	originalModel := c.GetString(ctxkey.OriginalModel)
-	// bizErr is shared, should not run this function in goroutine to avoid race
-	processChannelRelayError(ctx, channelId, channelName, bizErr)
-	requestId := c.GetString(ctxkey.RequestId)
+	// BUG: bizErr is shared, should not run this function in goroutine to avoid race
+	go processChannelRelayError(ctx, channelId, channelName, bizErr)
+	requestId := c.GetString(helper.RequestIdKey)
 	retryTimes := config.RetryTimes
 	if err := shouldRetry(c, bizErr.StatusCode); err != nil {
 		logger.Errorf(ctx, "relay error happen, won't retry since of %v", err.Error())

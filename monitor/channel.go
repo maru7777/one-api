@@ -2,10 +2,10 @@ package monitor
 
 import (
 	"fmt"
-	"github.com/Laisky/one-api/common/config"
-	"github.com/Laisky/one-api/common/logger"
-	"github.com/Laisky/one-api/common/message"
-	"github.com/Laisky/one-api/model"
+	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/common/message"
+	"github.com/songquanpeng/one-api/model"
 )
 
 func notifyRootUser(subject string, content string) {

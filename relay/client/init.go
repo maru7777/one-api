@@ -6,7 +6,7 @@ import (
 	"time"
 
 	gutils "github.com/Laisky/go-utils/v4"
-	"github.com/Laisky/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/config"
 )
 
 var HTTPClient *http.Client

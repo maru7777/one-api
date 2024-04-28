@@ -9,12 +9,16 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Laisky/one-api/common"
-	"github.com/Laisky/one-api/common/helper"
-	"github.com/Laisky/one-api/common/logger"
-	"github.com/Laisky/one-api/relay/adaptor/openai"
-	"github.com/Laisky/one-api/relay/model"
+	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/helper"
+	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/relay/adaptor/openai"
+	"github.com/songquanpeng/one-api/relay/model"
 	"github.com/gin-gonic/gin"
+)
+
+var (
+	WebSearchConnector = Connector{ID: "web-search"}
 )
 
 func stopReasonCohere2OpenAI(reason *string) string {
@@ -44,6 +48,10 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *Request {
 	}
 	if cohereRequest.Model == "" {
 		cohereRequest.Model = "command-r"
+	}
+	if strings.HasSuffix(cohereRequest.Model, "-internet") {
+		cohereRequest.Model = strings.TrimSuffix(cohereRequest.Model, "-internet")
+		cohereRequest.Connectors = append(cohereRequest.Connectors, WebSearchConnector)
 	}
 	for _, message := range textRequest.Messages {
 		if message.Role == "user" {

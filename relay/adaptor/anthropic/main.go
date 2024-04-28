@@ -8,12 +8,12 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Laisky/one-api/common"
-	"github.com/Laisky/one-api/common/helper"
-	"github.com/Laisky/one-api/common/image"
-	"github.com/Laisky/one-api/common/logger"
-	"github.com/Laisky/one-api/relay/adaptor/openai"
-	"github.com/Laisky/one-api/relay/model"
+	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/helper"
+	"github.com/songquanpeng/one-api/common/image"
+	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/relay/adaptor/openai"
+	"github.com/songquanpeng/one-api/relay/model"
 	"github.com/gin-gonic/gin"
 )
 
@@ -177,10 +177,10 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 			if len(data) < 6 {
 				continue
 			}
-			if !strings.HasPrefix(data, "data: ") {
+			if !strings.HasPrefix(data, "data:") {
 				continue
 			}
-			data = strings.TrimPrefix(data, "data: ")
+			data = strings.TrimPrefix(data, "data:")
 			dataChan <- data
 		}
 
@@ -194,7 +194,7 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 		select {
 		case data := <-dataChan:
 			// some implementations may add \r at the end of data
-			data = strings.TrimSuffix(data, "\r")
+			data = strings.TrimSpace(data)
 			var claudeResponse StreamResponse
 			err := json.Unmarshal([]byte(data), &claudeResponse)
 			if err != nil {

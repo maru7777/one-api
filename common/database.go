@@ -1,7 +1,7 @@
 package common
 
 import (
-	"github.com/Laisky/one-api/common/env"
+	"github.com/songquanpeng/one-api/common/env"
 )
 
 var UsingSQLite = false

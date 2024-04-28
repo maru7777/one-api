@@ -5,20 +5,19 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/Laisky/errors/v2"
-	"github.com/Laisky/one-api/common/ctxkey"
-	"github.com/Laisky/one-api/common/logger"
-	"github.com/Laisky/one-api/model"
-	"github.com/Laisky/one-api/relay"
-	"github.com/Laisky/one-api/relay/adaptor/openai"
-	"github.com/Laisky/one-api/relay/apitype"
-	"github.com/Laisky/one-api/relay/billing"
-	billingratio "github.com/Laisky/one-api/relay/billing/ratio"
-	"github.com/Laisky/one-api/relay/channeltype"
-	"github.com/Laisky/one-api/relay/meta"
-	relaymodel "github.com/Laisky/one-api/relay/model"
+	"github.com/songquanpeng/one-api/common/ctxkey"
+	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/model"
+	"github.com/songquanpeng/one-api/relay"
+	"github.com/songquanpeng/one-api/relay/adaptor/openai"
+	"github.com/songquanpeng/one-api/relay/apitype"
+	"github.com/songquanpeng/one-api/relay/billing"
+	billingratio "github.com/songquanpeng/one-api/relay/billing/ratio"
+	"github.com/songquanpeng/one-api/relay/channeltype"
+	"github.com/songquanpeng/one-api/relay/meta"
+	relaymodel "github.com/songquanpeng/one-api/relay/model"
 	"github.com/gin-gonic/gin"
 )
 
@@ -57,6 +56,7 @@ func RelayTextHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 	if adaptor == nil {
 		return openai.ErrorWrapper(errors.Errorf("invalid api type: %d", meta.APIType), "invalid_api_type", http.StatusBadRequest)
 	}
+	adaptor.Init(meta)
 
 	// get request body
 	var requestBody io.Reader
@@ -95,12 +95,9 @@ func RelayTextHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 		logger.Errorf(ctx, "DoRequest failed: %s", err.Error())
 		return openai.ErrorWrapper(err, "do_request_failed", http.StatusInternalServerError)
 	}
-	if resp != nil {
-		errorHappened := (resp.StatusCode != http.StatusOK) || (meta.IsStream && strings.HasPrefix(resp.Header.Get("Content-Type"), "application/json"))
-		if errorHappened {
-			billing.ReturnPreConsumedQuota(ctx, preConsumedQuota, meta.TokenId)
-			return RelayErrorHandler(resp)
-		}
+	if isErrorHappened(meta, resp) {
+		billing.ReturnPreConsumedQuota(ctx, preConsumedQuota, meta.TokenId)
+		return RelayErrorHandler(resp)
 	}
 
 	// do response

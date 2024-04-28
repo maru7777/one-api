@@ -7,11 +7,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Laisky/one-api/common"
-	"github.com/Laisky/one-api/common/config"
-	"github.com/Laisky/one-api/common/ctxkey"
-	"github.com/Laisky/one-api/common/random"
-	"github.com/Laisky/one-api/model"
+	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/ctxkey"
+	"github.com/songquanpeng/one-api/common/random"
+	"github.com/songquanpeng/one-api/model"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )

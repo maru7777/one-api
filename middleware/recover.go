@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"fmt"
-	"github.com/Laisky/one-api/common"
-	"github.com/Laisky/one-api/common/logger"
+	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"runtime/debug"
@@ -21,7 +21,7 @@ func RelayPanicRecover() gin.HandlerFunc {
 				logger.Errorf(ctx, fmt.Sprintf("request body: %s", string(body)))
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": gin.H{
-						"message": fmt.Sprintf("Panic detected, error: %v. Please submit an issue with the related log here: https://github.com/Laisky/one-api", err),
+						"message": fmt.Sprintf("Panic detected, error: %v. Please submit an issue with the related log here: https://github.com/songquanpeng/one-api", err),
 						"type":    "one_api_panic",
 					},
 				})

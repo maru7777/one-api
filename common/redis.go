@@ -2,7 +2,7 @@ package common
 
 import (
 	"context"
-	"github.com/Laisky/one-api/common/logger"
+	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/go-redis/redis/v8"
 	"os"
 	"time"

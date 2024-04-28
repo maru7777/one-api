@@ -1,7 +1,7 @@
 package palm
 
 import (
-	"github.com/Laisky/one-api/relay/model"
+	"github.com/songquanpeng/one-api/relay/model"
 )
 
 type ChatMessage struct {

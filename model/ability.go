@@ -2,7 +2,7 @@ package model
 
 import (
 	"context"
-	"github.com/Laisky/one-api/common"
+	"github.com/songquanpeng/one-api/common"
 	"gorm.io/gorm"
 	"sort"
 	"strings"

@@ -3,10 +3,10 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Laisky/one-api/common"
-	"github.com/Laisky/one-api/common/config"
-	"github.com/Laisky/one-api/common/message"
-	"github.com/Laisky/one-api/model"
+	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/message"
+	"github.com/songquanpeng/one-api/model"
 	"net/http"
 	"strings"
 

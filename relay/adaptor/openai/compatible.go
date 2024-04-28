@@ -1,16 +1,16 @@
 package openai
 
 import (
-	"github.com/Laisky/one-api/relay/adaptor/ai360"
-	"github.com/Laisky/one-api/relay/adaptor/baichuan"
-	"github.com/Laisky/one-api/relay/adaptor/deepseek"
-	"github.com/Laisky/one-api/relay/adaptor/groq"
-	"github.com/Laisky/one-api/relay/adaptor/lingyiwanwu"
-	"github.com/Laisky/one-api/relay/adaptor/minimax"
-	"github.com/Laisky/one-api/relay/adaptor/mistral"
-	"github.com/Laisky/one-api/relay/adaptor/moonshot"
-	"github.com/Laisky/one-api/relay/adaptor/stepfun"
-	"github.com/Laisky/one-api/relay/channeltype"
+	"github.com/songquanpeng/one-api/relay/adaptor/ai360"
+	"github.com/songquanpeng/one-api/relay/adaptor/baichuan"
+	"github.com/songquanpeng/one-api/relay/adaptor/deepseek"
+	"github.com/songquanpeng/one-api/relay/adaptor/groq"
+	"github.com/songquanpeng/one-api/relay/adaptor/lingyiwanwu"
+	"github.com/songquanpeng/one-api/relay/adaptor/minimax"
+	"github.com/songquanpeng/one-api/relay/adaptor/mistral"
+	"github.com/songquanpeng/one-api/relay/adaptor/moonshot"
+	"github.com/songquanpeng/one-api/relay/adaptor/stepfun"
+	"github.com/songquanpeng/one-api/relay/channeltype"
 )
 
 var CompatibleChannels = []int{

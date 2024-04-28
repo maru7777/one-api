@@ -1,8 +1,8 @@
 package monitor
 
 import (
-	"github.com/Laisky/one-api/common/config"
-	"github.com/Laisky/one-api/relay/model"
+	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/relay/model"
 	"net/http"
 	"strings"
 )

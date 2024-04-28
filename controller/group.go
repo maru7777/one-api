@@ -1,7 +1,7 @@
 package controller
 
 import (
-	billingratio "github.com/Laisky/one-api/relay/billing/ratio"
+	billingratio "github.com/songquanpeng/one-api/relay/billing/ratio"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )

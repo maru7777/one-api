@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/Laisky/errors/v2"
-	"github.com/Laisky/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/config"
 )
 
 func SendEmail(subject string, receiver string, content string) error {

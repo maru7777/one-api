@@ -4,17 +4,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Laisky/one-api/common"
-	"github.com/Laisky/one-api/common/ctxkey"
-	"github.com/Laisky/one-api/common/helper"
-	"github.com/Laisky/one-api/common/logger"
+	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/helper"
+	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/gin-gonic/gin"
 )
 
 func abortWithMessage(c *gin.Context, statusCode int, message string) {
 	c.JSON(statusCode, gin.H{
 		"error": gin.H{
-			"message": helper.MessageWithRequestId(message, c.GetString(ctxkey.RequestId)),
+			"message": helper.MessageWithRequestId(message, c.GetString(helper.RequestIdKey)),
 			"type":    "one_api_error",
 		},
 	})

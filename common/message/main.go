@@ -2,7 +2,7 @@ package message
 
 import (
 	"github.com/Laisky/errors/v2"
-	"github.com/Laisky/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/config"
 )
 
 const (

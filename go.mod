@@ -1,4 +1,4 @@
-module github.com/Laisky/one-api
+module github.com/songquanpeng/one-api
 
 // +heroku goVersion go1.18
 go 1.21

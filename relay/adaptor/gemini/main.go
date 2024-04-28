@@ -8,15 +8,15 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Laisky/one-api/common"
-	"github.com/Laisky/one-api/common/config"
-	"github.com/Laisky/one-api/common/helper"
-	"github.com/Laisky/one-api/common/image"
-	"github.com/Laisky/one-api/common/logger"
-	"github.com/Laisky/one-api/common/random"
-	"github.com/Laisky/one-api/relay/adaptor/openai"
-	"github.com/Laisky/one-api/relay/constant"
-	"github.com/Laisky/one-api/relay/model"
+	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/helper"
+	"github.com/songquanpeng/one-api/common/image"
+	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/common/random"
+	"github.com/songquanpeng/one-api/relay/adaptor/openai"
+	"github.com/songquanpeng/one-api/relay/constant"
+	"github.com/songquanpeng/one-api/relay/model"
 	"github.com/gin-gonic/gin"
 )
 
@@ -231,8 +231,6 @@ func streamResponseGeminiChat2OpenAI(geminiResponse *ChatResponse) *openai.ChatC
 
 func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusCode, string) {
 	responseText := ""
-	dataChan := make(chan string)
-	stopChan := make(chan bool)
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		if atEOF && len(data) == 0 {
@@ -246,14 +244,16 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 		}
 		return 0, nil, nil
 	})
+	dataChan := make(chan string)
+	stopChan := make(chan bool)
 	go func() {
 		for scanner.Scan() {
 			data := scanner.Text()
 			data = strings.TrimSpace(data)
-			if !strings.HasPrefix(data, "\"text\": \"") {
+			if !strings.HasPrefix(data, "data: ") {
 				continue
 			}
-			data = strings.TrimPrefix(data, "\"text\": \"")
+			data = strings.TrimPrefix(data, "data: ")
 			data = strings.TrimSuffix(data, "\"")
 			dataChan <- data
 		}
@@ -263,23 +263,17 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 	c.Stream(func(w io.Writer) bool {
 		select {
 		case data := <-dataChan:
-			// this is used to prevent annoying \ related format bug
-			data = fmt.Sprintf("{\"content\": \"%s\"}", data)
-			type dummyStruct struct {
-				Content string `json:"content"`
+			var geminiResponse ChatResponse
+			err := json.Unmarshal([]byte(data), &geminiResponse)
+			if err != nil {
+				logger.SysError("error unmarshalling stream response: " + err.Error())
+				return true
 			}
-			var dummy dummyStruct
-			err := json.Unmarshal([]byte(data), &dummy)
-			responseText += dummy.Content
-			var choice openai.ChatCompletionsStreamResponseChoice
-			choice.Delta.Content = dummy.Content
-			response := openai.ChatCompletionsStreamResponse{
-				Id:      fmt.Sprintf("chatcmpl-%s", random.GetUUID()),
-				Object:  "chat.completion.chunk",
-				Created: helper.GetTimestamp(),
-				Model:   "gemini-pro",
-				Choices: []openai.ChatCompletionsStreamResponseChoice{choice},
+			response := streamResponseGeminiChat2OpenAI(&geminiResponse)
+			if response == nil {
+				return true
 			}
+			responseText += response.Choices[0].Delta.StringContent()
 			jsonResponse, err := json.Marshal(response)
 			if err != nil {
 				logger.SysError("error marshalling stream response: " + err.Error())

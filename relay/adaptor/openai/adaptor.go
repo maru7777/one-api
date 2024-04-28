@@ -3,12 +3,12 @@ package openai
 import (
 	"fmt"
 	"github.com/Laisky/errors/v2"
-	"github.com/Laisky/one-api/relay/adaptor"
-	"github.com/Laisky/one-api/relay/adaptor/minimax"
-	"github.com/Laisky/one-api/relay/channeltype"
-	"github.com/Laisky/one-api/relay/meta"
-	"github.com/Laisky/one-api/relay/model"
-	"github.com/Laisky/one-api/relay/relaymode"
+	"github.com/songquanpeng/one-api/relay/adaptor"
+	"github.com/songquanpeng/one-api/relay/adaptor/minimax"
+	"github.com/songquanpeng/one-api/relay/channeltype"
+	"github.com/songquanpeng/one-api/relay/meta"
+	"github.com/songquanpeng/one-api/relay/model"
+	"github.com/songquanpeng/one-api/relay/relaymode"
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
@@ -29,17 +29,17 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 		if meta.Mode == relaymode.ImagesGenerations {
 			// https://learn.microsoft.com/en-us/azure/ai-services/openai/dall-e-quickstart?tabs=dalle3%2Ccommand-line&pivots=rest-api
 			// https://{resource_name}.openai.azure.com/openai/deployments/dall-e-3/images/generations?api-version=2024-03-01-preview
-			fullRequestURL := fmt.Sprintf("%s/openai/deployments/%s/images/generations?api-version=%s", meta.BaseURL, meta.ActualModelName, meta.APIVersion)
+			fullRequestURL := fmt.Sprintf("%s/openai/deployments/%s/images/generations?api-version=%s", meta.BaseURL, meta.ActualModelName, meta.Config.APIVersion)
 			return fullRequestURL, nil
 		}
 
 		// https://learn.microsoft.com/en-us/azure/cognitive-services/openai/chatgpt-quickstart?pivots=rest-api&tabs=command-line#rest-api
 		requestURL := strings.Split(meta.RequestURLPath, "?")[0]
-		requestURL = fmt.Sprintf("%s?api-version=%s", requestURL, meta.APIVersion)
+		requestURL = fmt.Sprintf("%s?api-version=%s", requestURL, meta.Config.APIVersion)
 		task := strings.TrimPrefix(requestURL, "/v1/")
 		model_ := meta.ActualModelName
 		model_ = strings.Replace(model_, ".", "", -1)
-		//https://github.com/Laisky/one-api/issues/1191
+		//https://github.com/songquanpeng/one-api/issues/1191
 		// {your endpoint}/openai/deployments/{your azure_model}/chat/completions?api-version={api_version}
 		requestURL = fmt.Sprintf("/openai/deployments/%s/%s", model_, task)
 		return GetFullRequestURL(meta.BaseURL, requestURL, meta.ChannelType), nil
@@ -58,7 +58,7 @@ func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Request, meta *me
 	}
 	req.Header.Set("Authorization", "Bearer "+meta.APIKey)
 	if meta.ChannelType == channeltype.OpenRouter {
-		req.Header.Set("HTTP-Referer", "https://github.com/Laisky/one-api")
+		req.Header.Set("HTTP-Referer", "https://github.com/songquanpeng/one-api")
 		req.Header.Set("X-Title", "One API")
 	}
 	return nil

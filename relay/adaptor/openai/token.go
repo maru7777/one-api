@@ -3,11 +3,11 @@ package openai
 import (
 	"fmt"
 	"github.com/Laisky/errors/v2"
-	"github.com/Laisky/one-api/common/config"
-	"github.com/Laisky/one-api/common/image"
-	"github.com/Laisky/one-api/common/logger"
-	billingratio "github.com/Laisky/one-api/relay/billing/ratio"
-	"github.com/Laisky/one-api/relay/model"
+	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/image"
+	"github.com/songquanpeng/one-api/common/logger"
+	billingratio "github.com/songquanpeng/one-api/relay/billing/ratio"
+	"github.com/songquanpeng/one-api/relay/model"
 	"github.com/pkoukk/tiktoken-go"
 	"math"
 	"strings"
@@ -252,4 +252,8 @@ func CountTokenInput(input any, model string) int {
 func CountTokenText(text string, model string) int {
 	tokenEncoder := getTokenEncoder(model)
 	return getTokenNum(tokenEncoder, text)
+}
+
+func CountToken(text string) int {
+	return CountTokenInput(text, "gpt-3.5-turbo")
 }

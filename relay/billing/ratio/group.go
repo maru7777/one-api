@@ -2,7 +2,7 @@ package ratio
 
 import (
 	"encoding/json"
-	"github.com/Laisky/one-api/common/logger"
+	"github.com/songquanpeng/one-api/common/logger"
 )
 
 var GroupRatio = map[string]float64{

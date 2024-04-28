@@ -4,8 +4,8 @@ import (
 	"math"
 
 	"github.com/Laisky/errors/v2"
-	"github.com/Laisky/one-api/relay/model"
-	"github.com/Laisky/one-api/relay/relaymode"
+	"github.com/songquanpeng/one-api/relay/model"
+	"github.com/songquanpeng/one-api/relay/relaymode"
 )
 
 func ValidateTextRequest(textRequest *model.GeneralOpenAIRequest, relayMode int) error {
