@@ -2,9 +2,9 @@ package middleware
 
 import (
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/logger"
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"runtime/debug"
 )

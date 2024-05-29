@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Laisky/errors/v2"
+	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/model"
@@ -19,7 +20,6 @@ import (
 	"github.com/songquanpeng/one-api/relay/channeltype"
 	"github.com/songquanpeng/one-api/relay/meta"
 	relaymodel "github.com/songquanpeng/one-api/relay/model"
-	"github.com/gin-gonic/gin"
 )
 
 func isWithinRange(element string, value int) bool {
@@ -57,6 +57,11 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 		return openai.ErrorWrapper(err, "get_image_cost_ratio_failed", http.StatusInternalServerError)
 	}
 
+	imageModel := imageRequest.Model
+	// Convert the original image model
+	imageRequest.Model, _ = getMappedModelName(imageRequest.Model, billingratio.ImageOriginModelName)
+	c.Set("response_format", imageRequest.ResponseFormat)
+
 	var requestBody io.Reader
 	if strings.ToLower(c.GetString(ctxkey.ContentType)) == "application/json" &&
 		isModelMapped || meta.ChannelType == channeltype.Azure { // make Azure channel request body
@@ -92,7 +97,7 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 		requestBody = bytes.NewBuffer(jsonStr)
 	}
 
-	modelRatio := billingratio.GetModelRatio(imageRequest.Model)
+	modelRatio := billingratio.GetModelRatio(imageModel)
 	// groupRatio := billingratio.GetGroupRatio(meta.Group)
 	groupRatio := c.GetFloat64(ctxkey.ChannelRatio) // pre-selected cheapest channel ratio
 

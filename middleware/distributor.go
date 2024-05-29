@@ -7,12 +7,12 @@ import (
 	"strings"
 
 	gutils "github.com/Laisky/go-utils/v4"
+	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/relay/billing/ratio"
 	"github.com/songquanpeng/one-api/relay/channeltype"
-	"github.com/gin-gonic/gin"
 )
 
 type ModelRequest struct {

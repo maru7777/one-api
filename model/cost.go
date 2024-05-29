@@ -1,8 +1,8 @@
 package model
 
 import (
-	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/pkg/errors"
+	"github.com/songquanpeng/one-api/common/helper"
 )
 
 type UserRequestCost struct {

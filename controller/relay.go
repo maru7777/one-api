@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/ctxkey"
@@ -18,8 +20,6 @@ import (
 	"github.com/songquanpeng/one-api/relay/controller"
 	"github.com/songquanpeng/one-api/relay/model"
 	"github.com/songquanpeng/one-api/relay/relaymode"
-	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 )
 
 // https://platform.openai.com/docs/api-reference/chat
@@ -46,6 +46,7 @@ func Relay(c *gin.Context) {
 	ctx := c.Request.Context()
 	relayMode := relaymode.GetByPath(c.Request.URL.Path)
 	channelId := c.GetInt(ctxkey.ChannelId)
+	userId := c.GetInt("id")
 	bizErr := relayHelper(c, relayMode)
 	if bizErr == nil {
 		monitor.Emit(channelId, true)
@@ -56,7 +57,7 @@ func Relay(c *gin.Context) {
 	group := c.GetString(ctxkey.Group)
 	originalModel := c.GetString(ctxkey.OriginalModel)
 	// BUG: bizErr is shared, should not run this function in goroutine to avoid race
-	go processChannelRelayError(ctx, channelId, channelName, bizErr)
+	go processChannelRelayError(ctx, userId, channelId, channelName, bizErr)
 	requestId := c.GetString(helper.RequestIdKey)
 	retryTimes := config.RetryTimes
 	if err := shouldRetry(c, bizErr.StatusCode); err != nil {
@@ -84,7 +85,7 @@ func Relay(c *gin.Context) {
 		lastFailedChannelId = channelId
 		channelName := c.GetString(ctxkey.ChannelName)
 		// bizErr is shared, should not run this function in goroutine to avoid race
-		processChannelRelayError(ctx, channelId, channelName, bizErr)
+		go processChannelRelayError(ctx, userId, channelId, channelName, bizErr)
 	}
 
 	if bizErr != nil {
@@ -114,8 +115,8 @@ func shouldRetry(c *gin.Context, statusCode int) error {
 	return nil
 }
 
-func processChannelRelayError(ctx context.Context, channelId int, channelName string, err *model.ErrorWithStatusCode) {
-	logger.Errorf(ctx, "relay error (channel #%d): %s", channelId, err.Message)
+func processChannelRelayError(ctx context.Context, userId int, channelId int, channelName string, err *model.ErrorWithStatusCode) {
+	logger.Errorf(ctx, "relay error (channel id %d, user id: %d): %s", channelId, userId, err.Message)
 	// https://platform.openai.com/docs/guides/error-codes/api-errors
 	if monitor.ShouldDisableChannel(&err.Error, err.StatusCode) {
 		monitor.DisableChannel(channelId, channelName, err.Message)
