@@ -17,10 +17,15 @@ import (
 )
 
 func ConvertRequest(textRequest model.GeneralOpenAIRequest) *Request {
-	lastMessage := textRequest.Messages[len(textRequest.Messages)-1]
+	var promptBuilder strings.Builder
+	for _, message := range textRequest.Messages {
+		promptBuilder.WriteString(message.StringContent())
+		promptBuilder.WriteString("\n") // 添加换行符来分隔每个消息
+	}
+
 	return &Request{
 		MaxTokens:   textRequest.MaxTokens,
-		Prompt:      lastMessage.StringContent(),
+		Prompt:      promptBuilder.String(),
 		Stream:      textRequest.Stream,
 		Temperature: textRequest.Temperature,
 	}
