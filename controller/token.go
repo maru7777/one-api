@@ -214,17 +214,100 @@ func DeleteToken(c *gin.Context) {
 }
 
 type updateTokenDto struct {
-	model.Token
 	// AddUsedQuota add or subtract used quota from another source
 	AddUsedQuota int `json:"add_used_quota" gorm:"-"`
 	// AddReason is the reason for adding or subtracting used quota
 	AddReason string `json:"add_reason" gorm:"-"`
 }
 
+// ConsumeToken consume token from another source,
+// let one-api to gather billing from different sources.
+func ConsumeToken(c *gin.Context) {
+	tokenPatch := new(updateTokenDto)
+	err := c.ShouldBindJSON(tokenPatch)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	userID := c.GetInt(ctxkey.Id)
+	tokenID := c.GetInt(ctxkey.TokenId)
+	cleanToken, err := model.GetTokenByIds(tokenID, userID)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	if cleanToken.Status != model.TokenStatusEnabled {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "令牌未启用",
+		})
+		return
+	}
+
+	if cleanToken.Status == model.TokenStatusExpired &&
+		cleanToken.ExpiredTime <= helper.GetTimestamp() && cleanToken.ExpiredTime != -1 {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "令牌已过期，无法启用，请先修改令牌过期时间，或者设置为永不过期",
+		})
+		return
+	}
+	if cleanToken.Status == model.TokenStatusExhausted &&
+		cleanToken.RemainQuota <= 0 && !cleanToken.UnlimitedQuota {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "令牌可用额度已用尽，无法启用，请先修改令牌剩余额度，或者设置为无限额度",
+		})
+		return
+	}
+
+	// let admin to add or subtract used quota,
+	// make it possible to aggregate billings from different sources.
+	if cleanToken.RemainQuota < int64(tokenPatch.AddUsedQuota) {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "剩余额度不足",
+		})
+		return
+	}
+
+	cleanToken.UsedQuota += int64(tokenPatch.AddUsedQuota)
+	cleanToken.RemainQuota -= int64(tokenPatch.AddUsedQuota)
+	model.RecordConsumeLog(c.Request.Context(),
+		userID, 0, 0, 0, tokenPatch.AddReason, cleanToken.Name,
+		int64(tokenPatch.AddUsedQuota),
+		fmt.Sprintf("外部(%s)消耗 %s",
+			tokenPatch.AddReason, common.LogQuota(int64(tokenPatch.AddUsedQuota))))
+
+	err = cleanToken.Update()
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    cleanToken,
+	})
+
+	return
+}
+
 func UpdateToken(c *gin.Context) {
 	userId := c.GetInt(ctxkey.Id)
 	statusOnly := c.Query("status_only")
-	tokenPatch := new(updateTokenDto)
+	tokenPatch := new(model.Token)
 	err := c.ShouldBindJSON(tokenPatch)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -278,28 +361,9 @@ func UpdateToken(c *gin.Context) {
 		}
 	}
 
-	switch {
-	case statusOnly != "":
+	if statusOnly != "" {
 		cleanToken.Status = token.Status
-	case tokenPatch.AddUsedQuota != 0:
-		// let admin to add or subtract used quota,
-		// make it possible to aggregate billings from different sources.
-		if cleanToken.RemainQuota < int64(tokenPatch.AddUsedQuota) {
-			c.JSON(http.StatusOK, gin.H{
-				"success": false,
-				"message": "剩余额度不足",
-			})
-			return
-		}
-
-		cleanToken.UsedQuota += int64(tokenPatch.AddUsedQuota)
-		cleanToken.RemainQuota -= int64(tokenPatch.AddUsedQuota)
-		model.RecordConsumeLog(c.Request.Context(),
-			userId, 0, 0, 0, tokenPatch.AddReason, cleanToken.Name,
-			int64(tokenPatch.AddUsedQuota),
-			fmt.Sprintf("外部(%s)消耗 %s",
-				tokenPatch.AddReason, common.LogQuota(int64(tokenPatch.AddUsedQuota))))
-	default:
+	} else {
 		// If you add more fields, please also update token.Update()
 		cleanToken.Name = token.Name
 		cleanToken.ExpiredTime = token.ExpiredTime
