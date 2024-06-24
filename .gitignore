@@ -8,4 +8,6 @@ build
 logs
 data
 node_modules
+/web/node_modules
 cmd.md
+.env
