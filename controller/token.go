@@ -213,7 +213,7 @@ func DeleteToken(c *gin.Context) {
 	return
 }
 
-type updateTokenDto struct {
+type consumeTokenRequest struct {
 	// AddUsedQuota add or subtract used quota from another source
 	AddUsedQuota int `json:"add_used_quota" gorm:"-"`
 	// AddReason is the reason for adding or subtracting used quota
@@ -223,7 +223,7 @@ type updateTokenDto struct {
 // ConsumeToken consume token from another source,
 // let one-api to gather billing from different sources.
 func ConsumeToken(c *gin.Context) {
-	tokenPatch := new(updateTokenDto)
+	tokenPatch := new(consumeTokenRequest)
 	err := c.ShouldBindJSON(tokenPatch)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
