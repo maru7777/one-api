@@ -294,7 +294,11 @@ func UpdateToken(c *gin.Context) {
 
 		cleanToken.UsedQuota += int64(tokenPatch.AddUsedQuota)
 		cleanToken.RemainQuota -= int64(tokenPatch.AddUsedQuota)
-		model.RecordLog(userId, model.LogTypeConsume, fmt.Sprintf("外部(%s)消耗 %s", tokenPatch.AddReason, common.LogQuota(int64(tokenPatch.AddUsedQuota))))
+		model.RecordConsumeLog(c.Request.Context(),
+			userId, 0, 0, 0, tokenPatch.AddReason, cleanToken.Name,
+			int64(tokenPatch.AddUsedQuota),
+			fmt.Sprintf("外部(%s)消耗 %s",
+				tokenPatch.AddReason, common.LogQuota(int64(tokenPatch.AddUsedQuota))))
 	default:
 		// If you add more fields, please also update token.Update()
 		cleanToken.Name = token.Name
