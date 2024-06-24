@@ -288,7 +288,19 @@ func UpdateToken(c *gin.Context) {
 		cleanToken.Subnet = token.Subnet
 	}
 
+	// let admin to add or subtract used quota,
+	// make it possible to aggregate billings from different sources.
 	if tokenPatch.AddUsedQuota != 0 {
+		if cleanToken.RemainQuota < int64(tokenPatch.AddUsedQuota) {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "剩余额度不足",
+			})
+			return
+		}
+
+		cleanToken.UsedQuota += int64(tokenPatch.AddUsedQuota)
+		cleanToken.RemainQuota -= int64(tokenPatch.AddUsedQuota)
 		model.RecordLog(userId, model.LogTypeConsume, fmt.Sprintf("外部(%s)消耗 %s", tokenPatch.AddReason, common.LogQuota(int64(tokenPatch.AddUsedQuota))))
 	}
 
