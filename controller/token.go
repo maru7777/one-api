@@ -215,9 +215,10 @@ func DeleteToken(c *gin.Context) {
 
 type updateTokenDto struct {
 	model.Token
-	// AddUsedQuota add or subtract used quota
-	AddUsedQuota int    `json:"add_used_quota" gorm:"-"`
-	AddReason    string `json:"add_reason" gorm:"-"`
+	// AddUsedQuota add or subtract used quota from another source
+	AddUsedQuota int `json:"add_used_quota" gorm:"-"`
+	// AddReason is the reason for adding or subtracting used quota
+	AddReason string `json:"add_reason" gorm:"-"`
 }
 
 func UpdateToken(c *gin.Context) {
@@ -276,21 +277,13 @@ func UpdateToken(c *gin.Context) {
 			return
 		}
 	}
-	if statusOnly != "" {
-		cleanToken.Status = token.Status
-	} else {
-		// If you add more fields, please also update token.Update()
-		cleanToken.Name = token.Name
-		cleanToken.ExpiredTime = token.ExpiredTime
-		cleanToken.RemainQuota = token.RemainQuota
-		cleanToken.UnlimitedQuota = token.UnlimitedQuota
-		cleanToken.Models = token.Models
-		cleanToken.Subnet = token.Subnet
-	}
 
-	// let admin to add or subtract used quota,
-	// make it possible to aggregate billings from different sources.
-	if tokenPatch.AddUsedQuota != 0 {
+	switch {
+	case statusOnly != "":
+		cleanToken.Status = token.Status
+	case tokenPatch.AddUsedQuota != 0:
+		// let admin to add or subtract used quota,
+		// make it possible to aggregate billings from different sources.
 		if cleanToken.RemainQuota < int64(tokenPatch.AddUsedQuota) {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
@@ -302,6 +295,13 @@ func UpdateToken(c *gin.Context) {
 		cleanToken.UsedQuota += int64(tokenPatch.AddUsedQuota)
 		cleanToken.RemainQuota -= int64(tokenPatch.AddUsedQuota)
 		model.RecordLog(userId, model.LogTypeConsume, fmt.Sprintf("外部(%s)消耗 %s", tokenPatch.AddReason, common.LogQuota(int64(tokenPatch.AddUsedQuota))))
+	default:
+		// If you add more fields, please also update token.Update()
+		cleanToken.Name = token.Name
+		cleanToken.ExpiredTime = token.ExpiredTime
+		cleanToken.UnlimitedQuota = token.UnlimitedQuota
+		cleanToken.Models = token.Models
+		cleanToken.Subnet = token.Subnet
 	}
 
 	err = cleanToken.Update()
