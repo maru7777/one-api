@@ -215,7 +215,7 @@ func DeleteToken(c *gin.Context) {
 
 type consumeTokenRequest struct {
 	// AddUsedQuota add or subtract used quota from another source
-	AddUsedQuota int `json:"add_used_quota" gorm:"-"`
+	AddUsedQuota uint `json:"add_used_quota" gorm:"-"`
 	// AddReason is the reason for adding or subtracting used quota
 	AddReason string `json:"add_reason" gorm:"-"`
 }
