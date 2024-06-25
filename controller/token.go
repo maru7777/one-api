@@ -279,8 +279,14 @@ func ConsumeToken(c *gin.Context) {
 		return
 	}
 
-	cleanToken.UsedQuota += int64(tokenPatch.AddUsedQuota)
-	cleanToken.RemainQuota -= int64(tokenPatch.AddUsedQuota)
+	if err = model.DecreaseTokenQuota(cleanToken.Id, int64(tokenPatch.AddUsedQuota)); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
 	model.RecordConsumeLog(c.Request.Context(),
 		userID, 0, 0, 0, tokenPatch.AddReason, cleanToken.Name,
 		int64(tokenPatch.AddUsedQuota),
