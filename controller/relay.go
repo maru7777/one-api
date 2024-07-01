@@ -46,7 +46,7 @@ func Relay(c *gin.Context) {
 	ctx := c.Request.Context()
 	relayMode := relaymode.GetByPath(c.Request.URL.Path)
 	channelId := c.GetInt(ctxkey.ChannelId)
-	userId := c.GetInt("id")
+	userId := c.GetInt(ctxkey.Id)
 	bizErr := relayHelper(c, relayMode)
 	if bizErr == nil {
 		monitor.Emit(channelId, true)

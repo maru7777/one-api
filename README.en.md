@@ -287,7 +287,9 @@ If the channel ID is not provided, load balancing will be used to distribute the
     + Double-check that your interface address and API Key are correct.
 
 ## Related Projects
-[FastGPT](https://github.com/labring/FastGPT): Knowledge question answering system based on the LLM
+* [FastGPT](https://github.com/labring/FastGPT): Knowledge question answering system based on the LLM
+* [VChart](https://github.com/VisActor/VChart):  More than just a cross-platform charting library, but also an expressive data storyteller.
+* [VMind](https://github.com/VisActor/VMind):  Not just automatic, but also fantastic. Open-source solution for intelligent visualization.
 
 ## Note
 This project is an open-source project. Please use it in compliance with OpenAI's [Terms of Use](https://openai.com/policies/terms-of-use) and **applicable laws and regulations**. It must not be used for illegal purposes.
