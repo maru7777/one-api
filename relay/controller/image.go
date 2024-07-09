@@ -5,10 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"strings"
-
 	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common"
@@ -21,6 +17,9 @@ import (
 	"github.com/songquanpeng/one-api/relay/channeltype"
 	"github.com/songquanpeng/one-api/relay/meta"
 	relaymodel "github.com/songquanpeng/one-api/relay/model"
+	"io"
+	"net/http"
+	"strings"
 )
 
 func getImageRequest(c *gin.Context, relayMode int) (*relaymodel.ImageRequest, error) {
@@ -169,9 +168,9 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 		requestBody = bytes.NewBuffer(jsonStr)
 	}
 
-	modelRatio := billingratio.GetModelRatio(imageModel)
+	modelRatio := billingratio.GetModelRatio(imageModel, meta.ChannelType)
 	// groupRatio := billingratio.GetGroupRatio(meta.Group)
-	groupRatio := c.GetFloat64(ctxkey.ChannelRatio) // pre-selected cheapest channel ratio
+	groupRatio := c.GetFloat64(ctxkey.ChannelRatio)
 
 	ratio := modelRatio * groupRatio
 	userQuota, err := model.CacheGetUserQuota(ctx, meta.UserId)

@@ -38,9 +38,9 @@ func RelayTextHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 	textRequest.Model, isModelMapped = getMappedModelName(textRequest.Model, meta.ModelMapping)
 	meta.ActualModelName = textRequest.Model
 	// get model ratio & group ratio
-	modelRatio := billingratio.GetModelRatio(textRequest.Model)
+	modelRatio := billingratio.GetModelRatio(textRequest.Model, meta.ChannelType)
 	// groupRatio := billingratio.GetGroupRatio(meta.Group)
-	groupRatio := meta.ChannelRatio
+	groupRatio := c.GetFloat64(ctxkey.ChannelRatio)
 
 	ratio := modelRatio * groupRatio
 	// pre-consume quota
