@@ -19,7 +19,7 @@ var _ adaptor.Adaptor = new(Adaptor)
 
 const channelName = "vertexai"
 
-type Adaptor struct {}
+type Adaptor struct{}
 
 func (a *Adaptor) Init(meta *meta.Meta) {
 }
