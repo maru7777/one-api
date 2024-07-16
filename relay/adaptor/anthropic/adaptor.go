@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
@@ -34,6 +35,13 @@ func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Request, meta *me
 	}
 	req.Header.Set("anthropic-version", anthropicVersion)
 	req.Header.Set("anthropic-beta", "messages-2023-12-15")
+
+	// https://x.com/alexalbert__/status/1812921642143900036
+	// claude-3-5-sonnet can support 8k context
+	if strings.HasPrefix(meta.ActualModelName, "claude-3-5-sonnet") {
+		req.Header.Set("anthropic-beta", "max-tokens-3-5-sonnet-2024-07-15")
+	}
+
 	return nil
 }
 
