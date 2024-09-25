@@ -9,12 +9,14 @@ import { renderQuota } from '../helpers/render';
 const COPY_OPTIONS = [
   { key: 'web', text: 'Web', value: 'web' },
   { key: 'opencat', text: 'OpenCat', value: 'opencat' },
+  { key: 'lobechat', text: 'LobeChat', value: 'lobechat' },
 ];
 
 const OPEN_LINK_OPTIONS = [
   { key: 'next', text: 'ChatGPT Next Web', value: 'next' },
   { key: 'ama', text: 'BotGem', value: 'ama' },
   { key: 'opencat', text: 'OpenCat', value: 'opencat' },
+  { key: 'lobechat', text: 'LobeChat', value: 'lobechat' },
 ];
 
 function renderTimestamp(timestamp) {
@@ -113,6 +115,9 @@ const TokensTable = () => {
       case 'web':
         url = `https://chat.laisky.com?apikey=laisky-${key}`;
         break;
+      case 'lobechat':
+        url = nextLink + `/?settings={"keyVaults":{"openai":{"apiKey":"sk-${key}","baseURL":"${serverAddress}"/v1"}}}`;
+        break;
       default:
         url = `laisky-${key}`;
     }
@@ -151,6 +156,10 @@ const TokensTable = () => {
 
       case 'opencat':
         url = `opencat://team/join?domain=${encodedServerAddress}&token=laisky-${key}`;
+        break;
+
+      case 'lobechat':
+        url = chatLink + `/?settings={"keyVaults":{"openai":{"apiKey":"sk-${key}","baseURL":"${serverAddress}"/v1"}}}`;
         break;
 
       default:
