@@ -12,7 +12,7 @@ WORKDIR /web/air
 RUN npm install
 RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat VERSION) npm run build
 
-FROM golang:1.22.5-bullseye AS builder2
+FROM golang:1.23.1-bullseye AS builder2
 
 RUN apt-get update
 RUN apt-get install -y --no-install-recommends g++ make gcc git build-essential ca-certificates \
