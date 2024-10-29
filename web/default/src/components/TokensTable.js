@@ -116,7 +116,7 @@ const TokensTable = () => {
         url = `https://chat.laisky.com?apikey=laisky-${key}`;
         break;
       case 'lobechat':
-        url = nextLink + `/?settings={"keyVaults":{"openai":{"apiKey":"sk-${key}","baseURL":"${serverAddress}"/v1"}}}`;
+        url = nextLink + `/?settings={"keyVaults":{"openai":{"apiKey":"sk-${key}","baseURL":"${serverAddress}/v1"}}}`;
         break;
       default:
         url = `laisky-${key}`;
@@ -159,7 +159,7 @@ const TokensTable = () => {
         break;
 
       case 'lobechat':
-        url = chatLink + `/?settings={"keyVaults":{"openai":{"apiKey":"sk-${key}","baseURL":"${serverAddress}"/v1"}}}`;
+        url = chatLink + `/?settings={"keyVaults":{"openai":{"apiKey":"sk-${key}","baseURL":"${serverAddress}/v1"}}}`;
         break;
 
       default:
