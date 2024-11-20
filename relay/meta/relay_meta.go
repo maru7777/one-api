@@ -32,6 +32,7 @@ type Meta struct {
 	RequestURLPath  string
 	PromptTokens    int // only for DoResponse
 	ChannelRatio    float64
+	SystemPrompt    string
 }
 
 func GetByContext(c *gin.Context) *Meta {
@@ -49,6 +50,7 @@ func GetByContext(c *gin.Context) *Meta {
 		APIKey:          strings.TrimPrefix(c.Request.Header.Get("Authorization"), "Bearer "),
 		RequestURLPath:  c.Request.URL.String(),
 		ChannelRatio:    c.GetFloat64(ctxkey.ChannelRatio), // add by Laisky
+		SystemPrompt:    c.GetString(ctxkey.SystemPrompt),
 	}
 	cfg, ok := c.Get(ctxkey.Config)
 	if ok {
