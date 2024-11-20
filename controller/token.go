@@ -376,6 +376,8 @@ func UpdateToken(c *gin.Context) {
 		cleanToken.UnlimitedQuota = token.UnlimitedQuota
 		cleanToken.Models = token.Models
 		cleanToken.Subnet = token.Subnet
+		cleanToken.RemainQuota = token.RemainQuota
+		cleanToken.Status = token.Status
 	}
 
 	err = cleanToken.Update()
