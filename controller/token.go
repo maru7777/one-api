@@ -351,14 +351,18 @@ func UpdateToken(c *gin.Context) {
 	}
 
 	if token.Status == model.TokenStatusEnabled {
-		if cleanToken.Status == model.TokenStatusExpired && cleanToken.ExpiredTime <= helper.GetTimestamp() && cleanToken.ExpiredTime != -1 {
+		if cleanToken.Status == model.TokenStatusExpired &&
+			cleanToken.ExpiredTime <= helper.GetTimestamp() && cleanToken.ExpiredTime != -1 &&
+			token.ExpiredTime != -1 && token.ExpiredTime < helper.GetTimestamp() {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": "令牌已过期，无法启用，请先修改令牌过期时间，或者设置为永不过期",
 			})
 			return
 		}
-		if cleanToken.Status == model.TokenStatusExhausted && cleanToken.RemainQuota <= 0 && !cleanToken.UnlimitedQuota {
+		if cleanToken.Status == model.TokenStatusExhausted &&
+			cleanToken.RemainQuota <= 0 && !cleanToken.UnlimitedQuota &&
+			token.RemainQuota <= 0 && !token.UnlimitedQuota {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": "令牌可用额度已用尽，无法启用，请先修改令牌剩余额度，或者设置为无限额度",
