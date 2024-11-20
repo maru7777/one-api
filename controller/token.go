@@ -350,7 +350,8 @@ func UpdateToken(c *gin.Context) {
 		return
 	}
 
-	if token.Status == model.TokenStatusEnabled {
+	switch token.Status {
+	case model.TokenStatusEnabled:
 		if cleanToken.Status == model.TokenStatusExpired &&
 			cleanToken.ExpiredTime <= helper.GetTimestamp() && cleanToken.ExpiredTime != -1 &&
 			token.ExpiredTime != -1 && token.ExpiredTime < helper.GetTimestamp() {
@@ -368,6 +369,14 @@ func UpdateToken(c *gin.Context) {
 				"message": "令牌可用额度已用尽，无法启用，请先修改令牌剩余额度，或者设置为无限额度",
 			})
 			return
+		}
+	case model.TokenStatusExhausted:
+		if token.RemainQuota > 0 || token.UnlimitedQuota {
+			token.Status = model.TokenStatusEnabled
+		}
+	case model.TokenStatusExpired:
+		if token.ExpiredTime == -1 || token.ExpiredTime > helper.GetTimestamp() {
+			token.Status = model.TokenStatusEnabled
 		}
 	}
 
