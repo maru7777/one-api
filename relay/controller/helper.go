@@ -91,7 +91,7 @@ func preConsumeQuota(ctx context.Context, textRequest *relaymodel.GeneralOpenAIR
 	return preConsumedQuota, nil
 }
 
-func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.Meta, textRequest *relaymodel.GeneralOpenAIRequest, ratio float64, preConsumedQuota int64, modelRatio float64, groupRatio float64, systemPromptReset bool) {
+func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.Meta, textRequest *relaymodel.GeneralOpenAIRequest, ratio float64, preConsumedQuota int64, modelRatio float64, groupRatio float64, systemPromptReset bool) (quota int64) {
 	if usage == nil {
 		logger.Error(ctx, "usage is nil, which is unexpected")
 		return
@@ -100,7 +100,7 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 	completionRatio := billingratio.GetCompletionRatio(textRequest.Model, meta.ChannelType)
 	promptTokens := usage.PromptTokens
 	completionTokens := usage.CompletionTokens
-	quota := int64(math.Ceil((float64(promptTokens) + float64(completionTokens)*completionRatio) * ratio))
+	quota = int64(math.Ceil((float64(promptTokens) + float64(completionTokens)*completionRatio) * ratio))
 	if ratio != 0 && quota <= 0 {
 		quota = 1
 	}
@@ -128,7 +128,7 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 	model.UpdateUserUsedQuotaAndRequestCount(meta.UserId, quota)
 	model.UpdateChannelUsedQuota(meta.ChannelId, quota)
 
-	return
+	return quota
 }
 
 func getMappedModelName(modelName string, mapping map[string]string) (string, bool) {

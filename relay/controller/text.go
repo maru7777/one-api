@@ -11,6 +11,7 @@ import (
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/relay"
 	"github.com/songquanpeng/one-api/relay/adaptor"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
@@ -90,7 +91,22 @@ func RelayTextHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 	}
 
 	// post-consume quota
-	go postConsumeQuota(ctx, usage, meta, textRequest, ratio, preConsumedQuota, modelRatio, groupRatio, systemPromptReset)
+	go func() {
+		quota := postConsumeQuota(ctx, usage, meta, textRequest, ratio, preConsumedQuota, modelRatio, groupRatio, systemPromptReset)
+
+		// also update user request cost
+		if quota != 0 {
+			docu := model.NewUserRequestCost(
+				c.GetInt(ctxkey.Id),
+				c.GetString(ctxkey.RequestId),
+				quota,
+			)
+			if err = docu.Insert(); err != nil {
+				logger.Errorf(c, "insert user request cost failed: %+v", err)
+			}
+		}
+	}()
+
 	return nil
 }
 
