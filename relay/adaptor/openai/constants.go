@@ -19,4 +19,5 @@ var ModelList = []string{
 	"whisper-1",
 	"tts-1", "tts-1-1106", "tts-1-hd", "tts-1-hd-1106",
 	"o1-preview", "o1-preview-2024-09-12",
+	"o1-mini", "o1-mini-2024-09-12",
 }
