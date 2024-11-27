@@ -8,6 +8,7 @@ import (
 
 	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
+	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/relay/adaptor"
 	"github.com/songquanpeng/one-api/relay/adaptor/doubao"
 	"github.com/songquanpeng/one-api/relay/adaptor/minimax"
@@ -75,7 +76,8 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 	if request == nil {
 		return nil, errors.New("request is nil")
 	}
-	if request.Stream {
+
+	if config.EnforceIncludeUsage && request.Stream {
 		// always return usage in stream mode
 		if request.StreamOptions == nil {
 			request.StreamOptions = &model.StreamOptions{}
