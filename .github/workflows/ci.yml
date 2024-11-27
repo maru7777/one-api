@@ -33,7 +33,7 @@ jobs:
           push: true
           tags: ppcelery/one-api:latest
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # cache-to: type=gha,mode=max
 
   build_hash:
     runs-on: ubuntu-latest
