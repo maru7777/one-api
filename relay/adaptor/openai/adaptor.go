@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/Laisky/errors/v2"
@@ -82,6 +83,21 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 		}
 		request.StreamOptions.IncludeUsage = true
 	}
+
+	// o1 do not support system prompt and max_tokens
+	if strings.HasPrefix(request.Model, "o1-mini") || strings.HasPrefix(request.Model, "o1-preview") {
+		request.MaxTokens = 0
+		request.Messages = func(raw []model.Message) (filtered []model.Message) {
+			for i := range raw {
+				if raw[i].Role != "system" {
+					filtered = append(filtered, raw[i])
+				}
+			}
+
+			return
+		}(request.Messages)
+	}
+
 	return request, nil
 }
 
