@@ -151,12 +151,12 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	}
 	adaptor.Init(meta)
 
+	// these adaptors need to convert the request
 	switch meta.ChannelType {
-	case channeltype.Ali:
-		fallthrough
-	case channeltype.Baidu:
-		fallthrough
-	case channeltype.Zhipu:
+	case channeltype.Zhipu,
+		channeltype.Ali,
+		channeltype.Replicate,
+		channeltype.Baidu:
 		finalRequest, err := adaptor.ConvertImageRequest(imageRequest)
 		if err != nil {
 			return openai.ErrorWrapper(err, "convert_image_request_failed", http.StatusInternalServerError)
@@ -189,7 +189,9 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	}
 
 	defer func(ctx context.Context) {
-		if resp != nil && resp.StatusCode != http.StatusOK {
+		if resp != nil &&
+			resp.StatusCode != http.StatusCreated && // replicate returns 201
+			resp.StatusCode != http.StatusOK {
 			return
 		}
 
@@ -208,6 +210,16 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 			model.UpdateUserUsedQuotaAndRequestCount(meta.UserId, quota)
 			channelId := c.GetInt(ctxkey.ChannelId)
 			model.UpdateChannelUsedQuota(channelId, quota)
+
+			// also update user request cost
+			docu := model.NewUserRequestCost(
+				c.GetInt(ctxkey.Id),
+				c.GetString(ctxkey.RequestId),
+				quota,
+			)
+			if err = docu.Insert(); err != nil {
+				logger.Errorf(c, "insert user request cost failed: %+v", err)
+			}
 		}
 	}(c.Request.Context())
 

@@ -11,3 +11,4 @@ node_modules
 /web/node_modules
 cmd.md
 .env
+/one-api
