@@ -39,6 +39,8 @@ import (
 // 	return nil, nil
 // }
 
+var errNextLoop = errors.New("next_loop")
+
 func ImageHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusCode, *model.Usage) {
 	if resp.StatusCode != http.StatusCreated {
 		payload, _ := io.ReadAll(resp.Body)
@@ -67,7 +69,6 @@ func ImageHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusCo
 				return errors.Wrap(err, "new request")
 			}
 
-			logger.Debug(c, "send image request to replicate")
 			taskReq.Header.Set("Authorization", "Bearer "+meta.GetByContext(c).APIKey)
 			taskResp, err := http.DefaultClient.Do(taskReq)
 			if err != nil {
@@ -97,7 +98,7 @@ func ImageHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusCo
 				return errors.Errorf("task failed: %s", taskData.Status)
 			default:
 				time.Sleep(time.Second * 3)
-				return nil
+				return errNextLoop
 			}
 
 			output, err := taskData.GetOutput()
@@ -170,6 +171,10 @@ func ImageHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusCo
 			return nil
 		}()
 		if err != nil {
+			if errors.Is(err, errNextLoop) {
+				continue
+			}
+
 			return openai.ErrorWrapper(err, "image_task_failed", http.StatusInternalServerError), nil
 		}
 

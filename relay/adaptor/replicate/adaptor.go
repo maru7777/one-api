@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
+	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/relay/adaptor"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/relay/meta"
@@ -29,7 +30,7 @@ func (*Adaptor) ConvertImageRequest(request *model.ImageRequest) (any, error) {
 			Guidance:        3,
 			Seed:            int(time.Now().UnixNano()),
 			SafetyTolerance: 5,
-			NImages:         request.N,
+			NImages:         1, // replicate will always return 1 image
 			Width:           1440,
 			Height:          1440,
 			AspectRatio:     "1:1",
@@ -60,6 +61,7 @@ func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Request, meta *me
 }
 
 func (a *Adaptor) DoRequest(c *gin.Context, meta *meta.Meta, requestBody io.Reader) (*http.Response, error) {
+	logger.Info(c, "send image request to replicate")
 	return adaptor.DoRequestHelper(a, c, meta, requestBody)
 }
 
