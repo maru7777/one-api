@@ -33,19 +33,16 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	action := ""
 	switch meta.Mode {
 	case relaymode.Embeddings:
-		action = "batchEmbedContents"
+		action = "batchEmbedContents?"
 	default:
-		action = "generateContent"
+		action = "generateContent?"
 	}
 
 	if meta.IsStream {
-		if version == "v1" {
-			action = "streamGenerateContent?alt=sse"
-		} else {
-			action = "streamGenerateContent"
-		}
+		action = "streamGenerateContent?alt=sse&"
 	}
-	return fmt.Sprintf("%s/%s/models/%s:%s?key=%s", meta.BaseURL, version, meta.ActualModelName, action, meta.APIKey), nil
+
+	return fmt.Sprintf("%s/%s/models/%s:%skey=%s", meta.BaseURL, version, meta.ActualModelName, action, meta.APIKey), nil
 }
 
 func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Request, meta *meta.Meta) error {
