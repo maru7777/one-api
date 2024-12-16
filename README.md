@@ -9,4 +9,5 @@ docker image: `ppcelery/one-api:latest`
 - support update user's remained quota
 - support aws claude
 - support openai images edits
-- support replicate
+- support gemini-2.0-flash-exp
+- support replicate flux & remix
