@@ -1,6 +1,8 @@
 # One API
 
-Fully compatible with the upstream version, can be used directly by replacing the container image, docker image: `ppcelery/one-api:latest`
+The original author of one-api has not been active for a long time, resulting in a backlog of PRs that cannot be updated. Therefore, I forked the code and merged some PRs that I consider important. I also welcome everyone to submit PRs, and I will respond and handle them actively and quickly.
+
+Fully compatible with the upstream version, can be used directly by replacing the container image, docker image: `ppcelery/one-api:latest`.
 
 - [One API](#one-api)
   - [New Features](#new-features)
