@@ -60,8 +60,6 @@ You can update the used quota using the API key of any token, allowing other con
 
 - [feat: 支持 replicate chat models #1989](https://github.com/songquanpeng/one-api/pull/1989)
 
-![](https://s3.laisky.com/uploads/2024/12/oneapi-replicate-3.png)
-
 ## Bug fix
 
 ### The token balance cannot be edited
