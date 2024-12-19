@@ -13,6 +13,7 @@ Fully compatible with the upstream version, can be used directly by replacing th
     - [Support gemini-2.0-flash-exp](#support-gemini-20-flash-exp)
     - [Support replicate flux \& remix](#support-replicate-flux--remix)
     - [Support replicate chat models](#support-replicate-chat-models)
+    - [Support OpenAI O1](#support-openai-o1)
   - [Bug fix](#bug-fix)
     - [The token balance cannot be edited](#the-token-balance-cannot-be-edited)
 
@@ -59,6 +60,10 @@ You can update the used quota using the API key of any token, allowing other con
 ### Support replicate chat models
 
 - [feat: 支持 replicate chat models #1989](https://github.com/songquanpeng/one-api/pull/1989)
+
+### Support OpenAI O1
+
+- [feat: add openai o1](https://github.com/songquanpeng/one-api/pull/1990)
 
 ## Bug fix
 
