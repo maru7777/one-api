@@ -104,11 +104,12 @@ func main() {
 	sessionSecret, err := base64.StdEncoding.DecodeString(config.SessionSecret)
 	if err != nil {
 		logger.SysLog("session secret is not base64 encoded, using raw value instead")
-		sessionSecret = []byte(config.SessionSecret)
+		store := cookie.NewStore([]byte(config.SessionSecret))
+		server.Use(sessions.Sessions("session", store))
+	} else {
+		store := cookie.NewStore(sessionSecret, sessionSecret)
+		server.Use(sessions.Sessions("session", store))
 	}
-
-	store := cookie.NewStore(sessionSecret, sessionSecret)
-	server.Use(sessions.Sessions("session", store))
 
 	router.SetRouter(server, buildFS)
 	var port = os.Getenv("PORT")
