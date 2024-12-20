@@ -103,7 +103,8 @@ func main() {
 	// Initialize session store
 	sessionSecret, err := base64.StdEncoding.DecodeString(config.SessionSecret)
 	if err != nil {
-		panic(fmt.Sprintf("failed to decode session secret: %v", err))
+		logger.SysLog("session secret is not base64 encoded, using raw value instead")
+		sessionSecret = []byte(config.SessionSecret)
 	}
 
 	store := cookie.NewStore(sessionSecret, sessionSecret)
