@@ -6,7 +6,7 @@ package tencent
 // 	"crypto/sha1"
 // 	"encoding/base64"
 // 	"encoding/json"
-// 	"github.com/Laisky/errors/v2"
+// 	"github.com/pkg/errors"
 // 	"fmt"
 // 	"github.com/gin-gonic/gin"
 // 	"github.com/songquanpeng/one-api/common"

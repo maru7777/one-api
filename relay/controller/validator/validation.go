@@ -3,7 +3,7 @@ package validator
 import (
 	"math"
 
-	"github.com/Laisky/errors/v2"
+	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/relay/model"
 	"github.com/songquanpeng/one-api/relay/relaymode"
 )

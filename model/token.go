@@ -3,7 +3,7 @@ package model
 import (
 	"fmt"
 
-	"github.com/Laisky/errors/v2"
+	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/helper"

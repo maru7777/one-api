@@ -1,7 +1,7 @@
 package message
 
 import (
-	"github.com/Laisky/errors/v2"
+	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common/config"
 )
 

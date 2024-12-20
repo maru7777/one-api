@@ -2,7 +2,7 @@ package openai
 
 import (
 	"fmt"
-	"github.com/Laisky/errors/v2"
+	"github.com/pkg/errors"
 	"github.com/pkoukk/tiktoken-go"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/image"
