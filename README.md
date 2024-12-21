@@ -7,7 +7,10 @@ Fully compatible with the upstream version, can be used directly by replacing th
 - `ppcelery/one-api:latest`
 - `ppcelery/one-api:arm64-latest`
 
+## Menu
+
 - [One API](#one-api)
+  - [Menu](#menu)
   - [New Features](#new-features)
     - [(Merged) Support gpt-vision](#merged-support-gpt-vision)
     - [Support update user's remained quota](#support-update-users-remained-quota)
