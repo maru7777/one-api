@@ -2,7 +2,10 @@
 
 The original author of one-api has not been active for a long time, resulting in a backlog of PRs that cannot be updated. Therefore, I forked the code and merged some PRs that I consider important. I also welcome everyone to submit PRs, and I will respond and handle them actively and quickly.
 
-Fully compatible with the upstream version, can be used directly by replacing the container image, docker image: `ppcelery/one-api:latest`.
+Fully compatible with the upstream version, can be used directly by replacing the container image, docker images:
+
+- `ppcelery/one-api:latest`
+- `ppcelery/one-api:arm64-latest`
 
 - [One API](#one-api)
   - [New Features](#new-features)
@@ -14,6 +17,7 @@ Fully compatible with the upstream version, can be used directly by replacing th
     - [Support replicate flux \& remix](#support-replicate-flux--remix)
     - [Support replicate chat models](#support-replicate-chat-models)
     - [Support OpenAI O1](#support-openai-o1)
+    - [Get request's cost](#get-requests-cost)
   - [Bug fix](#bug-fix)
     - [The token balance cannot be edited](#the-token-balance-cannot-be-edited)
 
@@ -64,6 +68,23 @@ You can update the used quota using the API key of any token, allowing other con
 ### Support OpenAI O1
 
 - [feat: add openai o1](https://github.com/songquanpeng/one-api/pull/1990)
+
+### Get request's cost
+
+Each chat completion request will include a `X-Oneapi-Request-Id` in the returned headers. You can use this request id to request `GET /api/cost/request/:request_id` to get the cost of this request.
+
+The returned structure is:
+
+```go
+type UserRequestCost struct {
+  Id          int     `json:"id"`
+  CreatedTime int64   `json:"created_time" gorm:"bigint"`
+  UserID      int     `json:"user_id"`
+  RequestID   string  `json:"request_id"`
+  Quota       int64   `json:"quota"`
+  CostUSD     float64 `json:"cost_usd" gorm:"-"`
+}
+```
 
 ## Bug fix
 

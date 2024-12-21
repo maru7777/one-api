@@ -159,7 +159,7 @@ func migrateDB() error {
 	if err = DB.AutoMigrate(&Log{}); err != nil {
 		return err
 	}
-	if err = DB.AutoMigrate(&Channel{}); err != nil {
+	if err = DB.AutoMigrate(&UserRequestCost{}); err != nil {
 		return err
 	}
 	return nil
