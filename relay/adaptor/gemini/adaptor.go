@@ -24,10 +24,13 @@ func (a *Adaptor) Init(meta *meta.Meta) {
 }
 
 func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
-	defaultVersion := config.GeminiVersion
-	// gemini-2.0-flash-exp and gemini-2.0-flash-thinking-exp use v1beta
-	if meta.ActualModelName == "gemini-2.0-flash-exp" || meta.ActualModelName == "gemini-2.0-flash-thinking-exp" {
+	var defaultVersion string
+	switch meta.ActualModelName {
+	case "gemini-2.0-flash-exp",
+		"gemini-2.0-flash-thinking-exp":
 		defaultVersion = "v1beta"
+	default:
+		defaultVersion = config.GeminiVersion
 	}
 
 	version := helper.AssignOrDefault(meta.Config.APIVersion, defaultVersion)
