@@ -139,7 +139,7 @@ const TokensTable = () => {
         <div>
           <Popover
             content={
-              'laisky-' + record.key
+              'sk-' + record.key
             }
             style={{ padding: 20 }}
             position="top"
@@ -148,7 +148,7 @@ const TokensTable = () => {
           </Popover>
           <Button theme="light" type="secondary" style={{ marginRight: 1 }}
                   onClick={async (text) => {
-                    await copyText('laisky-' + record.key);
+                    await copyText('sk-' + record.key);
                   }}
           >复制</Button>
           <SplitButtonGroup style={{ marginRight: 1 }} aria-label="项目操作按钮组">
@@ -329,24 +329,24 @@ const TokensTable = () => {
     let nextUrl;
 
     if (nextLink) {
-      nextUrl = nextLink + `/#/?settings={"key":"laisky-${key}","url":"${serverAddress}"}`;
+      nextUrl = nextLink + `/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
     } else {
-      nextUrl = `https://app.nextchat.dev/#/?settings={"key":"laisky-${key}","url":"${serverAddress}"}`;
+      nextUrl = `https://app.nextchat.dev/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
     }
 
     let url;
     switch (type) {
       case 'ama':
-        url = mjLink + `/#/?settings={"key":"laisky-${key}","url":"${serverAddress}"}`;
+        url = mjLink + `/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
         break;
       case 'opencat':
-        url = `opencat://team/join?domain=${encodedServerAddress}&token=laisky-${key}`;
+        url = `opencat://team/join?domain=${encodedServerAddress}&token=sk-${key}`;
         break;
       case 'next':
         url = nextUrl;
         break;
       default:
-        url = `laisky-${key}`;
+        url = `sk-${key}`;
     }
     // if (await copy(url)) {
     //     showSuccess('已复制到剪贴板！');
@@ -381,18 +381,18 @@ const TokensTable = () => {
     let defaultUrl;
 
     if (chatLink) {
-      defaultUrl = chatLink + `/#/?settings={"key":"laisky-${key}","url":"${serverAddress}"}`;
+      defaultUrl = chatLink + `/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
     }
     let url;
     switch (type) {
       case 'ama':
-        url = `ama://set-api-key?server=${encodedServerAddress}&key=laisky-${key}`;
+        url = `ama://set-api-key?server=${encodedServerAddress}&key=sk-${key}`;
         break;
       case 'opencat':
-        url = `opencat://team/join?domain=${encodedServerAddress}&token=laisky-${key}`;
+        url = `opencat://team/join?domain=${encodedServerAddress}&token=sk-${key}`;
         break;
       case 'next-mj':
-        url = mjLink + `/#/?settings={"key":"laisky-${key}","url":"${serverAddress}"}`;
+        url = mjLink + `/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
         break;
       case 'lobechat':
         url = chatLink + `/?settings={"keyVaults":{"openai":{"apiKey":"sk-${key}","baseURL":"${serverAddress}/v1"}}}`;
@@ -609,7 +609,7 @@ const TokensTable = () => {
           }
           let keys = '';
           for (let i = 0; i < selectedKeys.length; i++) {
-            keys += selectedKeys[i].name + '    laisky-' + selectedKeys[i].key + '\n';
+            keys += selectedKeys[i].name + '    sk-' + selectedKeys[i].key + '\n';
           }
           await copyText(keys);
         }

@@ -6,7 +6,6 @@ on:
       - "master"
       - "main"
       - "test/ci"
-      # - "feature/flux"
 
 jobs:
   build_latest:

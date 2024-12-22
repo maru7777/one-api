@@ -99,27 +99,27 @@ const TokensTable = () => {
     // let nextUrl;
 
     // if (nextLink) {
-    //   nextUrl = nextLink + `/#/?settings={"key":"laisky-${key}","url":"${serverAddress}"}`;
+    //   nextUrl = nextLink + `/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
     // } else {
-    //   nextUrl = `https://app.nextchat.dev/#/?settings={"key":"laisky-${key}","url":"${serverAddress}"}`;
+    //   nextUrl = `https://app.nextchat.dev/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
     // }
 
     let url;
     switch (type) {
       case 'ama':
-        url = `ama://set-api-key?server=${encodedServerAddress}&key=laisky-${key}`;
+        url = `ama://set-api-key?server=${encodedServerAddress}&key=sk-${key}`;
         break;
       case 'opencat':
-        url = `opencat://team/join?domain=${encodedServerAddress}&token=laisky-${key}`;
+        url = `opencat://team/join?domain=${encodedServerAddress}&token=sk-${key}`;
         break;
       case 'web':
-        url = `https://chat.laisky.com?apikey=laisky-${key}`;
+        url = `https://chat.laisky.com?apikey=sk-${key}`;
         break;
       case 'lobechat':
         url = nextLink + `/?settings={"keyVaults":{"openai":{"apiKey":"sk-${key}","baseURL":"${serverAddress}/v1"}}}`;
         break;
       default:
-        url = `laisky-${key}`;
+        url = `sk-${key}`;
     }
     if (await copy(url)) {
       showSuccess('已复制到剪贴板！');
@@ -144,18 +144,18 @@ const TokensTable = () => {
     let defaultUrl;
 
     if (chatLink) {
-      defaultUrl = chatLink + `/#/?settings={"key":"laisky-${key}","url":"${serverAddress}"}`;
+      defaultUrl = chatLink + `/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
     } else {
-      defaultUrl = `https://app.nextchat.dev/#/?settings={"key":"laisky-${key}","url":"${serverAddress}"}`;
+      defaultUrl = `https://app.nextchat.dev/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
     }
     let url;
     switch (type) {
       case 'ama':
-        url = `ama://set-api-key?server=${encodedServerAddress}&key=laisky-${key}`;
+        url = `ama://set-api-key?server=${encodedServerAddress}&key=sk-${key}`;
         break;
 
       case 'opencat':
-        url = `opencat://team/join?domain=${encodedServerAddress}&token=laisky-${key}`;
+        url = `opencat://team/join?domain=${encodedServerAddress}&token=sk-${key}`;
         break;
 
       case 'lobechat':

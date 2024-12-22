@@ -28,7 +28,7 @@ const COPY_OPTIONS = [
   {
     key: 'next',
     text: 'ChatGPT Next',
-    url: 'https://app.nextchat.dev/#/?settings={"key":"laisky-{key}","url":"{serverAddress}"}',
+    url: 'https://app.nextchat.dev/#/?settings={"key":"sk-{key}","url":"{serverAddress}"}',
     encode: false
   },
   { key: 'ama', text: 'BotGem', url: 'ama://set-api-key?server={serverAddress}&key=sk-{key}', encode: true },
@@ -134,7 +134,7 @@ export default function TokensTableRow({ item, manageToken, handleOpenModal, set
     let url = option.url;
 
     if (option.key === 'next' && siteInfo?.chat_link) {
-      url = siteInfo.chat_link + `/#/?settings={"key":"laisky-{key}","url":"{serverAddress}"}`;
+      url = siteInfo.chat_link + `/#/?settings={"key":"sk-{key}","url":"{serverAddress}"}`;
     }
 
     const key = item.key;
@@ -211,7 +211,7 @@ export default function TokensTableRow({ item, manageToken, handleOpenModal, set
               <Button
                 color="primary"
                 onClick={() => {
-                  copy(`laisky-${item.key}`);
+                  copy(`sk-${item.key}`);
                 }}
               >
                 复制
