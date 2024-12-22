@@ -101,6 +101,16 @@ type SiliconFlowUsageResponse struct {
 	} `json:"data"`
 }
 
+type DeepSeekUsageResponse struct {
+	IsAvailable  bool `json:"is_available"`
+	BalanceInfos []struct {
+		Currency        string `json:"currency"`
+		TotalBalance    string `json:"total_balance"`
+		GrantedBalance  string `json:"granted_balance"`
+		ToppedUpBalance string `json:"topped_up_balance"`
+	} `json:"balance_infos"`
+}
+
 // GetAuthHeader get auth header
 func GetAuthHeader(token string) http.Header {
 	h := http.Header{}
@@ -237,7 +247,36 @@ func updateChannelSiliconFlowBalance(channel *model.Channel) (float64, error) {
 	if response.Code != 20000 {
 		return 0, fmt.Errorf("code: %d, message: %s", response.Code, response.Message)
 	}
-	balance, err := strconv.ParseFloat(response.Data.Balance, 64)
+	balance, err := strconv.ParseFloat(response.Data.TotalBalance, 64)
+	if err != nil {
+		return 0, err
+	}
+	channel.UpdateBalance(balance)
+	return balance, nil
+}
+
+func updateChannelDeepSeekBalance(channel *model.Channel) (float64, error) {
+	url := "https://api.deepseek.com/user/balance"
+	body, err := GetResponseBody("GET", url, channel, GetAuthHeader(channel.Key))
+	if err != nil {
+		return 0, err
+	}
+	response := DeepSeekUsageResponse{}
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		return 0, err
+	}
+	index := -1
+	for i, balanceInfo := range response.BalanceInfos {
+		if balanceInfo.Currency == "CNY" {
+			index = i
+			break
+		}
+	}
+	if index == -1 {
+		return 0, errors.New("currency CNY not found")
+	}
+	balance, err := strconv.ParseFloat(response.BalanceInfos[index].TotalBalance, 64)
 	if err != nil {
 		return 0, err
 	}
@@ -271,6 +310,8 @@ func updateChannelBalance(channel *model.Channel) (float64, error) {
 		return updateChannelAIGC2DBalance(channel)
 	case channeltype.SiliconFlow:
 		return updateChannelSiliconFlowBalance(channel)
+	case channeltype.DeepSeek:
+		return updateChannelDeepSeekBalance(channel)
 	default:
 		return 0, errors.New("尚未实现")
 	}
