@@ -1,8 +1,13 @@
 package model
 
 import (
+	"fmt"
+	"math/rand"
+	"sync"
+
 	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common/helper"
+	"github.com/songquanpeng/one-api/common/logger"
 )
 
 type UserRequestCost struct {
@@ -25,8 +30,9 @@ func NewUserRequestCost(userID int, quotaID string, quota int64) *UserRequestCos
 }
 
 func (docu *UserRequestCost) Insert() error {
-	var err error
-	err = DB.Create(docu).Error
+	go removeOldRequestCost()
+
+	err := DB.Create(docu).Error
 	return errors.Wrap(err, "failed to insert UserRequestCost")
 }
 
@@ -44,4 +50,26 @@ func GetCostByRequestId(reqid string) (*UserRequestCost, error) {
 
 	docu.CostUSD = float64(docu.Quota) / 500000
 	return docu, nil
+}
+
+var muRemoveOldRequestCost sync.Mutex
+
+// removeOldRequestCost remove old request cost data,
+// this function will be executed every 1/1000 times.
+func removeOldRequestCost() {
+	if rand.Float32() > 0.001 {
+		return
+	}
+
+	if ok := muRemoveOldRequestCost.TryLock(); !ok {
+		return
+	}
+	defer muRemoveOldRequestCost.Unlock()
+
+	err := DB.
+		Where("created_time < ?", helper.GetTimestamp()-3600*24*7).
+		Delete(&UserRequestCost{}).Error
+	if err != nil {
+		logger.SysError(fmt.Sprintf("failed to remove old request cost: %s", err.Error()))
+	}
 }
