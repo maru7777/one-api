@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"strings"
@@ -33,8 +34,23 @@ const (
 	TokensPerSecond = 1000 / 20 // $0.006 / minute -> $0.002 / 20 seconds -> $0.002 / 1K tokens
 )
 
+type commonAudioRequest struct {
+	File *multipart.FileHeader `form:"file" binding:"required"`
+}
+
 func countAudioTokens(c *gin.Context) (int, error) {
 	body, err := common.GetRequestBody(c)
+	if err != nil {
+		return 0, errors.WithStack(err)
+	}
+
+	reqBody := new(commonAudioRequest)
+	c.Request.Body = io.NopCloser(bytes.NewReader(body))
+	if err = c.ShouldBind(reqBody); err != nil {
+		return 0, errors.WithStack(err)
+	}
+
+	reqFp, err := reqBody.File.Open()
 	if err != nil {
 		return 0, errors.WithStack(err)
 	}
@@ -45,8 +61,11 @@ func countAudioTokens(c *gin.Context) (int, error) {
 	}
 	defer os.Remove(fp.Name())
 
-	_, err = io.Copy(fp, bytes.NewReader(body))
+	_, err = io.Copy(fp, reqFp)
 	if err != nil {
+		return 0, errors.WithStack(err)
+	}
+	if err = fp.Close(); err != nil {
 		return 0, errors.WithStack(err)
 	}
 

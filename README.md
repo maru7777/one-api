@@ -19,10 +19,11 @@ Fully compatible with the upstream version, can be used directly by replacing th
     - [Support gemini-2.0-flash-exp](#support-gemini-20-flash-exp)
     - [Support replicate flux \& remix](#support-replicate-flux--remix)
     - [Support replicate chat models](#support-replicate-chat-models)
-    - [Support OpenAI O1](#support-openai-o1)
+    - [Support OpenAI O1/O1-mini/O1-preview](#support-openai-o1o1-minio1-preview)
     - [Get request's cost](#get-requests-cost)
   - [Bug fix](#bug-fix)
     - [The token balance cannot be edited](#the-token-balance-cannot-be-edited)
+    - [Whisper's transcription only charges for the length of the input audio](#whispers-transcription-only-charges-for-the-length-of-the-input-audio)
 
 ## New Features
 
@@ -68,7 +69,7 @@ You can update the used quota using the API key of any token, allowing other con
 
 - [feat: 支持 replicate chat models #1989](https://github.com/songquanpeng/one-api/pull/1989)
 
-### Support OpenAI O1
+### Support OpenAI O1/O1-mini/O1-preview
 
 - [feat: add openai o1](https://github.com/songquanpeng/one-api/pull/1990)
 
@@ -94,3 +95,7 @@ type UserRequestCost struct {
 ### The token balance cannot be edited
 
 - [BUGFIX: 更新令牌时的一些问题 #1933](https://github.com/songquanpeng/one-api/pull/1933)
+
+### Whisper's transcription only charges for the length of the input audio
+
+- [feat(audio): count whisper-1 quota by audio duration](https://github.com/Laisky/one-api/pull/21)
