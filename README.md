@@ -71,7 +71,7 @@ You can update the used quota using the API key of any token, allowing other con
 
 ### Support OpenAI O1/O1-mini/O1-preview
 
-- [feat: add openai o1](https://github.com/songquanpeng/one-api/pull/1990)
+- [feat: add openai o1 #1990](https://github.com/songquanpeng/one-api/pull/1990)
 
 ### Get request's cost
 
@@ -98,4 +98,4 @@ type UserRequestCost struct {
 
 ### Whisper's transcription only charges for the length of the input audio
 
-- [feat(audio): count whisper-1 quota by audio duration](https://github.com/Laisky/one-api/pull/21)
+- [feat(audio): count whisper-1 quota by audio duration #2022](https://github.com/songquanpeng/one-api/pull/2022)

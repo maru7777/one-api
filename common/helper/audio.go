@@ -3,7 +3,6 @@ package helper
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -30,13 +29,6 @@ func SaveTmpFile(filename string, data io.Reader) (string, error) {
 
 // GetAudioDuration returns the duration of an audio file in seconds.
 func GetAudioDuration(ctx context.Context, filename string) (float64, error) {
-	// print file info for debug
-	fstat, err := os.Stat(filename)
-	if err != nil {
-		return 0, errors.Wrap(err, "failed to get audio duration")
-	}
-	fmt.Printf("file name: %s, size: %d\n", filename, fstat.Size())
-
 	// ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 {{input}}
 	c := exec.CommandContext(ctx, "/usr/bin/ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", filename)
 	output, err := c.Output()
