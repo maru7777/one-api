@@ -33,7 +33,7 @@ RUN go build -trimpath -ldflags "-s -w -X 'github.com/songquanpeng/one-api/commo
 FROM debian:bullseye
 
 RUN apt-get update
-RUN apt-get install -y --no-install-recommends ca-certificates haveged tzdata \
+RUN apt-get install -y --no-install-recommends ca-certificates haveged tzdata ffmpeg \
     && update-ca-certificates 2>/dev/null || true \
     && rm -rf /var/lib/apt/lists/*
 
