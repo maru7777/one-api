@@ -21,6 +21,7 @@ Fully compatible with the upstream version, can be used directly by replacing th
     - [Support replicate chat models](#support-replicate-chat-models)
     - [Support OpenAI O1/O1-mini/O1-preview](#support-openai-o1o1-minio1-preview)
     - [Get request's cost](#get-requests-cost)
+    - [Support Vertex Imagen3](#support-vertex-imagen3)
   - [Bug fix](#bug-fix)
     - [The token balance cannot be edited](#the-token-balance-cannot-be-edited)
     - [Whisper's transcription only charges for the length of the input audio](#whispers-transcription-only-charges-for-the-length-of-the-input-audio)
@@ -89,6 +90,10 @@ type UserRequestCost struct {
   CostUSD     float64 `json:"cost_usd" gorm:"-"`
 }
 ```
+
+### Support Vertex Imagen3
+
+- [feat: support vertex imagen3 #2030](https://github.com/songquanpeng/one-api/pull/2030)
 
 ## Bug fix
 
