@@ -22,6 +22,7 @@ Fully compatible with the upstream version, can be used directly by replacing th
     - [Support OpenAI O1/O1-mini/O1-preview](#support-openai-o1o1-minio1-preview)
     - [Get request's cost](#get-requests-cost)
     - [Support Vertex Imagen3](#support-vertex-imagen3)
+    - [Support gpt-4o-audio](#support-gpt-4o-audio)
   - [Bug fix](#bug-fix)
     - [The token balance cannot be edited](#the-token-balance-cannot-be-edited)
     - [Whisper's transcription only charges for the length of the input audio](#whispers-transcription-only-charges-for-the-length-of-the-input-audio)
@@ -94,6 +95,16 @@ type UserRequestCost struct {
 ### Support Vertex Imagen3
 
 - [feat: support vertex imagen3 #2030](https://github.com/songquanpeng/one-api/pull/2030)
+
+![](https://s3.laisky.com/uploads/2025/01/oneapi-imagen3.png)
+
+### Support gpt-4o-audio
+
+- [feat: support gpt-4o-audio #2032](https://github.com/songquanpeng/one-api/pull/2032)
+
+![](https://s3.laisky.com/uploads/2025/01/oneapi-audio-1.png)
+
+![](https://s3.laisky.com/uploads/2025/01/oneapi-audio-2.png)
 
 ## Bug fix
 
