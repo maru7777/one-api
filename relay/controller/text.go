@@ -2,9 +2,11 @@ package controller
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
@@ -91,18 +93,23 @@ func RelayTextHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 	}
 
 	// post-consume quota
+	quotaId := c.GetInt(ctxkey.Id)
+	requestId := c.GetString(ctxkey.RequestId)
 	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
 		quota := postConsumeQuota(ctx, usage, meta, textRequest, ratio, preConsumedQuota, modelRatio, groupRatio, systemPromptReset)
 
 		// also update user request cost
 		if quota != 0 {
 			docu := model.NewUserRequestCost(
-				c.GetInt(ctxkey.Id),
-				c.GetString(ctxkey.RequestId),
+				quotaId,
+				requestId,
 				quota,
 			)
 			if err = docu.Insert(); err != nil {
-				logger.Errorf(c, "insert user request cost failed: %+v", err)
+				logger.Errorf(ctx, "insert user request cost failed: %+v", err)
 			}
 		}
 	}()
