@@ -42,10 +42,10 @@ func getAndValidateTextRequest(c *gin.Context, relayMode int) (*relaymodel.Gener
 	return textRequest, nil
 }
 
-func getPromptTokens(textRequest *relaymodel.GeneralOpenAIRequest, relayMode int) int {
+func getPromptTokens(ctx context.Context, textRequest *relaymodel.GeneralOpenAIRequest, relayMode int) int {
 	switch relayMode {
 	case relaymode.ChatCompletions:
-		return openai.CountTokenMessages(textRequest.Messages, textRequest.Model)
+		return openai.CountTokenMessages(ctx, textRequest.Messages, textRequest.Model)
 	case relaymode.Completions:
 		return openai.CountTokenInput(textRequest.Prompt, textRequest.Model)
 	case relaymode.Moderations:
