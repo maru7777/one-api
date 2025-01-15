@@ -1,21 +1,21 @@
 ---
-name: 功能请求
-about: 使用简练详细的语言描述希望加入的新功能
-title: ''
+name: Feature Request
+about: Use concise and detailed language to describe the new feature you'd like to see
+title: ""
 labels: enhancement
-assignees: ''
-
+assignees: ""
 ---
 
-**例行检查**
+## Routine Check
 
-[//]: # (方框内删除已有的空格，填 x 号)
-+ [ ] 我已确认目前没有类似 issue
-+ [ ] 我已确认我已升级到最新版本
-+ [ ] 我已完整查看过项目 README，已确定现有版本无法满足需求
-+ [ ] 我理解并愿意跟进此 issue，协助测试和提供反馈
-+ [ ] 我理解并认可上述内容，并理解项目维护者精力有限，**不遵循规则的 issue 可能会被无视或直接关闭**
+[//]: # "Remove space in brackets and fill with x"
 
-**功能描述**
+- [ ] I have confirmed there are no similar issues
+- [ ] I have confirmed I am using the latest version
+- [ ] I have thoroughly read the project README and confirmed existing features cannot meet my needs
+- [ ] I understand and am willing to follow up on this issue, assist with testing and provide feedback
+- [ ] I understand and agree to the above, and understand that maintainers have limited time - **issues not following guidelines may be ignored or closed**
 
-**应用场景**
+## Feature Description
+
+## Use Cases
