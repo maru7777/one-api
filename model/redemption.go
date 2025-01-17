@@ -1,8 +1,8 @@
 package model
 
 import (
-	"errors"
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/helper"
 	"gorm.io/gorm"

@@ -1,8 +1,10 @@
 package model
 
 import (
-	"errors"
 	"fmt"
+	"strings"
+
+	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/blacklist"
 	"github.com/songquanpeng/one-api/common/config"
@@ -10,7 +12,6 @@ import (
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/common/random"
 	"gorm.io/gorm"
-	"strings"
 )
 
 const (

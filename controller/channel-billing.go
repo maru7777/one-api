@@ -2,21 +2,20 @@ package controller
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common/client"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/monitor"
 	"github.com/songquanpeng/one-api/relay/channeltype"
-
-	"github.com/gin-gonic/gin"
 )
 
 // https://github.com/songquanpeng/one-api/issues/79
@@ -132,7 +131,7 @@ func GetResponseBody(method, url string, channel *model.Channel, headers http.He
 		return nil, err
 	}
 	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("status code: %d", res.StatusCode)
+		return nil, errors.Errorf("status code: %d", res.StatusCode)
 	}
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -197,7 +196,7 @@ func updateChannelAIProxyBalance(channel *model.Channel) (float64, error) {
 		return 0, err
 	}
 	if !response.Success {
-		return 0, fmt.Errorf("code: %d, message: %s", response.ErrorCode, response.Message)
+		return 0, errors.Errorf("code: %d, message: %s", response.ErrorCode, response.Message)
 	}
 	channel.UpdateBalance(response.Data.TotalPoints)
 	return response.Data.TotalPoints, nil

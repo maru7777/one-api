@@ -66,6 +66,20 @@ type Error struct {
 	Message string `json:"message"`
 }
 
+type ResponseType string
+
+const (
+	TypeError        ResponseType = "error"
+	TypeStart        ResponseType = "message_start"
+	TypeContentStart ResponseType = "content_block_start"
+	TypeContent      ResponseType = "content_block_delta"
+	TypePing         ResponseType = "ping"
+	TypeContentStop  ResponseType = "content_block_stop"
+	TypeMessageDelta ResponseType = "message_delta"
+	TypeMessageStop  ResponseType = "message_stop"
+)
+
+// https://docs.anthropic.com/claude/reference/messages-streaming
 type Response struct {
 	Id           string    `json:"id"`
 	Type         string    `json:"type"`

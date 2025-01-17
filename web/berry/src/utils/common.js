@@ -146,7 +146,7 @@ export function timestamp2string(timestamp) {
   return year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second;
 }
 
-export function calculateQuota(quota, digits = 2) {
+export function calculateQuota(quota = 0, digits = 2) {
   let quotaPerUnit = localStorage.getItem('quota_per_unit');
   quotaPerUnit = parseFloat(quotaPerUnit);
 

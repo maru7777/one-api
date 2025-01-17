@@ -3,11 +3,12 @@ package common
 import (
 	"flag"
 	"fmt"
-	"github.com/songquanpeng/one-api/common/config"
-	"github.com/songquanpeng/one-api/common/logger"
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/logger"
 )
 
 var (
@@ -27,15 +28,15 @@ func printHelp() {
 func Init() {
 	flag.Parse()
 
-	if *PrintVersion {
-		fmt.Println(Version)
-		os.Exit(0)
-	}
+	// if *PrintVersion {
+	// 	fmt.Println(Version)
+	// 	os.Exit(0)
+	// }
 
-	if *PrintHelp {
-		printHelp()
-		os.Exit(0)
-	}
+	// if *PrintHelp {
+	// 	printHelp()
+	// 	os.Exit(0)
+	// }
 
 	if os.Getenv("SESSION_SECRET") != "" {
 		if os.Getenv("SESSION_SECRET") == "random_string" {

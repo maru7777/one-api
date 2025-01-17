@@ -261,7 +261,6 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 		}
 		return 0, nil, nil
 	})
-
 	common.SetEventStreamHeaders(c)
 
 	var usage model.Usage
