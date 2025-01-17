@@ -1,26 +1,27 @@
 ---
-name: 报告问题
-about: 使用简练详细的语言描述你遇到的问题
-title: ''
+name: Bug Report
+about: Use concise and detailed language to describe the issue you encountered
+title: ""
 labels: bug
-assignees: ''
-
+assignees: ""
 ---
 
-**例行检查**
+## Routine Check
 
-[//]: # (方框内删除已有的空格，填 x 号)
-+ [ ] 我已确认目前没有类似 issue
-+ [ ] 我已确认我已升级到最新版本
-+ [ ] 我已完整查看过项目 README，尤其是常见问题部分
-+ [ ] 我理解并愿意跟进此 issue，协助测试和提供反馈 
-+ [ ] 我理解并认可上述内容，并理解项目维护者精力有限，**不遵循规则的 issue 可能会被无视或直接关闭**
+[//]: # "Remove space in brackets and fill with x"
 
-**问题描述**
+- [ ] I have confirmed there are no similar issues
+- [ ] I have confirmed I am using the latest version
+- [ ] I have thoroughly read the project README, especially the FAQ section
+- [ ] I understand and am willing to follow up on this issue, assist with testing and provide feedback
+- [ ] I understand and agree to the above, and understand that maintainers have limited time - **issues not following guidelines may be ignored or closed**
 
-**复现步骤**
+## Issue Description
 
-**预期结果**
+## Steps to Reproduce
 
-**相关截图**
-如果没有的话，请删除此节。
+## Expected Behavior
+
+## Screenshots
+
+Delete this section if not applicable.

@@ -3,25 +3,30 @@ package middleware
 import (
 	"fmt"
 	"net/http"
-	"one-api/common"
-	"one-api/model"
 	"strconv"
 	"strings"
 
+	gutils "github.com/Laisky/go-utils/v4"
 	"github.com/gin-gonic/gin"
+	"github.com/songquanpeng/one-api/common/ctxkey"
+	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/model"
+	"github.com/songquanpeng/one-api/relay/billing/ratio"
+	"github.com/songquanpeng/one-api/relay/channeltype"
 )
 
 type ModelRequest struct {
-	Model string `json:"model"`
+	Model string `json:"model" form:"model"`
 }
 
 func Distribute() func(c *gin.Context) {
 	return func(c *gin.Context) {
-		userId := c.GetInt("id")
+		userId := c.GetInt(ctxkey.Id)
 		userGroup, _ := model.CacheGetUserGroup(userId)
-		c.Set("group", userGroup)
+		c.Set(ctxkey.Group, userGroup)
+		var requestModel string
 		var channel *model.Channel
-		channelId, ok := c.Get("channelId")
+		channelId, ok := c.Get(ctxkey.SpecificChannelId)
 		if ok {
 			id, err := strconv.Atoi(channelId.(string))
 			if err != nil {
@@ -33,67 +38,85 @@ func Distribute() func(c *gin.Context) {
 				abortWithMessage(c, http.StatusBadRequest, "无效的渠道 Id")
 				return
 			}
-			if channel.Status != common.ChannelStatusEnabled {
+			if channel.Status != model.ChannelStatusEnabled {
 				abortWithMessage(c, http.StatusForbidden, "该渠道已被禁用")
 				return
 			}
 		} else {
-			// Select a channel for the user
-			var modelRequest ModelRequest
-			err := common.UnmarshalBodyReusable(c, &modelRequest)
+			requestModel = c.GetString(ctxkey.RequestModel)
+			var err error
+			channel, err = model.CacheGetRandomSatisfiedChannel(userGroup, requestModel, false)
 			if err != nil {
-				abortWithMessage(c, http.StatusBadRequest, "无效的请求")
-				return
-			}
-			if strings.HasPrefix(c.Request.URL.Path, "/v1/moderations") {
-				if modelRequest.Model == "" {
-					modelRequest.Model = "text-moderation-stable"
-				}
-			}
-			if strings.HasSuffix(c.Request.URL.Path, "embeddings") {
-				if modelRequest.Model == "" {
-					modelRequest.Model = c.Param("model")
-				}
-			}
-			if strings.HasPrefix(c.Request.URL.Path, "/v1/images/generations") {
-				if modelRequest.Model == "" {
-					modelRequest.Model = "dall-e-2"
-				}
-			}
-			if strings.HasPrefix(c.Request.URL.Path, "/v1/audio/transcriptions") || strings.HasPrefix(c.Request.URL.Path, "/v1/audio/translations") {
-				if modelRequest.Model == "" {
-					modelRequest.Model = "whisper-1"
-				}
-			}
-			channel, err = model.CacheGetRandomSatisfiedChannel(userGroup, modelRequest.Model)
-			if err != nil {
-				message := fmt.Sprintf("当前分组 %s 下对于模型 %s 无可用渠道", userGroup, modelRequest.Model)
+				message := fmt.Sprintf("当前分组 %s 下对于模型 %s 无可用渠道", userGroup, requestModel)
 				if channel != nil {
-					common.SysError(fmt.Sprintf("渠道不存在：%d", channel.Id))
+					logger.SysError(fmt.Sprintf("渠道不存在：%d", channel.Id))
 					message = "数据库一致性已被破坏，请联系管理员"
 				}
 				abortWithMessage(c, http.StatusServiceUnavailable, message)
 				return
 			}
 		}
-		c.Set("channel", channel.Type)
-		c.Set("channel_id", channel.Id)
-		c.Set("channel_name", channel.Name)
-		c.Set("model_mapping", channel.GetModelMapping())
-		c.Request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.Key))
-		c.Set("base_url", channel.GetBaseURL())
-		switch channel.Type {
-		case common.ChannelTypeAzure:
-			c.Set("api_version", channel.Other)
-		case common.ChannelTypeXunfei:
-			c.Set("api_version", channel.Other)
-		case common.ChannelTypeGemini:
-			c.Set("api_version", channel.Other)
-		case common.ChannelTypeAIProxyLibrary:
-			c.Set("library_id", channel.Other)
-		case common.ChannelTypeAli:
-			c.Set("plugin", channel.Other)
-		}
+		SetupContextForSelectedChannel(c, channel, requestModel)
 		c.Next()
 	}
+}
+
+func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, modelName string) {
+	// one channel could relates to multiple groups,
+	// and each groud has individual ratio,
+	// set minimal group ratio as channel_ratio
+	var minimalRatio float64 = -1
+	for _, grp := range strings.Split(channel.Group, ",") {
+		v := ratio.GetGroupRatio(grp)
+		if minimalRatio < 0 || v < minimalRatio {
+			minimalRatio = v
+		}
+	}
+	logger.Info(c.Request.Context(), fmt.Sprintf("set channel %s ratio to %f", channel.Name, minimalRatio))
+	c.Set(ctxkey.ChannelRatio, minimalRatio)
+	c.Set(ctxkey.ChannelModel, channel)
+
+	// generate an unique cost id for each request
+	if _, ok := c.Get(ctxkey.RequestId); !ok {
+		c.Set(ctxkey.RequestId, gutils.UUID7())
+	}
+
+	c.Set(ctxkey.Channel, channel.Type)
+	c.Set(ctxkey.ChannelId, channel.Id)
+	c.Set(ctxkey.ChannelName, channel.Name)
+	c.Set(ctxkey.ContentType, c.Request.Header.Get("Content-Type"))
+	if channel.SystemPrompt != nil && *channel.SystemPrompt != "" {
+		c.Set(ctxkey.SystemPrompt, *channel.SystemPrompt)
+	}
+	c.Set(ctxkey.ModelMapping, channel.GetModelMapping())
+	c.Set(ctxkey.OriginalModel, modelName) // for retry
+	c.Request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.Key))
+	c.Set(ctxkey.BaseURL, channel.GetBaseURL())
+	cfg, _ := channel.LoadConfig()
+	// this is for backward compatibility
+	if channel.Other != nil {
+		switch channel.Type {
+		case channeltype.Azure:
+			if cfg.APIVersion == "" {
+				cfg.APIVersion = *channel.Other
+			}
+		case channeltype.Xunfei:
+			if cfg.APIVersion == "" {
+				cfg.APIVersion = *channel.Other
+			}
+		case channeltype.Gemini:
+			if cfg.APIVersion == "" {
+				cfg.APIVersion = *channel.Other
+			}
+		case channeltype.AIProxyLibrary:
+			if cfg.LibraryID == "" {
+				cfg.LibraryID = *channel.Other
+			}
+		case channeltype.Ali:
+			if cfg.Plugin == "" {
+				cfg.Plugin = *channel.Other
+			}
+		}
+	}
+	c.Set(ctxkey.Config, cfg)
 }

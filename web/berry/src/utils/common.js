@@ -51,9 +51,9 @@ export function showError(error) {
 
 export function showNotice(message, isHTML = false) {
   if (isHTML) {
-    enqueueSnackbar(<SnackbarHTMLContent htmlContent={message} />, getSnackbarOptions('INFO'));
+    enqueueSnackbar(<SnackbarHTMLContent htmlContent={message} />, getSnackbarOptions('NOTICE'));
   } else {
-    enqueueSnackbar(message, getSnackbarOptions('INFO'));
+    enqueueSnackbar(message, getSnackbarOptions('NOTICE'));
   }
 }
 
@@ -91,6 +91,28 @@ export async function onGitHubOAuthClicked(github_client_id, openInNewTab = fals
   }
 }
 
+export async function onLarkOAuthClicked(lark_client_id) {
+  const state = await getOAuthState();
+  if (!state) return;
+  let redirect_uri = `${window.location.origin}/oauth/lark`;
+  window.open(`https://accounts.feishu.cn/open-apis/authen/v1/authorize?redirect_uri=${redirect_uri}&client_id=${lark_client_id}&state=${state}`);
+}
+
+export async function onOidcClicked(auth_url, client_id, openInNewTab = false) {
+  const state = await getOAuthState();
+  if (!state) return;
+  const redirect_uri = `${window.location.origin}/oauth/oidc`;
+  const response_type = "code";
+  const scope = "openid profile email";
+  const url = `${auth_url}?client_id=${client_id}&redirect_uri=${redirect_uri}&response_type=${response_type}&scope=${scope}&state=${state}`;
+  if (openInNewTab) {
+    window.open(url);
+  } else
+  {
+    window.location.href = url;
+  }
+}
+
 export function isAdmin() {
   let user = localStorage.getItem('user');
   if (!user) return false;
@@ -124,7 +146,7 @@ export function timestamp2string(timestamp) {
   return year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second;
 }
 
-export function calculateQuota(quota, digits = 2) {
+export function calculateQuota(quota = 0, digits = 2) {
   let quotaPerUnit = localStorage.getItem('quota_per_unit');
   quotaPerUnit = parseFloat(quotaPerUnit);
 
@@ -185,4 +207,41 @@ export function removeTrailingSlash(url) {
   } else {
     return url;
   }
+}
+
+let channelModels = undefined;
+export async function loadChannelModels() {
+  const res = await API.get('/api/models');
+  const { success, data } = res.data;
+  if (!success) {
+    return;
+  }
+  channelModels = data;
+  localStorage.setItem('channel_models', JSON.stringify(data));
+}
+
+export function getChannelModels(type) {
+  if (channelModels !== undefined && type in channelModels) {
+    return channelModels[type];
+  }
+  let models = localStorage.getItem('channel_models');
+  if (!models) {
+    return [];
+  }
+  channelModels = JSON.parse(models);
+  if (type in channelModels) {
+    return channelModels[type];
+  }
+  return [];
+}
+
+export function copy(text, name = '') {
+  try {
+    navigator.clipboard.writeText(text);
+  } catch (error) {
+    text = `复制${name}失败，请手动复制：<br /><br />${text}`;
+    enqueueSnackbar(<SnackbarHTMLContent htmlContent={text} />, getSnackbarOptions('COPY'));
+    return;
+  }
+  showSuccess(`复制${name}成功！`);
 }

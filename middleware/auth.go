@@ -1,12 +1,17 @@
 package middleware
 
 import (
+	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	"net/http"
-	"one-api/common"
-	"one-api/model"
-	"strings"
+	"github.com/songquanpeng/one-api/common/blacklist"
+	"github.com/songquanpeng/one-api/common/ctxkey"
+	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/common/network"
+	"github.com/songquanpeng/one-api/model"
 )
 
 func authHelper(c *gin.Context, minRole int) {
@@ -16,6 +21,7 @@ func authHelper(c *gin.Context, minRole int) {
 	id := session.Get("id")
 	status := session.Get("status")
 	if username == nil {
+		logger.SysLog("no user session found, try to use access token")
 		// Check access token
 		accessToken := c.Request.Header.Get("Authorization")
 		if accessToken == "" {
@@ -26,6 +32,7 @@ func authHelper(c *gin.Context, minRole int) {
 			c.Abort()
 			return
 		}
+
 		user := model.ValidateAccessToken(accessToken)
 		if user != nil && user.Username != "" {
 			// Token is valid
@@ -42,11 +49,14 @@ func authHelper(c *gin.Context, minRole int) {
 			return
 		}
 	}
-	if status.(int) == common.UserStatusDisabled {
+	if status.(int) == model.UserStatusDisabled || blacklist.IsUserBanned(id.(int)) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "用户已被封禁",
 		})
+		session := sessions.Default(c)
+		session.Clear()
+		_ = session.Save()
 		c.Abort()
 		return
 	}
@@ -66,27 +76,28 @@ func authHelper(c *gin.Context, minRole int) {
 
 func UserAuth() func(c *gin.Context) {
 	return func(c *gin.Context) {
-		authHelper(c, common.RoleCommonUser)
+		authHelper(c, model.RoleCommonUser)
 	}
 }
 
 func AdminAuth() func(c *gin.Context) {
 	return func(c *gin.Context) {
-		authHelper(c, common.RoleAdminUser)
+		authHelper(c, model.RoleAdminUser)
 	}
 }
 
 func RootAuth() func(c *gin.Context) {
 	return func(c *gin.Context) {
-		authHelper(c, common.RoleRootUser)
+		authHelper(c, model.RoleRootUser)
 	}
 }
 
 func TokenAuth() func(c *gin.Context) {
 	return func(c *gin.Context) {
+		ctx := c.Request.Context()
 		key := c.Request.Header.Get("Authorization")
 		key = strings.TrimPrefix(key, "Bearer ")
-		key = strings.TrimPrefix(key, "sk-")
+		key = strings.TrimPrefix(strings.TrimPrefix(key, "sk-"), "laisky-")
 		parts := strings.Split(key, "-")
 		key = parts[0]
 		token, err := model.ValidateUserToken(key)
@@ -94,30 +105,71 @@ func TokenAuth() func(c *gin.Context) {
 			abortWithMessage(c, http.StatusUnauthorized, err.Error())
 			return
 		}
+		if token.Subnet != nil && *token.Subnet != "" {
+			if !network.IsIpInSubnets(ctx, c.ClientIP(), *token.Subnet) {
+				abortWithMessage(c, http.StatusForbidden, fmt.Sprintf("该令牌只能在指定网段使用：%s，当前 ip：%s", *token.Subnet, c.ClientIP()))
+				return
+			}
+		}
 		userEnabled, err := model.CacheIsUserEnabled(token.UserId)
 		if err != nil {
 			abortWithMessage(c, http.StatusInternalServerError, err.Error())
 			return
 		}
-		if !userEnabled {
+		if !userEnabled || blacklist.IsUserBanned(token.UserId) {
 			abortWithMessage(c, http.StatusForbidden, "用户已被封禁")
 			return
 		}
-		c.Set("id", token.UserId)
-		c.Set("token_id", token.Id)
-		c.Set("token_name", token.Name)
-		c.Set("token_unlimited_quota", token.UnlimitedQuota)
-		if !token.UnlimitedQuota {
-			c.Set("token_quota", token.RemainQuota)
+		requestModel, err := getRequestModel(c)
+		if err != nil && shouldCheckModel(c) {
+			abortWithMessage(c, http.StatusBadRequest, err.Error())
+			return
 		}
+		c.Set(ctxkey.RequestModel, requestModel)
+		if token.Models != nil && *token.Models != "" {
+			c.Set(ctxkey.AvailableModels, *token.Models)
+			if requestModel != "" && !isModelInList(requestModel, *token.Models) {
+				abortWithMessage(c, http.StatusForbidden, fmt.Sprintf("该令牌无权使用模型：%s", requestModel))
+				return
+			}
+		}
+
+		c.Set(ctxkey.Id, token.UserId)
+		c.Set(ctxkey.TokenId, token.Id)
+		c.Set(ctxkey.TokenName, token.Name)
+		c.Set(ctxkey.TokenQuota, token.RemainQuota)
+		c.Set(ctxkey.TokenQuotaUnlimited, token.UnlimitedQuota)
+
 		if len(parts) > 1 {
 			if model.IsAdmin(token.UserId) {
-				c.Set("channelId", parts[1])
+				c.Set(ctxkey.SpecificChannelId, parts[1])
 			} else {
 				abortWithMessage(c, http.StatusForbidden, "普通用户不支持指定渠道")
 				return
 			}
 		}
+
+		// set channel id for proxy relay
+		if channelId := c.Param("channelid"); channelId != "" {
+			c.Set(ctxkey.SpecificChannelId, channelId)
+		}
+
 		c.Next()
 	}
+}
+
+func shouldCheckModel(c *gin.Context) bool {
+	if strings.HasPrefix(c.Request.URL.Path, "/v1/completions") {
+		return true
+	}
+	if strings.HasPrefix(c.Request.URL.Path, "/v1/chat/completions") {
+		return true
+	}
+	if strings.HasPrefix(c.Request.URL.Path, "/v1/images") {
+		return true
+	}
+	if strings.HasPrefix(c.Request.URL.Path, "/v1/audio") {
+		return true
+	}
+	return false
 }

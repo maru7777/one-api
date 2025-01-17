@@ -6,6 +6,9 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/logger"
 )
 
 var (
@@ -22,24 +25,24 @@ func printHelp() {
 	fmt.Println("Usage: one-api [--port <port>] [--log-dir <log directory>] [--version] [--help]")
 }
 
-func init() {
+func Init() {
 	flag.Parse()
 
-	if *PrintVersion {
-		fmt.Println(Version)
-		os.Exit(0)
-	}
+	// if *PrintVersion {
+	// 	fmt.Println(Version)
+	// 	os.Exit(0)
+	// }
 
-	if *PrintHelp {
-		printHelp()
-		os.Exit(0)
-	}
+	// if *PrintHelp {
+	// 	printHelp()
+	// 	os.Exit(0)
+	// }
 
 	if os.Getenv("SESSION_SECRET") != "" {
 		if os.Getenv("SESSION_SECRET") == "random_string" {
-			SysError("SESSION_SECRET is set to an example value, please change it to a random string.")
+			logger.SysError("SESSION_SECRET is set to an example value, please change it to a random string.")
 		} else {
-			SessionSecret = os.Getenv("SESSION_SECRET")
+			config.SessionSecret = os.Getenv("SESSION_SECRET")
 		}
 	}
 	if os.Getenv("SQLITE_PATH") != "" {
@@ -57,5 +60,6 @@ func init() {
 				log.Fatal(err)
 			}
 		}
+		logger.LogDir = *LogDir
 	}
 }
