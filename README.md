@@ -26,6 +26,7 @@ Fully compatible with the upstream version, can be used directly by replacing th
   - [Bug fix](#bug-fix)
     - [The token balance cannot be edited](#the-token-balance-cannot-be-edited)
     - [Whisper's transcription only charges for the length of the input audio](#whispers-transcription-only-charges-for-the-length-of-the-input-audio)
+    - [High-quota users using low-quota tokens could accumulate large token debts due to lack of pre-deduction](#high-quota-users-using-low-quota-tokens-could-accumulate-large-token-debts-due-to-lack-of-pre-deduction)
 
 ## New Features
 
@@ -115,3 +116,7 @@ type UserRequestCost struct {
 ### Whisper's transcription only charges for the length of the input audio
 
 - [feat(audio): count whisper-1 quota by audio duration #2022](https://github.com/songquanpeng/one-api/pull/2022)
+
+### High-quota users using low-quota tokens could accumulate large token debts due to lack of pre-deduction
+
+- [fix: 修复高并发下，高额度用户使用低额度令牌没有预扣费而导致令牌大额欠费 #25](https://github.com/Laisky/one-api/pull/25)
