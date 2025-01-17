@@ -5,18 +5,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/songquanpeng/one-api/common/render"
 	"io"
 	"net/http"
 	"strings"
 
-	"github.com/songquanpeng/one-api/common/helper"
-	"github.com/songquanpeng/one-api/common/random"
-
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/image"
 	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/common/random"
+	"github.com/songquanpeng/one-api/common/render"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/relay/constant"
 	"github.com/songquanpeng/one-api/relay/model"
@@ -31,8 +30,8 @@ func ConvertRequest(request model.GeneralOpenAIRequest) *ChatRequest {
 			TopP:             request.TopP,
 			FrequencyPenalty: request.FrequencyPenalty,
 			PresencePenalty:  request.PresencePenalty,
-			NumPredict:  	  request.MaxTokens,
-			NumCtx:  	  request.NumCtx,
+			NumPredict:       request.MaxTokens,
+			NumCtx:           request.NumCtx,
 		},
 		Stream: request.Stream,
 	}
@@ -122,7 +121,7 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 	for scanner.Scan() {
 		data := scanner.Text()
 		if strings.HasPrefix(data, "}") {
-		    data = strings.TrimPrefix(data, "}") + "}"
+			data = strings.TrimPrefix(data, "}") + "}"
 		}
 
 		var ollamaResponse ChatResponse

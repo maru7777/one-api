@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/songquanpeng/one-api/common/render"
 	"io"
 	"net/http"
 	"strings"
@@ -16,6 +15,7 @@ import (
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/client"
 	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/common/render"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/relay/constant"
 	"github.com/songquanpeng/one-api/relay/model"
@@ -35,9 +35,9 @@ type Message struct {
 
 type ChatRequest struct {
 	Messages        []Message `json:"messages"`
-	Temperature     float64   `json:"temperature,omitempty"`
-	TopP            float64   `json:"top_p,omitempty"`
-	PenaltyScore    float64   `json:"penalty_score,omitempty"`
+	Temperature     *float64  `json:"temperature,omitempty"`
+	TopP            *float64  `json:"top_p,omitempty"`
+	PenaltyScore    *float64  `json:"penalty_score,omitempty"`
 	Stream          bool      `json:"stream,omitempty"`
 	System          string    `json:"system,omitempty"`
 	DisableSearch   bool      `json:"disable_search,omitempty"`

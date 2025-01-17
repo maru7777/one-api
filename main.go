@@ -2,7 +2,11 @@ package main
 
 import (
 	"embed"
+	"encoding/base64"
 	"fmt"
+	"os"
+	"strconv"
+
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
@@ -16,8 +20,6 @@ import (
 	"github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/router"
-	"os"
-	"strconv"
 )
 
 //go:embed web/build/*
@@ -99,8 +101,15 @@ func main() {
 	server.Use(middleware.RequestId())
 	middleware.SetUpLogger(server)
 	// Initialize session store
-	store := cookie.NewStore([]byte(config.SessionSecret))
-	server.Use(sessions.Sessions("session", store))
+	sessionSecret, err := base64.StdEncoding.DecodeString(config.SessionSecret)
+	if err != nil {
+		logger.SysLog("session secret is not base64 encoded, using raw value instead")
+		store := cookie.NewStore([]byte(config.SessionSecret))
+		server.Use(sessions.Sessions("session", store))
+	} else {
+		store := cookie.NewStore(sessionSecret, sessionSecret)
+		server.Use(sessions.Sessions("session", store))
+	}
 
 	router.SetRouter(server, buildFS)
 	var port = os.Getenv("PORT")

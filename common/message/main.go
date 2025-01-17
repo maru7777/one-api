@@ -1,7 +1,7 @@
 package message
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common/config"
 )
 
@@ -18,5 +18,5 @@ func Notify(by string, title string, description string, content string) error {
 	if by == ByMessagePusher {
 		return SendMessage(title, description, content)
 	}
-	return fmt.Errorf("unknown notify method: %s", by)
+	return errors.Errorf("unknown notify method: %s", by)
 }

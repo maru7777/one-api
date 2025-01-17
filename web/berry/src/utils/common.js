@@ -95,7 +95,22 @@ export async function onLarkOAuthClicked(lark_client_id) {
   const state = await getOAuthState();
   if (!state) return;
   let redirect_uri = `${window.location.origin}/oauth/lark`;
-  window.open(`https://open.feishu.cn/open-apis/authen/v1/index?redirect_uri=${redirect_uri}&app_id=${lark_client_id}&state=${state}`);
+  window.open(`https://accounts.feishu.cn/open-apis/authen/v1/authorize?redirect_uri=${redirect_uri}&client_id=${lark_client_id}&state=${state}`);
+}
+
+export async function onOidcClicked(auth_url, client_id, openInNewTab = false) {
+  const state = await getOAuthState();
+  if (!state) return;
+  const redirect_uri = `${window.location.origin}/oauth/oidc`;
+  const response_type = "code";
+  const scope = "openid profile email";
+  const url = `${auth_url}?client_id=${client_id}&redirect_uri=${redirect_uri}&response_type=${response_type}&scope=${scope}&state=${state}`;
+  if (openInNewTab) {
+    window.open(url);
+  } else
+  {
+    window.location.href = url;
+  }
 }
 
 export function isAdmin() {
@@ -131,7 +146,7 @@ export function timestamp2string(timestamp) {
   return year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second;
 }
 
-export function calculateQuota(quota, digits = 2) {
+export function calculateQuota(quota = 0, digits = 2) {
   let quotaPerUnit = localStorage.getItem('quota_per_unit');
   quotaPerUnit = parseFloat(quotaPerUnit);
 

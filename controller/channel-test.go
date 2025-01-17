@@ -3,18 +3,9 @@ package controller
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
-	"net/http"
-	"net/http/httptest"
-	"net/url"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
-
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/common/logger"
@@ -28,6 +19,14 @@ import (
 	"github.com/songquanpeng/one-api/relay/meta"
 	relaymodel "github.com/songquanpeng/one-api/relay/model"
 	"github.com/songquanpeng/one-api/relay/relaymode"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
 )
 
 func buildTestRequest(model string) *relaymodel.GeneralOpenAIRequest {
@@ -66,7 +65,7 @@ func testChannel(channel *model.Channel, request *relaymodel.GeneralOpenAIReques
 	apiType := channeltype.ToAPIType(channel.Type)
 	adaptor := relay.GetAdaptor(apiType)
 	if adaptor == nil {
-		return fmt.Errorf("invalid api type: %d, adaptor is nil", apiType), nil
+		return errors.Errorf("invalid api type: %d, adaptor is nil", apiType), nil
 	}
 	adaptor.Init(meta)
 	modelName := request.Model
@@ -76,9 +75,9 @@ func testChannel(channel *model.Channel, request *relaymodel.GeneralOpenAIReques
 		if len(modelNames) > 0 {
 			modelName = modelNames[0]
 		}
-		if modelMap != nil && modelMap[modelName] != "" {
-			modelName = modelMap[modelName]
-		}
+	}
+	if modelMap != nil && modelMap[modelName] != "" {
+		modelName = modelMap[modelName]
 	}
 	meta.OriginModelName, meta.ActualModelName = request.Model, modelName
 	request.Model = modelName
@@ -103,7 +102,7 @@ func testChannel(channel *model.Channel, request *relaymodel.GeneralOpenAIReques
 	}
 	usage, respErr := adaptor.DoResponse(c, resp, meta)
 	if respErr != nil {
-		return fmt.Errorf("%s", respErr.Error.Message), &respErr.Error
+		return errors.Errorf("%s", respErr.Error.Message), &respErr.Error
 	}
 	if usage == nil {
 		return errors.New("usage is nil"), nil

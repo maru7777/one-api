@@ -3,6 +3,11 @@ package model
 import (
 	"database/sql"
 	"fmt"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/env"
@@ -13,9 +18,6 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"os"
-	"strings"
-	"time"
 )
 
 var DB *gorm.DB
@@ -28,7 +30,7 @@ func CreateRootAccountIfNeed() error {
 		logger.SysLog("no user exists, creating a root user for you: username is root, password is 123456")
 		hashedPassword, err := common.Password2Hash("123456")
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		accessToken := random.GetUUID()
 		if config.InitialRootAccessToken != "" {
@@ -157,7 +159,7 @@ func migrateDB() error {
 	if err = DB.AutoMigrate(&Log{}); err != nil {
 		return err
 	}
-	if err = DB.AutoMigrate(&Channel{}); err != nil {
+	if err = DB.AutoMigrate(&UserRequestCost{}); err != nil {
 		return err
 	}
 	return nil
@@ -220,10 +222,10 @@ func setDBConns(db *gorm.DB) *sql.DB {
 func closeDB(db *gorm.DB) error {
 	sqlDB, err := db.DB()
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	err = sqlDB.Close()
-	return err
+	return errors.WithStack(err)
 }
 
 func CloseDB() error {

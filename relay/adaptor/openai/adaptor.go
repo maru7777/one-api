@@ -1,13 +1,14 @@
 package openai
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
+	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/relay/adaptor"
 	"github.com/songquanpeng/one-api/relay/adaptor/doubao"
 	"github.com/songquanpeng/one-api/relay/adaptor/minimax"
@@ -75,10 +76,39 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 	if request == nil {
 		return nil, errors.New("request is nil")
 	}
+
+	if config.EnforceIncludeUsage && request.Stream {
+		// always return usage in stream mode
+		if request.StreamOptions == nil {
+			request.StreamOptions = &model.StreamOptions{}
+		}
+		request.StreamOptions.IncludeUsage = true
+	}
+
+	// o1/o1-mini/o1-preview do not support system prompt and max_tokens
+	if strings.HasPrefix(request.Model, "o1") {
+		request.MaxTokens = 0
+		request.Messages = func(raw []model.Message) (filtered []model.Message) {
+			for i := range raw {
+				if raw[i].Role != "system" {
+					filtered = append(filtered, raw[i])
+				}
+			}
+
+			return
+		}(request.Messages)
+	}
+
+	if request.Stream && strings.HasPrefix(request.Model, "gpt-4o-audio") {
+		// TODO: Since it is not clear how to implement billing in stream mode,
+		// it is temporarily not supported
+		return nil, errors.New("stream mode is not supported for gpt-4o-audio")
+	}
+
 	return request, nil
 }
 
-func (a *Adaptor) ConvertImageRequest(request *model.ImageRequest) (any, error) {
+func (a *Adaptor) ConvertImageRequest(_ *gin.Context, request *model.ImageRequest) (any, error) {
 	if request == nil {
 		return nil, errors.New("request is nil")
 	}
@@ -104,10 +134,13 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Met
 		switch meta.Mode {
 		case relaymode.ImagesGenerations:
 			err, _ = ImageHandler(c, resp)
+		case relaymode.ImagesEdits:
+			err, _ = ImagesEditsHandler(c, resp)
 		default:
 			err, usage = Handler(c, resp, meta.PromptTokens, meta.ActualModelName)
 		}
 	}
+
 	return
 }
 

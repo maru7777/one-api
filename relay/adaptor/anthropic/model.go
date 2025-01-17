@@ -48,8 +48,8 @@ type Request struct {
 	MaxTokens     int       `json:"max_tokens,omitempty"`
 	StopSequences []string  `json:"stop_sequences,omitempty"`
 	Stream        bool      `json:"stream,omitempty"`
-	Temperature   float64   `json:"temperature,omitempty"`
-	TopP          float64   `json:"top_p,omitempty"`
+	Temperature   *float64  `json:"temperature,omitempty"`
+	TopP          *float64  `json:"top_p,omitempty"`
 	TopK          int       `json:"top_k,omitempty"`
 	Tools         []Tool    `json:"tools,omitempty"`
 	ToolChoice    any       `json:"tool_choice,omitempty"`
@@ -66,6 +66,20 @@ type Error struct {
 	Message string `json:"message"`
 }
 
+type ResponseType string
+
+const (
+	TypeError        ResponseType = "error"
+	TypeStart        ResponseType = "message_start"
+	TypeContentStart ResponseType = "content_block_start"
+	TypeContent      ResponseType = "content_block_delta"
+	TypePing         ResponseType = "ping"
+	TypeContentStop  ResponseType = "content_block_stop"
+	TypeMessageDelta ResponseType = "message_delta"
+	TypeMessageStop  ResponseType = "message_stop"
+)
+
+// https://docs.anthropic.com/claude/reference/messages-streaming
 type Response struct {
 	Id           string    `json:"id"`
 	Type         string    `json:"type"`

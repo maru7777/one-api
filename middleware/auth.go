@@ -2,14 +2,16 @@ package middleware
 
 import (
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common/blacklist"
 	"github.com/songquanpeng/one-api/common/ctxkey"
+	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/common/network"
 	"github.com/songquanpeng/one-api/model"
-	"net/http"
-	"strings"
 )
 
 func authHelper(c *gin.Context, minRole int) {
@@ -19,6 +21,7 @@ func authHelper(c *gin.Context, minRole int) {
 	id := session.Get("id")
 	status := session.Get("status")
 	if username == nil {
+		logger.SysLog("no user session found, try to use access token")
 		// Check access token
 		accessToken := c.Request.Header.Get("Authorization")
 		if accessToken == "" {
@@ -29,6 +32,7 @@ func authHelper(c *gin.Context, minRole int) {
 			c.Abort()
 			return
 		}
+
 		user := model.ValidateAccessToken(accessToken)
 		if user != nil && user.Username != "" {
 			// Token is valid
@@ -93,7 +97,7 @@ func TokenAuth() func(c *gin.Context) {
 		ctx := c.Request.Context()
 		key := c.Request.Header.Get("Authorization")
 		key = strings.TrimPrefix(key, "Bearer ")
-		key = strings.TrimPrefix(key, "sk-")
+		key = strings.TrimPrefix(strings.TrimPrefix(key, "sk-"), "laisky-")
 		parts := strings.Split(key, "-")
 		key = parts[0]
 		token, err := model.ValidateUserToken(key)

@@ -13,7 +13,12 @@ import (
 )
 
 var ModelList = []string{
-	"claude-3-haiku@20240307", "claude-3-opus@20240229", "claude-3-5-sonnet@20240620", "claude-3-sonnet@20240229",
+	"claude-3-haiku@20240307",
+	"claude-3-opus@20240229",
+	"claude-3-sonnet@20240229",
+	"claude-3-5-sonnet@20240620",
+	"claude-3-5-sonnet-v2@20241022",
+	"claude-3-5-haiku@20241022",
 }
 
 const anthropicVersion = "vertex-2023-10-16"
@@ -43,6 +48,10 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 	c.Set(ctxkey.RequestModel, request.Model)
 	c.Set(ctxkey.ConvertedRequest, req)
 	return req, nil
+}
+
+func (a *Adaptor) ConvertImageRequest(c *gin.Context, request *model.ImageRequest) (any, error) {
+	return nil, errors.New("not support image request")
 }
 
 func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Meta) (usage *model.Usage, err *model.ErrorWithStatusCode) {

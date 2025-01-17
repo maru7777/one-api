@@ -2,8 +2,6 @@ package helper
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/songquanpeng/one-api/common/random"
 	"html/template"
 	"log"
 	"net"
@@ -11,6 +9,9 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/gin-gonic/gin"
+	"github.com/songquanpeng/one-api/common/random"
 )
 
 func OpenBrowser(url string) {
@@ -136,4 +137,24 @@ func String2Int(str string) int {
 		return 0
 	}
 	return num
+}
+
+func Float64PtrMax(p *float64, maxValue float64) *float64 {
+	if p == nil {
+		return nil
+	}
+	if *p > maxValue {
+		return &maxValue
+	}
+	return p
+}
+
+func Float64PtrMin(p *float64, minValue float64) *float64 {
+	if p == nil {
+		return nil
+	}
+	if *p < minValue {
+		return &minValue
+	}
+	return p
 }

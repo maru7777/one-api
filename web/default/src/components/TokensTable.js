@@ -7,15 +7,16 @@ import { ITEMS_PER_PAGE } from '../constants';
 import { renderQuota } from '../helpers/render';
 
 const COPY_OPTIONS = [
-  { key: 'next', text: 'ChatGPT Next Web', value: 'next' },
-  { key: 'ama', text: 'BotGem', value: 'ama' },
+  { key: 'web', text: 'Web', value: 'web' },
   { key: 'opencat', text: 'OpenCat', value: 'opencat' },
+  { key: 'lobechat', text: 'LobeChat', value: 'lobechat' },
 ];
 
 const OPEN_LINK_OPTIONS = [
   { key: 'next', text: 'ChatGPT Next Web', value: 'next' },
   { key: 'ama', text: 'BotGem', value: 'ama' },
   { key: 'opencat', text: 'OpenCat', value: 'opencat' },
+  { key: 'lobechat', text: 'LobeChat', value: 'lobechat' },
 ];
 
 function renderTimestamp(timestamp) {
@@ -94,14 +95,14 @@ const TokensTable = () => {
       serverAddress = window.location.origin;
     }
     let encodedServerAddress = encodeURIComponent(serverAddress);
-    const nextLink = localStorage.getItem('chat_link');
-    let nextUrl;
-  
-    if (nextLink) {
-      nextUrl = nextLink + `/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
-    } else {
-      nextUrl = `https://app.nextchat.dev/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
-    }
+    // const nextLink = localStorage.getItem('chat_link');
+    // let nextUrl;
+
+    // if (nextLink) {
+    //   nextUrl = nextLink + `/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
+    // } else {
+    //   nextUrl = `https://app.nextchat.dev/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
+    // }
 
     let url;
     switch (type) {
@@ -111,8 +112,11 @@ const TokensTable = () => {
       case 'opencat':
         url = `opencat://team/join?domain=${encodedServerAddress}&token=sk-${key}`;
         break;
-      case 'next':
-        url = nextUrl;
+      case 'web':
+        url = `https://chat.laisky.com?apikey=sk-${key}`;
+        break;
+      case 'lobechat':
+        url = nextLink + `/?settings={"keyVaults":{"openai":{"apiKey":"sk-${key}","baseURL":"${serverAddress}/v1"}}}`;
         break;
       default:
         url = `sk-${key}`;
@@ -130,7 +134,7 @@ const TokensTable = () => {
     let serverAddress = '';
     if (status) {
       status = JSON.parse(status);
-      serverAddress = status.server_address; 
+      serverAddress = status.server_address;
     }
     if (serverAddress === '') {
       serverAddress = window.location.origin;
@@ -138,7 +142,7 @@ const TokensTable = () => {
     let encodedServerAddress = encodeURIComponent(serverAddress);
     const chatLink = localStorage.getItem('chat_link');
     let defaultUrl;
-  
+
     if (chatLink) {
       defaultUrl = chatLink + `/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
     } else {
@@ -149,15 +153,19 @@ const TokensTable = () => {
       case 'ama':
         url = `ama://set-api-key?server=${encodedServerAddress}&key=sk-${key}`;
         break;
-  
+
       case 'opencat':
         url = `opencat://team/join?domain=${encodedServerAddress}&token=sk-${key}`;
         break;
-        
+
+      case 'lobechat':
+        url = chatLink + `/?settings={"keyVaults":{"openai":{"apiKey":"sk-${key}","baseURL":"${serverAddress}/v1"}}}`;
+        break;
+
       default:
         url = defaultUrl;
     }
-  
+
     window.open(url, '_blank');
   }
 
@@ -359,28 +367,6 @@ const TokensTable = () => {
                           }))}
                           trigger={<></>}
                         />
-                      </Button.Group>
-                      {' '}
-                      <Button.Group color='blue' size={'small'}>
-                        <Button
-                            size={'small'}
-                            positive
-                            onClick={() => {     
-                              onOpenLink('', token.key);       
-                            }}>
-                            聊天
-                          </Button>
-                          <Dropdown   
-                            className="button icon"       
-                            floating
-                            options={OPEN_LINK_OPTIONS.map(option => ({
-                              ...option,
-                              onClick: async () => {
-                                await onOpenLink(option.value, token.key);
-                              }
-                            }))}       
-                            trigger={<></>}   
-                          />
                       </Button.Group>
                       {' '}
                       <Popup

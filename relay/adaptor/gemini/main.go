@@ -4,10 +4,11 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/songquanpeng/one-api/common/render"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
@@ -15,11 +16,10 @@ import (
 	"github.com/songquanpeng/one-api/common/image"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/common/random"
+	"github.com/songquanpeng/one-api/common/render"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/relay/constant"
 	"github.com/songquanpeng/one-api/relay/model"
-
-	"github.com/gin-gonic/gin"
 )
 
 // https://ai.google.dev/docs/gemini_api_overview?hl=zh-cn
@@ -27,6 +27,17 @@ import (
 const (
 	VisionMaxImageNum = 16
 )
+
+var mimeTypeMap = map[string]string{
+	"json_object": "application/json",
+	"text":        "text/plain",
+}
+
+var toolChoiceTypeMap = map[string]string{
+	"none":     "NONE",
+	"auto":     "AUTO",
+	"required": "ANY",
+}
 
 // Setting safety to the lowest possible values since Gemini is already powerless enough
 func ConvertRequest(textRequest model.GeneralOpenAIRequest) *ChatRequest {
@@ -49,12 +60,25 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *ChatRequest {
 				Category:  "HARM_CATEGORY_DANGEROUS_CONTENT",
 				Threshold: config.GeminiSafetySetting,
 			},
+			{
+				Category:  "HARM_CATEGORY_CIVIC_INTEGRITY",
+				Threshold: config.GeminiSafetySetting,
+			},
 		},
 		GenerationConfig: ChatGenerationConfig{
 			Temperature:     textRequest.Temperature,
 			TopP:            textRequest.TopP,
 			MaxOutputTokens: textRequest.MaxTokens,
 		},
+	}
+	if textRequest.ResponseFormat != nil {
+		if mimeType, ok := mimeTypeMap[textRequest.ResponseFormat.Type]; ok {
+			geminiRequest.GenerationConfig.ResponseMimeType = mimeType
+		}
+		if textRequest.ResponseFormat.JsonSchema != nil {
+			geminiRequest.GenerationConfig.ResponseSchema = textRequest.ResponseFormat.JsonSchema.Schema
+			geminiRequest.GenerationConfig.ResponseMimeType = mimeTypeMap["json_object"]
+		}
 	}
 	if textRequest.Tools != nil {
 		functions := make([]model.Function, 0, len(textRequest.Tools))
@@ -73,7 +97,24 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *ChatRequest {
 			},
 		}
 	}
-	shouldAddDummyModelMessage := false
+	if textRequest.ToolChoice != nil {
+		geminiRequest.ToolConfig = &ToolConfig{
+			FunctionCallingConfig: FunctionCallingConfig{
+				Mode: "auto",
+			},
+		}
+		switch mode := textRequest.ToolChoice.(type) {
+		case string:
+			geminiRequest.ToolConfig.FunctionCallingConfig.Mode = toolChoiceTypeMap[mode]
+		case map[string]interface{}:
+			geminiRequest.ToolConfig.FunctionCallingConfig.Mode = "ANY"
+			if fn, ok := mode["function"].(map[string]interface{}); ok {
+				if name, ok := fn["name"].(string); ok {
+					geminiRequest.ToolConfig.FunctionCallingConfig.AllowedFunctionNames = []string{name}
+				}
+			}
+		}
+	}
 	for _, message := range textRequest.Messages {
 		content := ChatContent{
 			Role: message.Role,
@@ -111,25 +152,12 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *ChatRequest {
 		if content.Role == "assistant" {
 			content.Role = "model"
 		}
-		// Converting system prompt to prompt from user for the same reason
+		// Converting system prompt to SystemInstructions
 		if content.Role == "system" {
-			content.Role = "user"
-			shouldAddDummyModelMessage = true
+			geminiRequest.SystemInstruction = &content
+			continue
 		}
 		geminiRequest.Contents = append(geminiRequest.Contents, content)
-
-		// If a system message is the last message, we need to add a dummy model message to make gemini happy
-		if shouldAddDummyModelMessage {
-			geminiRequest.Contents = append(geminiRequest.Contents, ChatContent{
-				Role: "model",
-				Parts: []Part{
-					{
-						Text: "Okay",
-					},
-				},
-			})
-			shouldAddDummyModelMessage = false
-		}
 	}
 
 	return &geminiRequest
@@ -167,10 +195,16 @@ func (g *ChatResponse) GetResponseText() string {
 	if g == nil {
 		return ""
 	}
-	if len(g.Candidates) > 0 && len(g.Candidates[0].Content.Parts) > 0 {
-		return g.Candidates[0].Content.Parts[0].Text
+	var builder strings.Builder
+	for _, candidate := range g.Candidates {
+		for idx, part := range candidate.Content.Parts {
+			if idx > 0 {
+				builder.WriteString("\n")
+			}
+			builder.WriteString(part.Text)
+		}
 	}
-	return ""
+	return builder.String()
 }
 
 type ChatCandidate struct {
@@ -232,7 +266,14 @@ func responseGeminiChat2OpenAI(response *ChatResponse) *openai.TextResponse {
 			if candidate.Content.Parts[0].FunctionCall != nil {
 				choice.Message.ToolCalls = getToolCalls(&candidate)
 			} else {
-				choice.Message.Content = candidate.Content.Parts[0].Text
+				var builder strings.Builder
+				for idx, part := range candidate.Content.Parts {
+					if idx > 0 {
+						builder.WriteString("\n")
+					}
+					builder.WriteString(part.Text)
+				}
+				choice.Message.Content = builder.String()
 			}
 		} else {
 			choice.Message.Content = ""

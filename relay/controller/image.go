@@ -4,29 +4,31 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/relay"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
+	"github.com/songquanpeng/one-api/relay/adaptor/replicate"
 	billingratio "github.com/songquanpeng/one-api/relay/billing/ratio"
 	"github.com/songquanpeng/one-api/relay/channeltype"
-	"github.com/songquanpeng/one-api/relay/meta"
+	metalib "github.com/songquanpeng/one-api/relay/meta"
 	relaymodel "github.com/songquanpeng/one-api/relay/model"
 )
 
-func getImageRequest(c *gin.Context, relayMode int) (*relaymodel.ImageRequest, error) {
+func getImageRequest(c *gin.Context, _ int) (*relaymodel.ImageRequest, error) {
 	imageRequest := &relaymodel.ImageRequest{}
 	err := common.UnmarshalBodyReusable(c, imageRequest)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	if imageRequest.N == 0 {
 		imageRequest.N = 1
@@ -65,7 +67,7 @@ func getImageSizeRatio(model string, size string) float64 {
 	return 1
 }
 
-func validateImageRequest(imageRequest *relaymodel.ImageRequest, meta *meta.Meta) *relaymodel.ErrorWithStatusCode {
+func validateImageRequest(imageRequest *relaymodel.ImageRequest, _ *metalib.Meta) *relaymodel.ErrorWithStatusCode {
 	// check prompt length
 	if imageRequest.Prompt == "" {
 		return openai.ErrorWrapper(errors.New("prompt is required"), "prompt_missing", http.StatusBadRequest)
@@ -104,7 +106,7 @@ func getImageCostRatio(imageRequest *relaymodel.ImageRequest) (float64, error) {
 
 func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatusCode {
 	ctx := c.Request.Context()
-	meta := meta.GetByContext(c)
+	meta := metalib.GetByContext(c)
 	imageRequest, err := getImageRequest(c, meta.Mode)
 	if err != nil {
 		logger.Errorf(ctx, "getImageRequest failed: %s", err.Error())
@@ -116,6 +118,7 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	meta.OriginModelName = imageRequest.Model
 	imageRequest.Model, isModelMapped = getMappedModelName(imageRequest.Model, meta.ModelMapping)
 	meta.ActualModelName = imageRequest.Model
+	metalib.Set2Context(c, meta)
 
 	// model validation
 	bizErr := validateImageRequest(imageRequest, meta)
@@ -134,7 +137,8 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	c.Set("response_format", imageRequest.ResponseFormat)
 
 	var requestBody io.Reader
-	if isModelMapped || meta.ChannelType == channeltype.Azure { // make Azure channel request body
+	if strings.ToLower(c.GetString(ctxkey.ContentType)) == "application/json" &&
+		isModelMapped || meta.ChannelType == channeltype.Azure { // make Azure channel request body
 		jsonStr, err := json.Marshal(imageRequest)
 		if err != nil {
 			return openai.ErrorWrapper(err, "marshal_image_request_failed", http.StatusInternalServerError)
@@ -150,13 +154,23 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	}
 	adaptor.Init(meta)
 
+	// these adaptors need to convert the request
 	switch meta.ChannelType {
-	case channeltype.Ali:
-		fallthrough
-	case channeltype.Baidu:
-		fallthrough
-	case channeltype.Zhipu:
-		finalRequest, err := adaptor.ConvertImageRequest(imageRequest)
+	case channeltype.Zhipu,
+		channeltype.Ali,
+		channeltype.VertextAI,
+		channeltype.Baidu:
+		finalRequest, err := adaptor.ConvertImageRequest(c, imageRequest)
+		if err != nil {
+			return openai.ErrorWrapper(err, "convert_image_request_failed", http.StatusInternalServerError)
+		}
+		jsonStr, err := json.Marshal(finalRequest)
+		if err != nil {
+			return openai.ErrorWrapper(err, "marshal_image_request_failed", http.StatusInternalServerError)
+		}
+		requestBody = bytes.NewBuffer(jsonStr)
+	case channeltype.Replicate:
+		finalRequest, err := replicate.ConvertImageRequest(c, imageRequest)
 		if err != nil {
 			return openai.ErrorWrapper(err, "convert_image_request_failed", http.StatusInternalServerError)
 		}
@@ -168,11 +182,20 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	}
 
 	modelRatio := billingratio.GetModelRatio(imageModel, meta.ChannelType)
-	groupRatio := billingratio.GetGroupRatio(meta.Group)
+	// groupRatio := billingratio.GetGroupRatio(meta.Group)
+	groupRatio := c.GetFloat64(ctxkey.ChannelRatio)
+
 	ratio := modelRatio * groupRatio
 	userQuota, err := model.CacheGetUserQuota(ctx, meta.UserId)
 
-	quota := int64(ratio*imageCostRatio*1000) * int64(imageRequest.N)
+	var quota int64
+	switch meta.ChannelType {
+	case channeltype.Replicate:
+		// replicate always return 1 image
+		quota = int64(ratio * imageCostRatio * 1000)
+	default:
+		quota = int64(ratio*imageCostRatio*1000) * int64(imageRequest.N)
+	}
 
 	if userQuota-quota < 0 {
 		return openai.ErrorWrapper(errors.New("user quota is not enough"), "insufficient_user_quota", http.StatusForbidden)
@@ -186,7 +209,9 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	}
 
 	defer func(ctx context.Context) {
-		if resp != nil && resp.StatusCode != http.StatusOK {
+		if resp != nil &&
+			resp.StatusCode != http.StatusCreated && // replicate returns 201
+			resp.StatusCode != http.StatusOK {
 			return
 		}
 
@@ -198,13 +223,23 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 		if err != nil {
 			logger.SysError("error update user quota cache: " + err.Error())
 		}
-		if quota != 0 {
+		if quota >= 0 {
 			tokenName := c.GetString(ctxkey.TokenName)
 			logContent := fmt.Sprintf("模型倍率 %.2f，分组倍率 %.2f", modelRatio, groupRatio)
 			model.RecordConsumeLog(ctx, meta.UserId, meta.ChannelId, 0, 0, imageRequest.Model, tokenName, quota, logContent)
 			model.UpdateUserUsedQuotaAndRequestCount(meta.UserId, quota)
 			channelId := c.GetInt(ctxkey.ChannelId)
 			model.UpdateChannelUsedQuota(channelId, quota)
+
+			// also update user request cost
+			docu := model.NewUserRequestCost(
+				c.GetInt(ctxkey.Id),
+				c.GetString(ctxkey.RequestId),
+				quota,
+			)
+			if err = docu.Insert(); err != nil {
+				logger.Errorf(c, "insert user request cost failed: %+v", err)
+			}
 		}
 	}(c.Request.Context())
 

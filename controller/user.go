@@ -3,17 +3,17 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/songquanpeng/one-api/common"
-	"github.com/songquanpeng/one-api/common/config"
-	"github.com/songquanpeng/one-api/common/ctxkey"
-	"github.com/songquanpeng/one-api/common/random"
-	"github.com/songquanpeng/one-api/model"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/ctxkey"
+	"github.com/songquanpeng/one-api/common/random"
+	"github.com/songquanpeng/one-api/model"
 )
 
 type LoginRequest struct {
@@ -77,6 +77,12 @@ func SetupLogin(user *model.User, c *gin.Context) {
 		})
 		return
 	}
+
+	// set auth header
+	// c.Set("id", user.Id)
+	// GenerateAccessToken(c)
+	// c.Header("Authorization", user.AccessToken)
+
 	cleanUser := model.User{
 		Id:          user.Id,
 		Username:    user.Username,
@@ -173,7 +179,6 @@ func Register(c *gin.Context) {
 		})
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
@@ -339,6 +344,16 @@ func GetAffCode(c *gin.Context) {
 		"success": true,
 		"message": "",
 		"data":    user.AffCode,
+	})
+	return
+}
+
+// GetSelfByToken get user by openai api token
+func GetSelfByToken(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"uid":      c.GetInt("id"),
+		"token_id": c.GetInt("token_id"),
+		"username": c.GetString("username"),
 	})
 	return
 }
