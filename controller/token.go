@@ -134,13 +134,13 @@ func GetTokenStatus(c *gin.Context) {
 
 func validateToken(c *gin.Context, token *model.Token) error {
 	if len(token.Name) > 30 {
-		return fmt.Errorf("令牌名称过长")
+		return fmt.Errorf("Token name is too long")
 	}
 
 	if token.Subnet != nil && *token.Subnet != "" {
 		err := network.IsValidSubnets(*token.Subnet)
 		if err != nil {
-			return fmt.Errorf("无效的网段：%s", err.Error())
+			return fmt.Errorf("None效的网段：%s", err.Error())
 		}
 	}
 
@@ -162,7 +162,7 @@ func AddToken(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": fmt.Sprintf("参数错误：%s", err.Error()),
+			"message": fmt.Sprintf("参数Error:%s", err.Error()),
 		})
 		return
 	}
@@ -247,7 +247,7 @@ func ConsumeToken(c *gin.Context) {
 	if cleanToken.Status != model.TokenStatusEnabled {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "令牌未启用",
+			"message": "API KeysNot enabled",
 		})
 		return
 	}
@@ -256,7 +256,7 @@ func ConsumeToken(c *gin.Context) {
 		cleanToken.ExpiredTime <= helper.GetTimestamp() && cleanToken.ExpiredTime != -1 {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "令牌已过期，无法启用，请先修改令牌过期时间，或者设置为永不过期",
+			"message": "The token has expired and cannot be enabled. Please modify the expiration time of the token, or set it to never expire.",
 		})
 		return
 	}
@@ -264,7 +264,7 @@ func ConsumeToken(c *gin.Context) {
 		cleanToken.RemainQuota <= 0 && !cleanToken.UnlimitedQuota {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "令牌可用额度已用尽，无法启用，请先修改令牌剩余额度，或者设置为无限额度",
+			"message": "The available quota of the token has been used up and cannot be enabled. Please modify the remaining quota of the token, or set it to unlimited quota",
 		})
 		return
 	}
@@ -274,7 +274,7 @@ func ConsumeToken(c *gin.Context) {
 	if cleanToken.RemainQuota < int64(tokenPatch.AddUsedQuota) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "剩余额度不足",
+			"message": "Remaining quota不足",
 		})
 		return
 	}
@@ -336,7 +336,7 @@ func UpdateToken(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": fmt.Sprintf("参数错误：%s", err.Error()),
+			"message": fmt.Sprintf("参数Error:%s", err.Error()),
 		})
 		return
 	}
@@ -357,7 +357,7 @@ func UpdateToken(c *gin.Context) {
 			token.ExpiredTime != -1 && token.ExpiredTime < helper.GetTimestamp() {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "令牌已过期，无法启用，请先修改令牌过期时间，或者设置为永不过期",
+				"message": "The token has expired and cannot be enabled. Please modify the expiration time of the token, or set it to never expire.",
 			})
 			return
 		}
@@ -366,7 +366,7 @@ func UpdateToken(c *gin.Context) {
 			token.RemainQuota <= 0 && !token.UnlimitedQuota {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "令牌可用额度已用尽，无法启用，请先修改令牌剩余额度，或者设置为无限额度",
+				"message": "The available quota of the token has been used up and cannot be enabled. Please modify the remaining quota of the token, or set it to unlimited quota",
 			})
 			return
 		}

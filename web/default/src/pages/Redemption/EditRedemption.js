@@ -58,9 +58,9 @@ const EditRedemption = () => {
     const { success, message, data } = res.data;
     if (success) {
       if (isEdit) {
-        showSuccess('兑换码更新成功！');
+        showSuccess('Redemption code updated successfully!');
       } else {
-        showSuccess('兑换码创建成功！');
+        showSuccess('Redemption code created successfully!');
         setInputs(originInputs);
       }
     } else {
@@ -78,13 +78,13 @@ const EditRedemption = () => {
   return (
     <>
       <Segment loading={loading}>
-        <Header as='h3'>{isEdit ? '更新兑换码信息' : '创建新的兑换码'}</Header>
+        <Header as='h3'>{isEdit ? 'Update redemption code information' : 'Create a new redemption code'}</Header>
         <Form autoComplete='new-password'>
           <Form.Field>
             <Form.Input
-              label='名称'
+              label='Name'
               name='name'
-              placeholder={'请输入名称'}
+              placeholder={'Please enter a name'}
               onChange={handleInputChange}
               value={name}
               autoComplete='new-password'
@@ -93,9 +93,9 @@ const EditRedemption = () => {
           </Form.Field>
           <Form.Field>
             <Form.Input
-              label={`额度${renderQuotaWithPrompt(quota)}`}
+              label={`Quota${renderQuotaWithPrompt(quota)}`}
               name='quota'
-              placeholder={'请输入单个兑换码中包含的额度'}
+              placeholder={'Please enter the quota included in a single redemption code'}
               onChange={handleInputChange}
               value={quota}
               autoComplete='new-password'
@@ -106,9 +106,9 @@ const EditRedemption = () => {
             !isEdit && <>
               <Form.Field>
                 <Form.Input
-                  label='生成数量'
+                  label='Generate quantity'
                   name='count'
-                  placeholder={'请输入生成数量'}
+                  placeholder={'Please enter the quantity to generate'}
                   onChange={handleInputChange}
                   value={count}
                   autoComplete='new-password'
@@ -117,8 +117,8 @@ const EditRedemption = () => {
               </Form.Field>
             </>
           }
-          <Button positive onClick={submit}>提交</Button>
-          <Button onClick={handleCancel}>取消</Button>
+          <Button positive onClick={submit}>Submit</Button>
+          <Button onClick={handleCancel}>Cancel</Button>
         </Form>
       </Segment>
     </>
