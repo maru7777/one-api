@@ -9,50 +9,50 @@ import '../index.css';
 // Header Buttons
 let headerButtons = [
   {
-    name: '首页',
+    name: 'Home',
     to: '/',
     icon: 'home'
   },
   {
-    name: '渠道',
+    name: 'Channel',
     to: '/channel',
     icon: 'sitemap',
     admin: true
   },
   {
-    name: '令牌',
+    name: 'API Keys',
     to: '/token',
     icon: 'key'
   },
   {
-    name: '兑换',
+    name: 'Redeem',
     to: '/redemption',
     icon: 'dollar sign',
     admin: true
   },
   {
-    name: '充值',
+    name: 'Recharge',
     to: '/topup',
     icon: 'cart'
   },
   {
-    name: '用户',
+    name: 'Users',
     to: '/user',
     icon: 'user',
     admin: true
   },
   {
-    name: '日志',
+    name: 'Logs',
     to: '/log',
     icon: 'book'
   },
   {
-    name: '设置',
+    name: 'Settings',
     to: '/setting',
     icon: 'setting'
   },
   {
-    name: '关于',
+    name: 'About',
     to: '/about',
     icon: 'info circle'
   }
@@ -60,7 +60,7 @@ let headerButtons = [
 
 if (localStorage.getItem('chat_link')) {
   headerButtons.splice(1, 0, {
-    name: '聊天',
+    name: 'Chat',
     to: '/chat',
     icon: 'comments'
   });
@@ -77,7 +77,7 @@ const Header = () => {
   async function logout() {
     setShowSidebar(false);
     await API.get('/api/user/logout');
-    showSuccess('注销成功!');
+    showSuccess('Logout successful!');
     userDispatch({ type: 'logout' });
     localStorage.removeItem('user');
     navigate('/login');
@@ -152,7 +152,7 @@ const Header = () => {
               {renderButtons(true)}
               <Menu.Item>
                 {userState.user ? (
-                  <Button onClick={logout}>注销</Button>
+                  <Button onClick={logout}>Log out</Button>
                 ) : (
                   <>
                     <Button
@@ -161,7 +161,7 @@ const Header = () => {
                         navigate('/login');
                       }}
                     >
-                      登录
+                      Log in
                     </Button>
                     <Button
                       onClick={() => {
@@ -169,7 +169,7 @@ const Header = () => {
                         navigate('/register');
                       }}
                     >
-                      注册
+                      Sign up
                     </Button>
                   </>
                 )}
@@ -202,12 +202,12 @@ const Header = () => {
                 className='link item'
               >
                 <Dropdown.Menu>
-                  <Dropdown.Item onClick={logout}>注销</Dropdown.Item>
+                  <Dropdown.Item onClick={logout}>Log out</Dropdown.Item>
                 </Dropdown.Menu>
               </Dropdown>
             ) : (
               <Menu.Item
-                name='登录'
+                name='Log in'
                 as={Link}
                 to='/login'
                 className='btn btn-link'

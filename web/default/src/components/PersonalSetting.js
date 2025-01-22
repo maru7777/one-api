@@ -65,7 +65,7 @@ const PersonalSetting = () => {
       setSystemToken(data);
       setAffLink(""); 
       await copy(data);
-      showSuccess(`令牌已重置并已复制到剪贴板`);
+      showSuccess(`Token has been reset and copied to the clipboard`);
     } else {
       showError(message);
     }
@@ -79,7 +79,7 @@ const PersonalSetting = () => {
       setAffLink(link);
       setSystemToken("");
       await copy(link);
-      showSuccess(`邀请链接已复制到剪切板`);
+      showSuccess(`Invitation link has been copied to the clipboard`);
     } else {
       showError(message);
     }
@@ -88,18 +88,18 @@ const PersonalSetting = () => {
   const handleAffLinkClick = async (e) => {
     e.target.select();
     await copy(e.target.value);
-    showSuccess(`邀请链接已复制到剪切板`);
+    showSuccess(`Invitation link has been copied to the clipboard`);
   };
 
   const handleSystemTokenClick = async (e) => {
     e.target.select();
     await copy(e.target.value);
-    showSuccess(`系统令牌已复制到剪切板`);
+    showSuccess(`System token has been copied to the clipboard`);
   };
 
   const deleteAccount = async () => {
     if (inputs.self_account_deletion_confirmation !== userState.user.username) {
-      showError('请输入你的账户名以确认删除！');
+      showError('Please enter your account name to confirm deletion!');
       return;
     }
 
@@ -107,7 +107,7 @@ const PersonalSetting = () => {
     const { success, message } = res.data;
 
     if (success) {
-      showSuccess('账户已删除！');
+      showSuccess('Account has been deleted!');
       await API.get('/api/user/logout');
       userDispatch({ type: 'logout' });
       localStorage.removeItem('user');
@@ -124,7 +124,7 @@ const PersonalSetting = () => {
     );
     const { success, message } = res.data;
     if (success) {
-      showSuccess('微信账户绑定成功！');
+      showSuccess('WeChat account binding successful!');
       setShowWeChatBindModal(false);
     } else {
       showError(message);
@@ -135,7 +135,7 @@ const PersonalSetting = () => {
     setDisableButton(true);
     if (inputs.email === '') return;
     if (turnstileEnabled && turnstileToken === '') {
-      showInfo('请稍后几秒重试，Turnstile 正在检查用户环境！');
+      showInfo('Please try again in a few seconds, Turnstile is checking the user environment!');
       return;
     }
     setLoading(true);
@@ -144,7 +144,7 @@ const PersonalSetting = () => {
     );
     const { success, message } = res.data;
     if (success) {
-      showSuccess('验证码发送成功，请检查邮箱！');
+      showSuccess('Verification code sent successfully, please check your email!');
     } else {
       showError(message);
     }
@@ -159,7 +159,7 @@ const PersonalSetting = () => {
     );
     const { success, message } = res.data;
     if (success) {
-      showSuccess('邮箱账户绑定成功！');
+      showSuccess('Email account binding successful!');
       setShowEmailBindModal(false);
     } else {
       showError(message);
@@ -169,18 +169,18 @@ const PersonalSetting = () => {
 
   return (
     <div style={{ lineHeight: '40px' }}>
-      <Header as='h3'>通用设置</Header>
+      <Header as='h3'>General Settings</Header>
       <Message>
-        注意，此处生成的令牌用于系统管理，而非用于请求 OpenAI 相关的服务，请知悉。
+        Note that, The token generated here is used for system management，Not for requesting OpenAI related services，Please be aware。
       </Message>
       <Button as={Link} to={`/user/edit/`}>
-        更新个人信息
+        Update Personal Information
       </Button>
-      <Button onClick={generateAccessToken}>生成系统访问令牌</Button>
-      <Button onClick={getAffLink}>复制邀请链接</Button>
+      <Button onClick={generateAccessToken}>Generate system access token</Button>
+      <Button onClick={getAffLink}>Copy invitation link</Button>
       <Button onClick={() => {
         setShowAccountDeleteModal(true);
-      }}>删除个人账户</Button>
+      }}>Delete个人账户</Button>
       
       {systemToken && (
         <Form.Input 
@@ -201,7 +201,7 @@ const PersonalSetting = () => {
         />
       )}
       <Divider />
-      <Header as='h3'>账号绑定</Header>
+      <Header as='h3'>Account binding</Header>
       {
         status.wechat_login && (
           <Button
@@ -209,7 +209,7 @@ const PersonalSetting = () => {
               setShowWeChatBindModal(true);
             }}
           >
-            绑定微信账号
+            Bind WeChat Account
           </Button>
         )
       }
@@ -224,19 +224,19 @@ const PersonalSetting = () => {
             <Image src={status.wechat_qrcode} fluid />
             <div style={{ textAlign: 'center' }}>
               <p>
-                微信扫码关注公众号，输入「验证码」获取验证码（三分钟内有效）
+                Scan the QR code with WeChat, follow the official account and enter 'verification code' to get the verification code (valid within three minutes)
               </p>
             </div>
             <Form size='large'>
               <Form.Input
                 fluid
-                placeholder='验证码'
+                placeholder='Verification code'
                 name='wechat_verification_code'
                 value={inputs.wechat_verification_code}
                 onChange={handleInputChange}
               />
               <Button color='' fluid size='large' onClick={bindWeChat}>
-                绑定
+                Bind
               </Button>
             </Form>
           </Modal.Description>
@@ -244,12 +244,12 @@ const PersonalSetting = () => {
       </Modal>
       {
         status.github_oauth && (
-          <Button onClick={()=>{onGitHubOAuthClicked(status.github_client_id)}}>绑定 GitHub 账号</Button>
+          <Button onClick={()=>{onGitHubOAuthClicked(status.github_client_id)}}>Bind GitHub Account</Button>
         )
       }
       {
         status.lark_client_id && (
-          <Button onClick={()=>{onLarkOAuthClicked(status.lark_client_id)}}>绑定飞书账号</Button>
+          <Button onClick={()=>{onLarkOAuthClicked(status.lark_client_id)}}>Bind飞书账号</Button>
         )
       }
       <Button
@@ -257,7 +257,7 @@ const PersonalSetting = () => {
           setShowEmailBindModal(true);
         }}
       >
-        绑定邮箱地址
+        Bind email address
       </Button>
       <Modal
         onClose={() => setShowEmailBindModal(false)}
@@ -266,25 +266,25 @@ const PersonalSetting = () => {
         size={'tiny'}
         style={{ maxWidth: '450px' }}
       >
-        <Modal.Header>绑定邮箱地址</Modal.Header>
+        <Modal.Header>Bind email address</Modal.Header>
         <Modal.Content>
           <Modal.Description>
             <Form size='large'>
               <Form.Input
                 fluid
-                placeholder='输入邮箱地址'
+                placeholder='Enter email address'
                 onChange={handleInputChange}
                 name='email'
                 type='email'
                 action={
                   <Button onClick={sendVerificationCode} disabled={disableButton || loading}>
-                    {disableButton ? `重新发送(${countdown})` : '获取验证码'}
+                    {disableButton ? `Resend(${countdown})` : 'Get verification code'}
                   </Button>
                 }
               />
               <Form.Input
                 fluid
-                placeholder='验证码'
+                placeholder='Verification code'
                 name='email_verification_code'
                 value={inputs.email_verification_code}
                 onChange={handleInputChange}
@@ -307,7 +307,7 @@ const PersonalSetting = () => {
                 onClick={bindEmail}
                 loading={loading}
               >
-                确认绑定
+                Confirm binding
               </Button>
               <div style={{ width: '1rem' }}></div> 
               <Button
@@ -315,7 +315,7 @@ const PersonalSetting = () => {
                 size='large'
                 onClick={() => setShowEmailBindModal(false)}
               >
-                取消
+                Cancel
               </Button>
               </div>
             </Form>
@@ -329,14 +329,14 @@ const PersonalSetting = () => {
         size={'tiny'}
         style={{ maxWidth: '450px' }}
       >
-        <Modal.Header>危险操作</Modal.Header>
+        <Modal.Header>Dangerous operation</Modal.Header>
         <Modal.Content>
-        <Message>您正在删除自己的帐户，将清空所有数据且不可恢复</Message>
+        <Message>You are deleting your own account, all data will be cleared and cannot be recovered</Message>
           <Modal.Description>
             <Form size='large'>
               <Form.Input
                 fluid
-                placeholder={`输入你的账户名 ${userState?.user?.username} 以确认删除`}
+                placeholder={`Enter your account name ${userState?.user?.username} To confirm deletion`}
                 name='self_account_deletion_confirmation'
                 value={inputs.self_account_deletion_confirmation}
                 onChange={handleInputChange}
@@ -359,7 +359,7 @@ const PersonalSetting = () => {
                   onClick={deleteAccount}
                   loading={loading}
                 >
-                  确认删除
+                  Confirm deletion
                 </Button>
                 <div style={{ width: '1rem' }}></div>
                 <Button
@@ -367,7 +367,7 @@ const PersonalSetting = () => {
                   size='large'
                   onClick={() => setShowAccountDeleteModal(false)}
                 >
-                  取消
+                  Cancel
                 </Button>
               </div>
             </Form>

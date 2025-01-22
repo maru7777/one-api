@@ -5,7 +5,7 @@ import ChannelsTable from '../../components/ChannelsTable';
 const Channel = () => (
   <>
     <Segment>
-      <Header as='h3'>管理渠道</Header>
+      <Header as='h3'>Manage Channels</Header>
       <ChannelsTable />
     </Segment>
   </>

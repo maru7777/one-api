@@ -18,7 +18,8 @@ var ModelList = []string{
 	"gemini-pro", "gemini-pro-vision",
 	"gemini-1.5-pro-001", "gemini-1.5-flash-001",
 	"gemini-1.5-pro-002", "gemini-1.5-flash-002",
-	"gemini-2.0-flash-exp", "gemini-2.0-flash-thinking-exp",
+	"gemini-2.0-flash-exp",
+	"gemini-2.0-flash-thinking-exp", "gemini-2.0-flash-thinking-exp-01-21",
 }
 
 type Adaptor struct {
@@ -33,6 +34,10 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 	c.Set(ctxkey.RequestModel, request.Model)
 	c.Set(ctxkey.ConvertedRequest, geminiRequest)
 	return geminiRequest, nil
+}
+
+func (a *Adaptor) ConvertImageRequest(c *gin.Context, request *model.ImageRequest) (any, error) {
+	return nil, errors.New("not support image request")
 }
 
 func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Meta) (usage *model.Usage, err *model.ErrorWithStatusCode) {

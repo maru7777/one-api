@@ -1,12 +1,13 @@
 package meta
 
 import (
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/relay/channeltype"
 	"github.com/songquanpeng/one-api/relay/relaymode"
-	"strings"
 )
 
 type Meta struct {
@@ -30,10 +31,15 @@ type Meta struct {
 	ActualModelName string
 	RequestURLPath  string
 	PromptTokens    int // only for DoResponse
+	ChannelRatio    float64
 	SystemPrompt    string
 }
 
 func GetByContext(c *gin.Context) *Meta {
+	if v, ok := c.Get(ctxkey.Meta); ok {
+		return v.(*Meta)
+	}
+
 	meta := Meta{
 		Mode:            relaymode.GetByPath(c.Request.URL.Path),
 		ChannelType:     c.GetInt(ctxkey.Channel),
@@ -47,6 +53,7 @@ func GetByContext(c *gin.Context) *Meta {
 		BaseURL:         c.GetString(ctxkey.BaseURL),
 		APIKey:          strings.TrimPrefix(c.Request.Header.Get("Authorization"), "Bearer "),
 		RequestURLPath:  c.Request.URL.String(),
+		ChannelRatio:    c.GetFloat64(ctxkey.ChannelRatio), // add by Laisky
 		SystemPrompt:    c.GetString(ctxkey.SystemPrompt),
 	}
 	cfg, ok := c.Get(ctxkey.Config)
@@ -57,5 +64,11 @@ func GetByContext(c *gin.Context) *Meta {
 		meta.BaseURL = channeltype.ChannelBaseURLs[meta.ChannelType]
 	}
 	meta.APIType = channeltype.ToAPIType(meta.ChannelType)
+
+	Set2Context(c, &meta)
 	return &meta
+}
+
+func Set2Context(c *gin.Context, meta *Meta) {
+	c.Set(ctxkey.Meta, meta)
 }

@@ -9,7 +9,7 @@ import OperationSetting from '../../components/OperationSetting';
 const Setting = () => {
   let panes = [
     {
-      menuItem: '个人设置',
+      menuItem: 'Personal settings',
       render: () => (
         <Tab.Pane attached={false}>
           <PersonalSetting />
@@ -20,7 +20,7 @@ const Setting = () => {
 
   if (isRoot()) {
     panes.push({
-      menuItem: '运营设置',
+      menuItem: 'Operations settings',
       render: () => (
         <Tab.Pane attached={false}>
           <OperationSetting />
@@ -28,7 +28,7 @@ const Setting = () => {
       )
     });
     panes.push({
-      menuItem: '系统设置',
+      menuItem: 'System settings',
       render: () => (
         <Tab.Pane attached={false}>
           <SystemSetting />
@@ -36,7 +36,7 @@ const Setting = () => {
       )
     });
     panes.push({
-      menuItem: '其他设置',
+      menuItem: 'Other settings',
       render: () => (
         <Tab.Pane attached={false}>
           <OtherSetting />

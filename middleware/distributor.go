@@ -2,13 +2,17 @@ package middleware
 
 import (
 	"fmt"
+	"net/http"
+	"strconv"
+	"strings"
+
+	gutils "github.com/Laisky/go-utils/v4"
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/model"
+	"github.com/songquanpeng/one-api/relay/billing/ratio"
 	"github.com/songquanpeng/one-api/relay/channeltype"
-	"net/http"
-	"strconv"
 )
 
 type ModelRequest struct {
@@ -26,16 +30,16 @@ func Distribute() func(c *gin.Context) {
 		if ok {
 			id, err := strconv.Atoi(channelId.(string))
 			if err != nil {
-				abortWithMessage(c, http.StatusBadRequest, "无效的渠道 Id")
+				abortWithMessage(c, http.StatusBadRequest, "None效的Channel Id")
 				return
 			}
 			channel, err = model.GetChannelById(id, true)
 			if err != nil {
-				abortWithMessage(c, http.StatusBadRequest, "无效的渠道 Id")
+				abortWithMessage(c, http.StatusBadRequest, "None效的Channel Id")
 				return
 			}
 			if channel.Status != model.ChannelStatusEnabled {
-				abortWithMessage(c, http.StatusForbidden, "该渠道已被禁用")
+				abortWithMessage(c, http.StatusForbidden, "The channel has been disabled")
 				return
 			}
 		} else {
@@ -43,10 +47,10 @@ func Distribute() func(c *gin.Context) {
 			var err error
 			channel, err = model.CacheGetRandomSatisfiedChannel(userGroup, requestModel, false)
 			if err != nil {
-				message := fmt.Sprintf("当前分组 %s 下对于模型 %s 无可用渠道", userGroup, requestModel)
+				message := fmt.Sprintf("当前Group %s 下对于Model %s No available channels", userGroup, requestModel)
 				if channel != nil {
-					logger.SysError(fmt.Sprintf("渠道不存在：%d", channel.Id))
-					message = "数据库一致性已被破坏，请联系管理员"
+					logger.SysError(fmt.Sprintf("Channel does not exist: %d", channel.Id))
+					message = "Database consistency has been broken, please contact the administrator"
 				}
 				abortWithMessage(c, http.StatusServiceUnavailable, message)
 				return
@@ -58,9 +62,29 @@ func Distribute() func(c *gin.Context) {
 }
 
 func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, modelName string) {
+	// one channel could relates to multiple groups,
+	// and each groud has individual ratio,
+	// set minimal group ratio as channel_ratio
+	var minimalRatio float64 = -1
+	for _, grp := range strings.Split(channel.Group, ",") {
+		v := ratio.GetGroupRatio(grp)
+		if minimalRatio < 0 || v < minimalRatio {
+			minimalRatio = v
+		}
+	}
+	logger.Info(c.Request.Context(), fmt.Sprintf("set channel %s ratio to %f", channel.Name, minimalRatio))
+	c.Set(ctxkey.ChannelRatio, minimalRatio)
+	c.Set(ctxkey.ChannelModel, channel)
+
+	// generate an unique cost id for each request
+	if _, ok := c.Get(ctxkey.RequestId); !ok {
+		c.Set(ctxkey.RequestId, gutils.UUID7())
+	}
+
 	c.Set(ctxkey.Channel, channel.Type)
 	c.Set(ctxkey.ChannelId, channel.Id)
 	c.Set(ctxkey.ChannelName, channel.Name)
+	c.Set(ctxkey.ContentType, c.Request.Header.Get("Content-Type"))
 	if channel.SystemPrompt != nil && *channel.SystemPrompt != "" {
 		c.Set(ctxkey.SystemPrompt, *channel.SystemPrompt)
 	}

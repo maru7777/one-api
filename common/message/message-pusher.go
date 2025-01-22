@@ -3,7 +3,7 @@ package message
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
+	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common/config"
 	"net/http"
 )

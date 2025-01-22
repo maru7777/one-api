@@ -22,7 +22,7 @@ const LoginForm = () => {
 
   useEffect(() => {
     if (searchParams.get('expired')) {
-      showError('未登录或登录已过期，请重新登录！');
+      showError('Not logged in or login has expired, please log in again!');
     }
     let status = localStorage.getItem('status');
     if (status) {
@@ -46,7 +46,7 @@ const LoginForm = () => {
       userDispatch({ type: 'login', payload: data });
       localStorage.setItem('user', JSON.stringify(data));
       navigate('/');
-      showSuccess('登录成功！');
+      showSuccess('Login successful!');
       setShowWeChatLoginModal(false);
     } else {
       showError(message);
@@ -71,11 +71,11 @@ const LoginForm = () => {
         localStorage.setItem('user', JSON.stringify(data));
         if (username === 'root' && password === '123456') {
           navigate('/user/edit');
-          showSuccess('登录成功！');
-          showWarning('请立刻修改默认密码！');
+          showSuccess('Login successful!');
+          showWarning('Please change the default password immediately!');
         } else {
           navigate('/token');
-          showSuccess('登录成功！');
+          showSuccess('Login successful!');
         }
       } else {
         showError(message);
@@ -87,7 +87,7 @@ const LoginForm = () => {
     <Grid textAlign='center' style={{ marginTop: '48px' }}>
       <Grid.Column style={{ maxWidth: 450 }}>
         <Header as='h2' color='' textAlign='center'>
-          <Image src={logo} /> 用户登录
+          <Image src={logo} /> User login
         </Header>
         <Form size='large'>
           <Segment>
@@ -95,7 +95,7 @@ const LoginForm = () => {
               fluid
               icon='user'
               iconPosition='left'
-              placeholder='用户名 / 邮箱地址'
+              placeholder='Username / Email address'
               name='username'
               value={username}
               onChange={handleChange}
@@ -104,25 +104,25 @@ const LoginForm = () => {
               fluid
               icon='lock'
               iconPosition='left'
-              placeholder='密码'
+              placeholder='Password'
               name='password'
               type='password'
               value={password}
               onChange={handleChange}
             />
             <Button color='green' fluid size='large' onClick={handleSubmit}>
-              登录
+              Log in
             </Button>
           </Segment>
         </Form>
         <Message>
-          忘记密码？
+          Forget password?
           <Link to='/reset' className='btn btn-link'>
-            点击重置
+            Click to reset
           </Link>
-          ； 没有账户？
+          ; No account?
           <Link to='/register' className='btn btn-link'>
-            点击注册
+            Click to register
           </Link>
         </Message>
         {status.github_oauth || status.wechat_login || status.lark_client_id ? (
@@ -186,13 +186,13 @@ const LoginForm = () => {
               <Image src={status.wechat_qrcode} fluid />
               <div style={{ textAlign: 'center' }}>
                 <p>
-                  微信扫码关注公众号，输入「验证码」获取验证码（三分钟内有效）
+                  Scan the QR code with WeChat, follow the official account and enter 'verification code' to get the verification code (valid within three minutes)
                 </p>
               </div>
               <Form size='large'>
                 <Form.Input
                   fluid
-                  placeholder='验证码'
+                  placeholder='Verification code'
                   name='wechat_verification_code'
                   value={inputs.wechat_verification_code}
                   onChange={handleChange}
@@ -203,7 +203,7 @@ const LoginForm = () => {
                   size='large'
                   onClick={onSubmitWeChatVerificationCode}
                 >
-                  登录
+                  Log in
                 </Button>
               </Form>
             </Modal.Description>
