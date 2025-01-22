@@ -23,6 +23,7 @@ Fully compatible with the upstream version, can be used directly by replacing th
     - [Get request's cost](#get-requests-cost)
     - [Support Vertex Imagen3](#support-vertex-imagen3)
     - [Support gpt-4o-audio](#support-gpt-4o-audio)
+    - [Support deepseek-reasoner \& gemini-2.0-flash-thinking-exp-01-21](#support-deepseek-reasoner--gemini-20-flash-thinking-exp-01-21)
   - [Bug fix](#bug-fix)
     - [The token balance cannot be edited](#the-token-balance-cannot-be-edited)
     - [Whisper's transcription only charges for the length of the input audio](#whispers-transcription-only-charges-for-the-length-of-the-input-audio)
@@ -106,6 +107,10 @@ type UserRequestCost struct {
 ![](https://s3.laisky.com/uploads/2025/01/oneapi-audio-1.png)
 
 ![](https://s3.laisky.com/uploads/2025/01/oneapi-audio-2.png)
+
+### Support deepseek-reasoner & gemini-2.0-flash-thinking-exp-01-21
+
+- [feature: add deepseek-reasoner & gemini-2.0-flash-thinking-exp-01-21 #2045](https://github.com/songquanpeng/one-api/pull/2045)
 
 ## Bug fix
 
