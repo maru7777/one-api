@@ -27,7 +27,8 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	var defaultVersion string
 	switch meta.ActualModelName {
 	case "gemini-2.0-flash-exp",
-		"gemini-2.0-flash-thinking-exp":
+		"gemini-2.0-flash-thinking-exp",
+		"gemini-2.0-flash-thinking-exp-01-21":
 		defaultVersion = "v1beta"
 	default:
 		defaultVersion = config.GeminiVersion
