@@ -7,10 +7,9 @@ Fully compatible with the upstream version, can be used directly by replacing th
 - `ppcelery/one-api:latest`
 - `ppcelery/one-api:arm64-latest`
 
-## Menu
+Also welcome to register and use my deployed one-api gateway, which supports various mainstream models. For usage instructions, please refer to <https://wiki.laisky.com/projects/gpt/pay/cn/#page_gpt_pay_cn>.
 
 - [One API](#one-api)
-  - [Menu](#menu)
   - [New Features](#new-features)
     - [(Merged) Support gpt-vision](#merged-support-gpt-vision)
     - [Support update user's remained quota](#support-update-users-remained-quota)
