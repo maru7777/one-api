@@ -140,15 +140,15 @@ const OtherSetting = () => {
           <Form.Button onClick={submitSystemName}>Set system name</Form.Button>
           <Form.Group widths='equal'>
             <Form.Input
-              label={<label>主题Name（<Link
-                to='https://github.com/songquanpeng/one-api/blob/main/web/README.md'>当前可用主题</Link>）</label>}
-              placeholder='请Enter主题Name'
+              label={<label>Theme Name (<Link
+                to='https://github.com/songquanpeng/one-api/blob/main/web/README.md'>Available Themes</Link>)</label>}
+              placeholder='Please enter theme name'
               value={inputs.Theme}
               name='Theme'
               onChange={handleInputChange}
             />
           </Form.Group>
-          <Form.Button onClick={submitTheme}>Settings主题（重启生效）</Form.Button>
+          <Form.Button onClick={submitTheme}>Set Theme (Restart Required)</Form.Button>
           <Form.Group widths='equal'>
             <Form.Input
               label='Logo Image URL'
@@ -182,8 +182,7 @@ const OtherSetting = () => {
             />
           </Form.Group>
           <Form.Button onClick={submitAbout}>Save About</Form.Button>
-          <Message>移除 One API
-            的版权标识必须首先获得授权，项目维护需要花费大量精力，如果本项目对你有意义，请主动支持本项目。</Message>
+          <Message>Removing One API's copyright notice requires prior authorization. Project maintenance requires significant effort - if this project is meaningful to you, please actively support it.</Message>
           <Form.Group widths='equal'>
             <Form.Input
               label='Footer'

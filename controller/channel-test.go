@@ -49,7 +49,7 @@ func testChannel(channel *model.Channel, request *relaymodel.GeneralOpenAIReques
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = &http.Request{
-		Method: "POST",
+		Method: http.MethodPost,
 		URL:    &url.URL{Path: "/v1/chat/completions"},
 		Body:   nil,
 		Header: make(http.Header),

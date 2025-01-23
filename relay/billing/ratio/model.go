@@ -3,7 +3,6 @@ package ratio
 import (
 	"encoding/json"
 	"fmt"
-	"math"
 	"strings"
 
 	"github.com/songquanpeng/one-api/common/logger"
@@ -396,7 +395,7 @@ var AudioPromptTokensPerSecond = map[string]float64{
 
 // GetAudioPromptTokensPerSecond returns the number of audio tokens per second
 // for the given model.
-func GetAudioPromptTokensPerSecond(actualModelName string) int {
+func GetAudioPromptTokensPerSecond(actualModelName string) float64 {
 	var v float64
 	if tokensPerSecond, ok := AudioPromptTokensPerSecond[actualModelName]; ok {
 		v = tokensPerSecond
@@ -404,7 +403,7 @@ func GetAudioPromptTokensPerSecond(actualModelName string) int {
 		v = 10
 	}
 
-	return int(math.Ceil(v))
+	return v
 }
 
 var CompletionRatio = map[string]float64{

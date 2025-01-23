@@ -107,7 +107,7 @@ const OperationSetting = () => {
         }
         if (originInputs['CompletionRatio'] !== inputs.CompletionRatio) {
           if (!verifyJSON(inputs.CompletionRatio)) {
-            showError('Completion倍率不是合法的 JSON 字符串');
+            showError('Completion ratio is not a valid JSON string');
             return;
           }
           await updateOption('CompletionRatio', inputs.CompletionRatio);
@@ -149,10 +149,10 @@ const OperationSetting = () => {
     const res = await API.delete(`/api/log/?target_timestamp=${Date.parse(historyTimestamp) / 1000}`);
     const { success, message, data } = res.data;
     if (success) {
-      showSuccess(`${data} 条Logs已清理！`);
+      showSuccess(`$cleared {data} logs!`);
       return;
     }
-    showError('Logs清理失败：' + message);
+    showError('Failed to clear logs：' + message);
   };
 
   return (
@@ -192,7 +192,7 @@ const OperationSetting = () => {
               placeholder='Quota that can be exchanged for one unit of currency'
             />
             <Form.Input
-              label='失败Retry次数'
+              label='Retry Times on Failure'
               name='RetryTimes'
               type={'number'}
               step='1'
@@ -200,7 +200,7 @@ const OperationSetting = () => {
               onChange={handleInputChange}
               autoComplete='new-password'
               value={inputs.RetryTimes}
-              placeholder='失败Retry次数'
+              placeholder='Number of retry attempts on failure'
             />
           </Form.Group>
           <Form.Group inline>
@@ -239,7 +239,7 @@ const OperationSetting = () => {
             />
           </Form.Group>
           <Form.Group widths={4}>
-            <Form.Input label='目标Time' value={historyTimestamp} type='datetime-local'
+            <Form.Input label='Target Time' value={historyTimestamp} type='datetime-local'
                         name='history_timestamp'
                         onChange={(e, { name, value }) => {
                           setHistoryTimestamp(value);
@@ -247,7 +247,7 @@ const OperationSetting = () => {
           </Form.Group>
           <Form.Button onClick={() => {
             deleteHistoryLogs().then();
-          }}>清理历史Logs</Form.Button>
+          }}>Clear History Logs</Form.Button>
           <Divider />
           <Header as='h3'>
             Monitoring Settings
@@ -357,13 +357,13 @@ const OperationSetting = () => {
           </Form.Group>
           <Form.Group widths='equal'>
             <Form.TextArea
-              label='Completion倍率'
+              label='Completion Ratio'
               name='CompletionRatio'
               onChange={handleInputChange}
               style={{ minHeight: 250, fontFamily: 'JetBrains Mono, Consolas' }}
               autoComplete='new-password'
               value={inputs.CompletionRatio}
-              placeholder='Is a JSON text，Key is model name，Value is the rate，此处的Rate Settings是ModelCompletion倍率相较于Prompt倍率的比例，使用该Settings可强制覆盖 One API 的内部比例'
+              placeholder='Should be a JSON text, where keys are model names and values are ratios. This ratio setting represents the proportion of ModelCompletion rate to Prompt rate, which can forcefully override One API internal ratios'
             />
           </Form.Group>
           <Form.Group widths='equal'>

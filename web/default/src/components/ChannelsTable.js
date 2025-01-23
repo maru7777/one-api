@@ -380,14 +380,14 @@ const ChannelsTable = () => {
             setShowPrompt(false);
             setPromptShown(promptID);
           }}>
-            OpenAI Channel已经不再支持通过 key 获取Balance，因此Balance显示为 0。对于支持的ChannelType，请点击Balance进行Refresh。
+            OpenAI Channel no longer supports getting Balance via key, so Balance is shown as 0. For supported ChannelTypes, please click Balance to Refresh.
             <br/>
-            ChannelTest仅支持 chat Model，优先使用 gpt-3.5-turbo，如果该Model不可用则使用你所配置的Model列表中的第一个Model。
+            ChannelTest only supports chat Models, preferring gpt-3.5-turbo. If this Model is not available, it will use the first Model in your configured Model list.
             <br/>
-            点击下方Details按钮可以显示Balance以及Settings额外的TestModel。
+            Click the Details button below to display Balance and additional TestModel Settings.
           </Message>
-        )
-      }
+      )
+    }
       <Table basic compact size='small'>
         <Table.Header>
           <Table.Row>
@@ -454,7 +454,7 @@ const ChannelsTable = () => {
                 sortChannel('priority');
               }}
             >
-              优先级
+              Priority
             </Table.HeaderCell>
             <Table.HeaderCell hidden={!showDetail}>TestModel</Table.HeaderCell>
             <Table.HeaderCell>Operation</Table.HeaderCell>
@@ -491,7 +491,7 @@ const ChannelsTable = () => {
                       }} style={{ cursor: 'pointer' }}>
                       {renderBalance(channel.type, channel.balance)}
                     </span>}
-                      content='点击更新'
+                      content='Click to refresh'
                       basic
                     />
                   </Table.Cell>
@@ -507,8 +507,7 @@ const ChannelsTable = () => {
                       }}>
                         <input style={{ maxWidth: '60px' }} />
                       </Input>}
-                      content='Channel选择优先级，越高越优先'
-                      basic
+                      content='Channel priority - higher value means higher priority'
                     />
                   </Table.Cell>
                   <Table.Cell hidden={!showDetail}>

@@ -264,7 +264,7 @@ const EditChannel = () => {
                   <Form.Input
                     label='Default API Version'
                     name='other'
-                    placeholder={'请EnterDefault API Version，For example：2024-03-01-preview，该配置可以被实际的请求Query参数所覆盖'}
+                    placeholder={'Please enter default API version, for example: 2024-03-01-preview. This configuration can be overridden by actual request query parameters'}
                     onChange={handleInputChange}
                     value={inputs.other}
                     autoComplete='new-password'
@@ -301,7 +301,7 @@ const EditChannel = () => {
           <Form.Field>
             <Form.Dropdown
               label='Group'
-              placeholder={'请选择可以使用该Channel的Group'}
+              placeholder={'Please select the Group that can use this Channel'}
               name='groups'
               required
               fluid
@@ -333,9 +333,9 @@ const EditChannel = () => {
             inputs.type === 21 && (
               <Form.Field>
                 <Form.Input
-                  label='知识库 ID'
+                  label='Knowledge Base ID'
                   name='other'
-                  placeholder={'请Enter知识库 ID，For example：123456'}
+                  placeholder={'Please enter Knowledge Base ID, for example: 123456'}
                   onChange={handleInputChange}
                   value={inputs.other}
                   autoComplete='new-password'
@@ -347,9 +347,9 @@ const EditChannel = () => {
             inputs.type === 17 && (
               <Form.Field>
                 <Form.Input
-                  label='插件参数'
+                  label='Plugin Parameters'
                   name='other'
-                  placeholder={'请Enter插件参数，即 X-DashScope-Plugin 请求头的取值'}
+                  placeholder={'Please enter plugin parameters, i.e., the value of the X-DashScope-Plugin request header'}
                   onChange={handleInputChange}
                   value={inputs.other}
                   autoComplete='new-password'
@@ -360,14 +360,14 @@ const EditChannel = () => {
           {
             inputs.type === 34 && (
               <Message>
-                对于 Coze 而言，Model name即 Bot ID，你可以添加一个前缀 `bot-`，For example：`bot-123456`。
+                For Coze, the Model name is the Bot ID. You can add a prefix `bot-`, for example: `bot-123456`.
               </Message>
             )
           }
           {
             inputs.type === 40 && (
               <Message>
-                对于豆包而言，需要手动去 <a target="_blank" href="https://console.volcengine.com/ark/region:ark+cn-beijing/endpoint">Model推理页面</a> 创建推理接入点，以接入点Name作为Model name，For example：`ep-20240608051426-tkxvl`。
+                For Doubao, you need to manually create an inference endpoint on the <a target="_blank" href="https://console.volcengine.com/ark/region:ark+cn-beijing/endpoint">Model Inference Page</a>. Use the endpoint Name as the Model name, for example: `ep-20240608051426-tkxvl`.
               </Message>
             )
           }
@@ -399,7 +399,7 @@ const EditChannel = () => {
               <div style={{ lineHeight: '40px', marginBottom: '12px' }}>
                 <Button type={'button'} onClick={() => {
                   handleInputChange(null, { name: 'models', value: basicModels });
-                }}>填入相关Model</Button>
+                }}>Fill in Related Models</Button>
                 <Button type={'button'} onClick={() => {
                   handleInputChange(null, { name: 'models', value: fullModels });
                 }}>Fill in all models</Button>
@@ -408,7 +408,7 @@ const EditChannel = () => {
                 }}>Clear all models</Button>
                 <Input
                   action={
-                    <Button type={'button'} onClick={addCustomModel}>填入</Button>
+                    <Button type={'button'} onClick={addCustomModel}>Fill in</Button>
                   }
                   placeholder='EnterCustomModel name'
                   value={customModel}
@@ -440,8 +440,8 @@ const EditChannel = () => {
               </Form.Field>
             <Form.Field>
                 <Form.TextArea
-                  label='SystemPrompt词'
-                  placeholder={`此项可选，用于强制Settings给定的SystemPrompt词，请配合CustomModel & Model redirection使用，首先创建一个唯一的CustomModel name并在上面填入，之后将该CustomModel redirection映射到该Channel一个原生支持的Model`}
+                  label='System Prompt'
+                  placeholder={`Optional: Used to force system prompt words specified in Settings. Use with CustomModel & Model redirection - first create a unique CustomModel name and fill it above, then map that CustomModel redirection to a natively supported Model on this Channel`}
                   name='system_prompt'
                   onChange={handleInputChange}
                   value={inputs.system_prompt}
@@ -524,7 +524,7 @@ const EditChannel = () => {
                 label='User ID'
                 name='user_id'
                 required
-                placeholder={'生成该Key的Users ID'}
+                placeholder={'User ID that generated this Key'}
                 onChange={handleConfigChange}
                 value={config.user_id}
                 autoComplete=''
@@ -561,7 +561,7 @@ const EditChannel = () => {
                   label='Account ID'
                   name='user_id'
                   required
-                  placeholder={'请Enter Account ID，For example：d8d7c61dbc334c32d3ced580e4bf42b4'}
+                  placeholder={'Enter Account ID，For example：d8d7c61dbc334c32d3ced580e4bf42b4'}
                   onChange={handleConfigChange}
                   value={config.user_id}
                   autoComplete=''
@@ -597,9 +597,9 @@ const EditChannel = () => {
             inputs.type === 22 && (
               <Form.Field>
                 <Form.Input
-                  label='私有部署地址'
+                  label='Private Deployment URL'
                   name='base_url'
-                  placeholder={'请Enter私有部署地址，格式为：https://fastgpt.run/api/openapi'}
+                  placeholder={'Please enter the private deployment URL, format: https://fastgpt.run/api/openapi'}
                   onChange={handleInputChange}
                   value={inputs.base_url}
                   autoComplete='new-password'

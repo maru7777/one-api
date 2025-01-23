@@ -63,7 +63,7 @@ const PersonalSetting = () => {
     const { success, message, data } = res.data;
     if (success) {
       setSystemToken(data);
-      setAffLink(""); 
+      setAffLink("");
       await copy(data);
       showSuccess(`Token has been reset and copied to the clipboard`);
     } else {
@@ -180,22 +180,22 @@ const PersonalSetting = () => {
       <Button onClick={getAffLink}>Copy invitation link</Button>
       <Button onClick={() => {
         setShowAccountDeleteModal(true);
-      }}>Delete个人账户</Button>
-      
+      }}>Delete Account</Button>
+
       {systemToken && (
-        <Form.Input 
-          fluid 
-          readOnly 
-          value={systemToken} 
+        <Form.Input
+          fluid
+          readOnly
+          value={systemToken}
           onClick={handleSystemTokenClick}
           style={{ marginTop: '10px' }}
         />
       )}
       {affLink && (
-        <Form.Input 
-          fluid 
-          readOnly 
-          value={affLink} 
+        <Form.Input
+          fluid
+          readOnly
+          value={affLink}
           onClick={handleAffLinkClick}
           style={{ marginTop: '10px' }}
         />
@@ -309,7 +309,7 @@ const PersonalSetting = () => {
               >
                 Confirm binding
               </Button>
-              <div style={{ width: '1rem' }}></div> 
+              <div style={{ width: '1rem' }}></div>
               <Button
                 fluid
                 size='large'
