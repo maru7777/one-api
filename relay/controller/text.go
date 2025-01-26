@@ -21,13 +21,13 @@ import (
 	"github.com/songquanpeng/one-api/relay/billing"
 	billingratio "github.com/songquanpeng/one-api/relay/billing/ratio"
 	"github.com/songquanpeng/one-api/relay/channeltype"
-	"github.com/songquanpeng/one-api/relay/meta"
+	metalib "github.com/songquanpeng/one-api/relay/meta"
 	relaymodel "github.com/songquanpeng/one-api/relay/model"
 )
 
 func RelayTextHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 	ctx := c.Request.Context()
-	meta := meta.GetByContext(c)
+	meta := metalib.GetByContext(c)
 	// get & validate textRequest
 	textRequest, err := getAndValidateTextRequest(c, meta.Mode)
 	if err != nil {
@@ -38,7 +38,7 @@ func RelayTextHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 
 	// map model name
 	meta.OriginModelName = textRequest.Model
-	textRequest.Model, _ = getMappedModelName(textRequest.Model, meta.ModelMapping)
+	textRequest.Model = meta.ActualModelName
 	meta.ActualModelName = textRequest.Model
 	// set system prompt if not empty
 	systemPromptReset := setSystemPrompt(ctx, textRequest, meta.SystemPrompt)
@@ -117,7 +117,7 @@ func RelayTextHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 	return nil
 }
 
-func getRequestBody(c *gin.Context, meta *meta.Meta, textRequest *relaymodel.GeneralOpenAIRequest, adaptor adaptor.Adaptor) (io.Reader, error) {
+func getRequestBody(c *gin.Context, meta *metalib.Meta, textRequest *relaymodel.GeneralOpenAIRequest, adaptor adaptor.Adaptor) (io.Reader, error) {
 	if !config.EnforceIncludeUsage &&
 		meta.APIType == apitype.OpenAI &&
 		meta.OriginModelName == meta.ActualModelName &&
