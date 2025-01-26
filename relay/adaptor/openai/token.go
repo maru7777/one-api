@@ -125,7 +125,7 @@ func CountTokenMessages(ctx context.Context,
 				if err != nil {
 					logger.SysError("error counting audio tokens: " + err.Error())
 				} else {
-					audioTokens += audioTokens
+					totalAudioTokens += audioTokens
 				}
 			}
 		}
