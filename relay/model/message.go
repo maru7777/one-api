@@ -9,11 +9,12 @@ import (
 type Message struct {
 	Role string `json:"role,omitempty"`
 	// Content is a string or a list of objects
-	Content    any           `json:"content,omitempty"`
-	Name       *string       `json:"name,omitempty"`
-	ToolCalls  []Tool        `json:"tool_calls,omitempty"`
-	ToolCallId string        `json:"tool_call_id,omitempty"`
-	Audio      *messageAudio `json:"audio,omitempty"`
+	Content          any           `json:"content,omitempty"`
+	ReasoningContent string        `json:"reasoning_content,omitempty"`
+	Name             *string       `json:"name,omitempty"`
+	ToolCalls        []Tool        `json:"tool_calls,omitempty"`
+	ToolCallId       string        `json:"tool_call_id,omitempty"`
+	Audio            *messageAudio `json:"audio,omitempty"`
 }
 
 type messageAudio struct {
