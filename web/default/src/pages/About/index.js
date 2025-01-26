@@ -37,8 +37,8 @@ const About = () => {
             <Header as='h3'>About</Header>
             <p>You can set the content about in the settings page, support HTML & Markdown</p>
             Project Repository Address：
-            <a href='https://github.com/songquanpeng/one-api'>
-              https://github.com/songquanpeng/one-api
+            <a href='https://github.com/Laisky/one-api'>
+              https://github.com/Laisky/one-api
             </a>
           </Segment>
         </> : <>

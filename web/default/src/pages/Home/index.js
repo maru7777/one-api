@@ -69,10 +69,10 @@ const Home = () => {
                       <p>
                         Source code:
                         <a
-                          href='https://github.com/songquanpeng/one-api'
+                          href='https://github.com/Laisky/one-api'
                           target='_blank'
                         >
-                          https://github.com/songquanpeng/one-api
+                          https://github.com/Laisky/one-api
                         </a>
                       </p>
                       <p>Startup time:{getStartTimeString()}</p>
