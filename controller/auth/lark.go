@@ -53,7 +53,7 @@ func getLarkUserInfoByCode(code string) (*LarkUser, error) {
 	res, err := client.Do(req)
 	if err != nil {
 		logger.SysLog(err.Error())
-		return nil, errors.New("None法连接至飞书服务器，请稍后Retry！")
+		return nil, errors.New("Unable to connect to Lark server, please try again later!")
 	}
 	defer res.Body.Close()
 	var oAuthResponse LarkOAuthResponse
@@ -69,7 +69,7 @@ func getLarkUserInfoByCode(code string) (*LarkUser, error) {
 	res2, err := client.Do(req)
 	if err != nil {
 		logger.SysLog(err.Error())
-		return nil, errors.New("None法连接至飞书服务器，请稍后Retry！")
+		return nil, errors.New("Unable to connect to Lark server, please try again later!")
 	}
 	var larkUser LarkUser
 	err = json.NewDecoder(res2.Body).Decode(&larkUser)
@@ -168,7 +168,7 @@ func LarkBind(c *gin.Context) {
 	if model.IsLarkIdAlreadyTaken(user.LarkId) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "该飞书账户已被Bind",
+			"message": "This Lark account has already been bound",
 		})
 		return
 	}

@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"fmt"
+
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/common/message"
@@ -38,9 +39,10 @@ func DisableChannel(channelId int, channelName string, reason string) {
 func MetricDisableChannel(channelId int, successRate float64) {
 	model.UpdateChannelStatusById(channelId, model.ChannelStatusAutoDisabled)
 	logger.SysLog(fmt.Sprintf("channel #%d has been disabled due to low success rate: %.2f", channelId, successRate*100))
-	subject := fmt.Sprintf("Channel #%d 已被Disable", channelId)
-	content := fmt.Sprintf("该Channel（#%d）在最近 %d 次调用中成功率为 %.2f%%，低于阈值 %.2f%%，因此被System自动Disable。",
-		channelId, config.MetricQueueSize, successRate*100, config.MetricSuccessRateThreshold*100)
+	subject := fmt.Sprintf("Channel #%d has been disabled", channelId)
+	content := fmt.Sprintf("The channel (#%d) has been automatically disabled by the system due to "+
+		"a success rate of %.2f%% over the last %d calls, which is below the threshold of %.2f%%.",
+		channelId, successRate*100, config.MetricQueueSize, config.MetricSuccessRateThreshold*100)
 	notifyRootUser(subject, content)
 }
 
@@ -48,7 +50,7 @@ func MetricDisableChannel(channelId int, successRate float64) {
 func EnableChannel(channelId int, channelName string) {
 	model.UpdateChannelStatusById(channelId, model.ChannelStatusEnabled)
 	logger.SysLog(fmt.Sprintf("channel #%d has been enabled", channelId))
-	subject := fmt.Sprintf("Channel「%s」（#%d）已被Enable", channelName, channelId)
-	content := fmt.Sprintf("Channel「%s」（#%d）已被Enable", channelName, channelId)
+	subject := fmt.Sprintf("Channel %s (#%d) has been enabled", channelName, channelId)
+	content := fmt.Sprintf("Channel %s (#%d) has been enabled", channelName, channelId)
 	notifyRootUser(subject, content)
 }

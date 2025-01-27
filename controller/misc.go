@@ -3,14 +3,14 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/songquanpeng/one-api/common"
-	"github.com/songquanpeng/one-api/common/config"
-	"github.com/songquanpeng/one-api/common/message"
-	"github.com/songquanpeng/one-api/model"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/message"
+	"github.com/songquanpeng/one-api/model"
 )
 
 func GetStatus(c *gin.Context) {
@@ -100,7 +100,7 @@ func SendEmailVerification(c *gin.Context) {
 		if !allowed {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "AdministratorEnable了邮箱域名白名单，您的Email address的域名不在白名单中",
+				"message": "Administrator has enabled email domain whitelist, your email domain is not in the whitelist",
 			})
 			return
 		}
@@ -154,8 +154,8 @@ func SendPasswordResetEmail(c *gin.Context) {
 	link := fmt.Sprintf("%s/user/reset?email=%s&token=%s", config.ServerAddress, email, code)
 	subject := fmt.Sprintf("%s Password reset", config.SystemName)
 	content := fmt.Sprintf("<p>Hello, you are resetting %s password.</p>"+
-		"<p>点击 <a href='%s'>此处</a> 进行Password reset。</p>"+
-		"<p>如果链接None法点击，请尝试点击下面的链接或将其Copy到浏览器中打开：<br> %s </p>"+
+		"<p>Click <a href='%s'>here</a> to reset your password.</p>"+
+		"<p>If the link cannot be clicked, please try clicking the link below or copy it to your browser to open:<br> %s </p>"+
 		"<p>The reset link is valid within %d minutes. If it is not your operation, please ignore it.</p>", config.SystemName, link, link, common.VerificationValidMinutes)
 	err := message.SendEmail(subject, email, content)
 	if err != nil {

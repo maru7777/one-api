@@ -38,7 +38,7 @@ func aiProxyDocuments2Markdown(documents []LibraryDocument) string {
 	if len(documents) == 0 {
 		return ""
 	}
-	content := "\n\n参考文档：\n"
+	content := "\n\nReference Documents:\n"
 	for i, document := range documents {
 		content += fmt.Sprintf("%d. [%s](%s)\n", i+1, document.Title, document.URL)
 	}

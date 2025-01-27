@@ -249,7 +249,7 @@ const PersonalSetting = () => {
       }
       {
         status.lark_client_id && (
-          <Button onClick={()=>{onLarkOAuthClicked(status.lark_client_id)}}>Bind飞书账号</Button>
+          <Button onClick={()=>{onLarkOAuthClicked(status.lark_client_id)}}>Bind Lark Account</Button>
         )
       }
       <Button

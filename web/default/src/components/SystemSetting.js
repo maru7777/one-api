@@ -264,7 +264,7 @@ const SystemSetting = () => {
           <Form.Group widths='equal'>
             <Form.Input
               label='Server Address'
-              placeholder='For example：https://yourdomain.com'
+              placeholder='For example: https://yourdomain.com'
               value={inputs.ServerAddress}
               name='ServerAddress'
               onChange={handleInputChange}
@@ -290,7 +290,7 @@ const SystemSetting = () => {
                 size={'tiny'}
                 style={{ maxWidth: '450px' }}
               >
-                <Modal.Header>警告</Modal.Header>
+                <Modal.Header>Warning</Modal.Header>
                 <Modal.Content>
                   <p>Canceling password login will cause all users (including administrators) who have not bound other login methods to be unable to log in via password, confirm cancel?</p>
                 </Modal.Content>
@@ -303,7 +303,7 @@ const SystemSetting = () => {
                       await updateOption('PasswordLoginEnabled', 'false');
                     }}
                   >
-                    确定
+                    Confirm
                   </Button>
                 </Modal.Actions>
               </Modal>
@@ -336,7 +336,7 @@ const SystemSetting = () => {
           <Form.Group inline>
             <Form.Checkbox
               checked={inputs.RegisterEnabled === 'true'}
-              label='Allow new user registration (if this option is off, new users will not be able to register in any way）'
+              label='Allow new user registration (if this option is off, new users will not be able to register in any way)'
               name='RegisterEnabled'
               onChange={handleInputChange}
             />
@@ -349,12 +349,12 @@ const SystemSetting = () => {
           </Form.Group>
           <Divider />
           <Header as='h3'>
-            配置邮箱域名白名单
-            <Header.Subheader>用以防止恶意Users利用临时邮箱批量Sign up</Header.Subheader>
+            Configure Email Domain Whitelist
+            <Header.Subheader>To prevent malicious users from using temporary emails to sign up in bulk</Header.Subheader>
           </Header>
           <Form.Group widths={3}>
             <Form.Checkbox
-              label='Enable邮箱域名白名单'
+              label='Enable Email Domain Whitelist'
               name='EmailDomainRestrictionEnabled'
               onChange={handleInputChange}
               checked={inputs.EmailDomainRestrictionEnabled === 'true'}
@@ -362,8 +362,8 @@ const SystemSetting = () => {
           </Form.Group>
           <Form.Group widths={2}>
             <Form.Dropdown
-              label='允许的邮箱域名'
-              placeholder='允许的邮箱域名'
+              label='Allowed Email Domains'
+              placeholder='Allowed Email Domains'
               name='EmailDomainWhitelist'
               required
               fluid
@@ -375,11 +375,11 @@ const SystemSetting = () => {
               options={EmailDomainWhitelist}
             />
             <Form.Input
-              label='添加新的允许的邮箱域名'
+              label='Add New Allowed Email Domain'
               action={
                 <Button type='button' onClick={() => {
                   submitNewRestrictedDomain();
-                }}>填入</Button>
+                }}>Add</Button>
               }
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -387,14 +387,14 @@ const SystemSetting = () => {
                 }
               }}
               autoComplete='new-password'
-              placeholder='Enter新的允许的邮箱域名'
+              placeholder='Enter new allowed email domain'
               value={restrictedDomainInput}
               onChange={(e, { value }) => {
                 setRestrictedDomainInput(value);
               }}
             />
           </Form.Group>
-          <Form.Button onClick={submitEmailDomainWhitelist}>保存邮箱域名白名单Settings</Form.Button>
+          <Form.Button onClick={submitEmailDomainWhitelist}>Save Email Domain Whitelist Settings</Form.Button>
           <Divider />
           <Header as='h3'>
             Configure SMTP
@@ -428,7 +428,7 @@ const SystemSetting = () => {
           </Form.Group>
           <Form.Group widths={3}>
             <Form.Input
-              label='SMTP Sender email'
+              label='SMTP Sender Email'
               name='SMTPFrom'
               onChange={handleInputChange}
               autoComplete='new-password'
@@ -450,7 +450,7 @@ const SystemSetting = () => {
           <Header as='h3'>
             Configure GitHub OAuth App
             <Header.Subheader>
-              To support login & registration via GitHub，
+              To support login & registration via GitHub,
               <a href='https://github.com/settings/developers' target='_blank'>
                 Click here
               </a>
@@ -459,7 +459,7 @@ const SystemSetting = () => {
           </Header>
           <Message>
             Fill in the Homepage URL <code>{inputs.ServerAddress}</code>
-            ，Fill in the Authorization callback URL{' '}
+            , Fill in the Authorization callback URL{' '}
             <code>{`${inputs.ServerAddress}/oauth/github`}</code>
           </Message>
           <Form.Group widths={3}>
@@ -486,18 +486,18 @@ const SystemSetting = () => {
           </Form.Button>
           <Divider />
           <Header as='h3'>
-            配置飞书授权Log in
+            Configure Lark OAuth
             <Header.Subheader>
-              用以支持通过飞书进行Log inSign up，
+              To support login & registration via Lark,
               <a href='https://open.feishu.cn/app' target='_blank'>
                 Click here
               </a>
-              Management你的飞书应用
+              Manage your Lark App
             </Header.Subheader>
           </Header>
           <Message>
-            主页链接填 <code>{inputs.ServerAddress}</code>
-            ，重定向 URL 填{' '}
+            Fill in the Homepage URL <code>{inputs.ServerAddress}</code>
+            , Fill in the Redirect URL{' '}
             <code>{`${inputs.ServerAddress}/oauth/lark`}</code>
           </Message>
           <Form.Group widths={3}>
@@ -520,13 +520,13 @@ const SystemSetting = () => {
             />
           </Form.Group>
           <Form.Button onClick={submitLarkOAuth}>
-            保存飞书 OAuth Settings
+            Save Lark OAuth Settings
           </Form.Button>
           <Divider />
           <Header as='h3'>
             Configure WeChat Server
             <Header.Subheader>
-              To support login & registration via WeChat，
+              To support login & registration via WeChat,
               <a
                 href='https://github.com/songquanpeng/wechat-server'
                 target='_blank'
@@ -538,9 +538,9 @@ const SystemSetting = () => {
           </Header>
           <Form.Group widths={3}>
             <Form.Input
-              label='WeChat Server Server Address'
+              label='WeChat Server Address'
               name='WeChatServerAddress'
-              placeholder='For example：https://yourdomain.com'
+              placeholder='For example: https://yourdomain.com'
               onChange={handleInputChange}
               autoComplete='new-password'
               value={inputs.WeChatServerAddress}
@@ -568,29 +568,29 @@ const SystemSetting = () => {
           </Form.Button>
           <Divider />
           <Header as='h3'>
-            配置 Message Pusher
+            Configure Message Pusher
             <Header.Subheader>
-              用以推送报警信息，
+              To push alert messages,
               <a
                 href='https://github.com/songquanpeng/message-pusher'
                 target='_blank'
               >
                 Click here
               </a>
-              了解 Message Pusher
+              Learn about Message Pusher
             </Header.Subheader>
           </Header>
           <Form.Group widths={3}>
             <Form.Input
-              label='Message Pusher 推送地址'
+              label='Message Pusher Address'
               name='MessagePusherAddress'
-              placeholder='For example：https://msgpusher.com/push/your_username'
+              placeholder='For example: https://msgpusher.com/push/your_username'
               onChange={handleInputChange}
               autoComplete='new-password'
               value={inputs.MessagePusherAddress}
             />
             <Form.Input
-              label='Message Pusher 访问凭证'
+              label='Message Pusher Access Credential'
               name='MessagePusherToken'
               type='password'
               onChange={handleInputChange}
@@ -600,13 +600,13 @@ const SystemSetting = () => {
             />
           </Form.Group>
           <Form.Button onClick={submitMessagePusher}>
-            保存 Message Pusher Settings
+            Save Message Pusher Settings
           </Form.Button>
           <Divider />
           <Header as='h3'>
             Configure Turnstile
             <Header.Subheader>
-              To support user verification，
+              To support user verification,
               <a href='https://dash.cloudflare.com/' target='_blank'>
                 Click here
               </a>

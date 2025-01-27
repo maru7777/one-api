@@ -203,7 +203,7 @@ const ChannelsTable = () => {
             trigger={<Label basic color='red'>
               Disabled
             </Label>}
-            content='本Channel被手动Disable'
+            content='This channel has been manually disabled'
             basic
           />
         );
@@ -213,7 +213,7 @@ const ChannelsTable = () => {
             trigger={<Label basic color='yellow'>
               Disabled
             </Label>}
-            content='本Channel被程序自动Disable'
+            content='This channel has been automatically disabled by the program'
             basic
           />
         );
@@ -277,7 +277,7 @@ const ChannelsTable = () => {
       newChannels[realIdx].response_time = time * 1000;
       newChannels[realIdx].test_time = Date.now() / 1000;
       setChannels(newChannels);
-      showInfo(`Channel ${name} Test成功，Model ${model}，耗时 ${time.toFixed(2)}s。`);
+      showInfo(`Channel ${name} tested successfully with model ${model}, taking ${time.toFixed(2)} seconds.`);
     } else {
       showError(message);
     }
@@ -292,7 +292,7 @@ const ChannelsTable = () => {
     const res = await API.get(`/api/channel/test?scope=${scope}`);
     const { success, message } = res.data;
     if (success) {
-      showInfo('已成功开始TestChannel，请Refresh页面查看结果。');
+      showInfo('Successfully started testing channels, please refresh the page to see the results.');
     } else {
       showError(message);
     }
@@ -302,7 +302,7 @@ const ChannelsTable = () => {
     const res = await API.delete(`/api/channel/disabled`);
     const { success, message, data } = res.data;
     if (success) {
-      showSuccess(`已Delete所有DisableChannel，共计 ${data} 个`);
+      showSuccess(`Successfully deleted all disabled channels, total ${data} channels`);
       await refresh();
     } else {
       showError(message);
@@ -504,26 +504,26 @@ const ChannelsTable = () => {
                           idx,
                           event.target.value
                         );
-                      }}>
+                        }}>
                         <input style={{ maxWidth: '60px' }} />
-                      </Input>}
-                      content='Channel priority - higher value means higher priority'
-                    />
-                  </Table.Cell>
-                  <Table.Cell hidden={!showDetail}>
-                    <Dropdown
-                      placeholder='请选择TestModel'
-                      selection
-                      options={channel.model_options}
-                      defaultValue={channel.test_model}
-                      onChange={(event, data) => {
+                        </Input>}
+                        content='Channel priority - higher value means higher priority'
+                      />
+                      </Table.Cell>
+                      <Table.Cell hidden={!showDetail}>
+                      <Dropdown
+                        placeholder='Please select TestModel'
+                        selection
+                        options={channel.model_options}
+                        defaultValue={channel.test_model}
+                        onChange={(event, data) => {
                         switchTestModel(idx, data.value);
-                      }}
-                    />
-                  </Table.Cell>
-                  <Table.Cell>
-                    <div>
-                      <Button
+                        }}
+                      />
+                      </Table.Cell>
+                      <Table.Cell>
+                      <div>
+                        <Button
                         size={'small'}
                         positive
                         onClick={() => {
@@ -597,14 +597,14 @@ const ChannelsTable = () => {
                 Test all channels
               </Button>
               <Button size='small' loading={loading} onClick={()=>{testChannels("disabled")}}>
-                TestDisableChannel
+                Test disabled channels
               </Button>
               {/*<Button size='small' onClick={updateAllChannelsBalance}*/}
               {/*        loading={loading || updatingBalance}>Update the balance of enabled channels</Button>*/}
               <Popup
                 trigger={
                   <Button size='small' loading={loading}>
-                    DeleteDisableChannel
+                    Delete disabled channels
                   </Button>
                 }
                 on='click'
@@ -627,7 +627,7 @@ const ChannelsTable = () => {
                 }
               />
               <Button size='small' onClick={refresh} loading={loading}>Refresh</Button>
-              <Button size='small' onClick={toggleShowDetail}>{showDetail ? "隐藏Details" : "Details"}</Button>
+              <Button size='small' onClick={toggleShowDetail}>{showDetail ? "Hide Details" : "Details"}</Button>
             </Table.HeaderCell>
           </Table.Row>
         </Table.Footer>

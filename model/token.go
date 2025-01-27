@@ -72,7 +72,7 @@ func ValidateUserToken(key string) (token *Token, err error) {
 		return nil, errors.Wrap(err, "failed to get token by key")
 	}
 	if token.Status == TokenStatusExhausted {
-		return nil, fmt.Errorf("API Keys %s（#%d）Quota已用尽", token.Name, token.Id)
+		return nil, fmt.Errorf("API Key %s (#%d) quota has been exhausted", token.Name, token.Id)
 	} else if token.Status == TokenStatusExpired {
 		return nil, errors.New("The token has expired")
 	}

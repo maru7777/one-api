@@ -385,8 +385,9 @@ func GetAudioCompletionRatio(actualModelName string) float64 {
 
 // AudioTokensPerSecond is the number of audio tokens per second for each model.
 var AudioPromptTokensPerSecond = map[string]float64{
-	// whisper 的 API 价格是 $0.0001/sec。one-api 的历史倍率为 15，对应 $0.03/kilo_tokens。
-	// 那么换算后可得，每秒的 tokens 应该为 0.0001/0.03*1000 = 3.3333
+	// Whisper API price is $0.0001/sec. One-api's historical ratio is 15,
+	// corresponding to $0.03/kilo_tokens.
+	// After conversion, tokens per second should be 0.0001/0.03*1000 = 3.3333.
 	"whisper-1": 0.0001 / 0.03 * 1000,
 	// gpt-4o-audio series processes 10 tokens per second
 	"gpt-4o-audio-preview":            10,

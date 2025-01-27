@@ -330,13 +330,13 @@ const UsersTable = () => {
                 Add New User
               </Button>
               <Dropdown
-                placeholder='排序方式'
+                placeholder='Sort By'
                 selection
                 options={[
-                  { key: '', text: 'Default排序', value: '' },
-                  { key: 'quota', text: '按Remaining quota排序', value: 'quota' },
-                  { key: 'used_quota', text: '按Used quota排序', value: 'used_quota' },
-                  { key: 'request_count', text: '按Number of Requests排序', value: 'request_count' },
+                  { key: '', text: 'Default Order', value: '' },
+                  { key: 'quota', text: 'Sort by Remaining Quota', value: 'quota' },
+                  { key: 'used_quota', text: 'Sort by Used Quota', value: 'used_quota' },
+                  { key: 'request_count', text: 'Sort by Number of Requests', value: 'request_count' },
                 ]}
                 value={orderBy}
                 onChange={handleOrderByChange}

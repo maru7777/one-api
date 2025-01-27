@@ -162,7 +162,7 @@ func AddToken(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": fmt.Sprintf("参数Error:%s", err.Error()),
+			"message": fmt.Sprintf("invalid token: %s", err.Error()),
 		})
 		return
 	}
@@ -336,7 +336,7 @@ func UpdateToken(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": fmt.Sprintf("参数Error:%s", err.Error()),
+			"message": fmt.Sprintf("invalid token: %s", err.Error()),
 		})
 		return
 	}

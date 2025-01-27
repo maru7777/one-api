@@ -271,7 +271,7 @@ func GetUserDashboard(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "None法获取Statistics",
+			"message": "Failed to get user dashboard data: " + err.Error(),
 			"data":    nil,
 		})
 		return
@@ -415,7 +415,7 @@ func UpdateUser(c *gin.Context) {
 	if myRole <= updatedUser.Role && myRole != model.RoleRootUser {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "None权将其他Users权限等级Promote到大于Equals自己的权限等级",
+			"message": "No permission to promote other users to a permission level greater than or equal to your own",
 		})
 		return
 	}
@@ -529,7 +529,7 @@ func DeleteSelf(c *gin.Context) {
 	if user.Role == model.RoleRootUser {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "不能DeleteSuper administrator账户",
+			"message": "Cannot delete super administrator account",
 		})
 		return
 	}
@@ -813,7 +813,7 @@ func AdminTopUp(c *gin.Context) {
 		return
 	}
 	if req.Remark == "" {
-		req.Remark = fmt.Sprintf("通过 API Recharge %s", common.LogQuota(int64(req.Quota)))
+		req.Remark = fmt.Sprintf("Recharged via API %s", common.LogQuota(int64(req.Quota)))
 	}
 	model.RecordTopupLog(req.UserId, req.Remark, req.Quota)
 	c.JSON(http.StatusOK, gin.H{

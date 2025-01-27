@@ -125,7 +125,7 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 	}
 	var extraLog string
 	if systemPromptReset {
-		extraLog = " （NoteSystemPrompt词已被重置）"
+		extraLog = " (Note: System prompt has been reset)"
 	}
 	logContent := fmt.Sprintf("model rate %.2f, group rate %.2f, completion rate %.2f%s", modelRatio, groupRatio, completionRatio, extraLog)
 	model.RecordConsumeLog(ctx, meta.UserId, meta.ChannelId, promptTokens, completionTokens, textRequest.Model, meta.TokenName, quota, logContent)

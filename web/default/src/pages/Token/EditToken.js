@@ -138,8 +138,8 @@ const EditToken = () => {
           </Form.Field>
           <Form.Field>
             <Form.Dropdown
-              label='Model范围'
-              placeholder={'请选择允许使用的Model，留空则不进行限制'}
+              label='Model Range'
+              placeholder={'Please select the allowed models, leave blank for no restriction'}
               name='models'
               fluid
               multiple
@@ -156,9 +156,9 @@ const EditToken = () => {
           </Form.Field>
           <Form.Field>
             <Form.Input
-              label='IP 限制'
+              label='IP Restriction'
               name='subnet'
-              placeholder={'请Enter允许访问的网段，For example：192.168.0.0/24，请使用英文逗号分隔多个网段'}
+              placeholder={'Please enter the allowed subnet, e.g., 192.168.0.0/24, use commas to separate multiple subnets'}
               onChange={handleInputChange}
               value={inputs.subnet}
               autoComplete='new-password'
@@ -166,9 +166,9 @@ const EditToken = () => {
           </Form.Field>
           <Form.Field>
             <Form.Input
-              label='Expiration time'
+              label='Expiration Time'
               name='expired_time'
-              placeholder={'Please enter the expiration time, the format is yyyy-MM-dd HH:mm:ss, -1 means unlimited'}
+              placeholder={'Please enter the expiration time, format: yyyy-MM-dd HH:mm:ss, -1 means unlimited'}
               onChange={handleInputChange}
               value={expired_time}
               autoComplete='new-password'
@@ -192,7 +192,7 @@ const EditToken = () => {
               setExpiredTime(0, 0, 0, 1);
             }}>Expires after one minute</Button>
           </div>
-          <Message>Note that the quota of the token is only used to limit the maximum quota usage of the token itself, and the actual usage is limited by the remaining quota of the account.</Message>
+          <Message>Note that the token's quota is only used to limit the maximum usage of the token itself, and the actual usage is limited by the remaining quota of the account.</Message>
           <Form.Field>
             <Form.Input
               label={`Quota${renderQuotaWithPrompt(remain_quota)}`}

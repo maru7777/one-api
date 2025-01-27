@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+
 	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/helper"
@@ -80,7 +81,7 @@ func Redeem(key string, userId int) (quota int64, err error) {
 		return err
 	})
 	if err != nil {
-		return 0, errors.New("Redeem失败，" + err.Error())
+		return 0, errors.New("Redeem failed, " + err.Error())
 	}
 	RecordLog(userId, LogTypeTopup, fmt.Sprintf("Recharge %s through redemption code", common.LogQuota(redemption.Quota)))
 	return redemption.Quota, nil

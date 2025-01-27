@@ -247,24 +247,24 @@ const OperationSetting = () => {
           </Form.Group>
           <Form.Button onClick={() => {
             deleteHistoryLogs().then();
-          }}>Clear History Logs</Form.Button>
-          <Divider />
-          <Header as='h3'>
+            }}>Clear History Logs</Form.Button>
+            <Divider />
+            <Header as='h3'>
             Monitoring Settings
-          </Header>
-          <Form.Group widths={3}>
+            </Header>
+            <Form.Group widths={3}>
             <Form.Input
-              label='Longest Response Time'
+              label='Maximum Response Time'
               name='ChannelDisableThreshold'
               onChange={handleInputChange}
               autoComplete='new-password'
               value={inputs.ChannelDisableThreshold}
               type='number'
               min='0'
-              placeholder='Unit in seconds，When all operating channels are tested，Channels will be automatically disabled if this time is exceeded'
+              placeholder='Unit in seconds. When all operating channels are tested, channels will be automatically disabled if this time is exceeded'
             />
             <Form.Input
-              label='Quota reminder threshold'
+              label='Quota Reminder Threshold'
               name='QuotaRemindThreshold'
               onChange={handleInputChange}
               autoComplete='new-password'
@@ -273,8 +273,8 @@ const OperationSetting = () => {
               min='0'
               placeholder='Email will be sent to remind users when the quota is below this'
             />
-          </Form.Group>
-          <Form.Group inline>
+            </Form.Group>
+            <Form.Group inline>
             <Form.Checkbox
               checked={inputs.AutomaticDisableChannelEnabled === 'true'}
               label='Automatically disable the channel when it fails'
@@ -283,12 +283,12 @@ const OperationSetting = () => {
             />
             <Form.Checkbox
               checked={inputs.AutomaticEnableChannelEnabled === 'true'}
-              label='成功时自动EnableChannel'
+              label='Automatically enable the channel when it succeeds'
               name='AutomaticEnableChannelEnabled'
               onChange={handleInputChange}
             />
-          </Form.Group>
-          <Form.Button onClick={() => {
+            </Form.Group>
+            <Form.Button onClick={() => {
             submitConfig('monitor').then();
           }}>Save Monitoring Settings</Form.Button>
           <Divider />

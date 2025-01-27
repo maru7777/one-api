@@ -107,7 +107,7 @@ func TokenAuth() func(c *gin.Context) {
 		}
 		if token.Subnet != nil && *token.Subnet != "" {
 			if !network.IsIpInSubnets(ctx, c.ClientIP(), *token.Subnet) {
-				abortWithMessage(c, http.StatusForbidden, fmt.Sprintf("该API Keys只能在指定网段使用：%s，当前 ip：%s", *token.Subnet, c.ClientIP()))
+				abortWithMessage(c, http.StatusForbidden, fmt.Sprintf("This API key can only be used in the specified subnet: %s, current IP: %s", *token.Subnet, c.ClientIP()))
 				return
 			}
 		}
@@ -129,7 +129,7 @@ func TokenAuth() func(c *gin.Context) {
 		if token.Models != nil && *token.Models != "" {
 			c.Set(ctxkey.AvailableModels, *token.Models)
 			if requestModel != "" && !isModelInList(requestModel, *token.Models) {
-				abortWithMessage(c, http.StatusForbidden, fmt.Sprintf("该API KeysNone权使用Model：%s", requestModel))
+				abortWithMessage(c, http.StatusForbidden, fmt.Sprintf("This API key does not have permission to use the model: %s", requestModel))
 				return
 			}
 		}

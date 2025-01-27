@@ -30,12 +30,12 @@ func Distribute() func(c *gin.Context) {
 		if ok {
 			id, err := strconv.Atoi(channelId.(string))
 			if err != nil {
-				abortWithMessage(c, http.StatusBadRequest, "None效的Channel Id")
+				abortWithMessage(c, http.StatusBadRequest, "Invalid Channel Id")
 				return
 			}
 			channel, err = model.GetChannelById(id, true)
 			if err != nil {
-				abortWithMessage(c, http.StatusBadRequest, "None效的Channel Id")
+				abortWithMessage(c, http.StatusBadRequest, "Invalid Channel Id")
 				return
 			}
 			if channel.Status != model.ChannelStatusEnabled {
@@ -47,7 +47,7 @@ func Distribute() func(c *gin.Context) {
 			var err error
 			channel, err = model.CacheGetRandomSatisfiedChannel(userGroup, requestModel, false)
 			if err != nil {
-				message := fmt.Sprintf("当前Group %s 下对于Model %s No available channels", userGroup, requestModel)
+				message := fmt.Sprintf("No available channels for Model %s under Group %s", requestModel, userGroup)
 				if channel != nil {
 					logger.SysError(fmt.Sprintf("Channel does not exist: %d", channel.Id))
 					message = "Database consistency has been broken, please contact the administrator"
