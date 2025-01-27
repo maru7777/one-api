@@ -21,7 +21,7 @@ func GetRequestCost(c *gin.Context) {
 	if reqId == "" {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "request_id 不能为空",
+			"message": "request_id should not be empty",
 		})
 		return
 	}
@@ -132,7 +132,7 @@ func GetTokenStatus(c *gin.Context) {
 	})
 }
 
-func validateToken(c *gin.Context, token *model.Token) error {
+func validateToken(_ *gin.Context, token *model.Token) error {
 	if len(token.Name) > 30 {
 		return fmt.Errorf("Token name is too long")
 	}
@@ -140,7 +140,7 @@ func validateToken(c *gin.Context, token *model.Token) error {
 	if token.Subnet != nil && *token.Subnet != "" {
 		err := network.IsValidSubnets(*token.Subnet)
 		if err != nil {
-			return fmt.Errorf("None效的网段：%s", err.Error())
+			return fmt.Errorf("invalid network segment: %s", err.Error())
 		}
 	}
 
@@ -274,7 +274,7 @@ func ConsumeToken(c *gin.Context) {
 	if cleanToken.RemainQuota < int64(tokenPatch.AddUsedQuota) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "Remaining quota不足",
+			"message": "Insufficient remaining quota",
 		})
 		return
 	}
@@ -290,7 +290,7 @@ func ConsumeToken(c *gin.Context) {
 	model.RecordConsumeLog(c.Request.Context(),
 		userID, 0, 0, 0, tokenPatch.AddReason, cleanToken.Name,
 		int64(tokenPatch.AddUsedQuota),
-		fmt.Sprintf("外部(%s)消耗 %s",
+		fmt.Sprintf("External (%s) consumed %s",
 			tokenPatch.AddReason, common.LogQuota(int64(tokenPatch.AddUsedQuota))))
 
 	err = cleanToken.Update()
