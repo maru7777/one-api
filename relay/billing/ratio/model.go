@@ -117,15 +117,14 @@ var ModelRatio = map[string]float64{
 	"bge-large-en":       0.002 * RMB,
 	"tao-8k":             0.002 * RMB,
 	// https://ai.google.dev/pricing
-	"gemini-pro":                          1, // $0.00025 / 1k characters -> $0.001 / 1k tokens
-	"gemini-1.0-pro":                      1,
-	"gemini-1.5-pro":                      1,
-	"gemini-1.5-pro-001":                  1,
-	"gemini-1.5-flash":                    1,
-	"gemini-1.5-flash-001":                1,
-	"gemini-2.0-flash-exp":                1,
-	"gemini-2.0-flash-thinking-exp":       1,
-	"gemini-2.0-flash-thinking-exp-01-21": 1,
+	"gemini-pro":                          0.25 * MILLI_USD, // $0.00025 / 1k characters -> $0.001 / 1k tokens
+	"gemini-1.0-pro":                      0.125 * MILLI_USD,
+	"gemini-1.5-pro":                      1.25 * MILLI_USD,
+	"gemini-1.5-pro-001":                  1.25 * MILLI_USD,
+	"gemini-1.5-flash":                    0.075 * MILLI_USD,
+	"gemini-1.5-flash-001":                0.075 * MILLI_USD,
+	"gemini-2.0-flash-exp":                0.075 * MILLI_USD,
+	"gemini-2.0-flash-thinking-exp-01-21": 0.075 * MILLI_USD,
 	"aqa":                                 1,
 	// https://open.bigmodel.cn/pricing
 	"glm-4":         0.1 * RMB,
@@ -566,7 +565,7 @@ func GetCompletionRatio(name string, channelType int) float64 {
 		return 3
 	}
 	if strings.HasPrefix(name, "gemini-") {
-		return 3
+		return 4
 	}
 	if strings.HasPrefix(name, "deepseek-") {
 		return 2
