@@ -115,6 +115,7 @@ func Logout(c *gin.Context) {
 }
 
 func Register(c *gin.Context) {
+	ctx := c.Request.Context()
 	if !config.RegisterEnabled {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "The administrator has turned off new user registration",
@@ -172,7 +173,7 @@ func Register(c *gin.Context) {
 	if config.EmailVerificationEnabled {
 		cleanUser.Email = user.Email
 	}
-	if err := cleanUser.Insert(inviterId); err != nil {
+	if err := cleanUser.Insert(ctx, inviterId); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
@@ -377,6 +378,7 @@ func GetSelf(c *gin.Context) {
 }
 
 func UpdateUser(c *gin.Context) {
+	ctx := c.Request.Context()
 	var updatedUser model.User
 	err := json.NewDecoder(c.Request.Body).Decode(&updatedUser)
 	if err != nil || updatedUser.Id == 0 {
@@ -431,7 +433,7 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 	if originUser.Quota != updatedUser.Quota {
-		model.RecordLog(originUser.Id, model.LogTypeManage, fmt.Sprintf("The administrator changed the user quota from %s to %s", common.LogQuota(originUser.Quota), common.LogQuota(updatedUser.Quota)))
+		model.RecordLog(ctx, originUser.Id, model.LogTypeManage, fmt.Sprintf("Admin changed user quota from %s to %s", common.LogQuota(originUser.Quota), common.LogQuota(updatedUser.Quota)))
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -550,6 +552,7 @@ func DeleteSelf(c *gin.Context) {
 }
 
 func CreateUser(c *gin.Context) {
+	ctx := c.Request.Context()
 	var user model.User
 	err := json.NewDecoder(c.Request.Body).Decode(&user)
 	if err != nil || user.Username == "" || user.Password == "" {
@@ -583,7 +586,7 @@ func CreateUser(c *gin.Context) {
 		Password:    user.Password,
 		DisplayName: user.DisplayName,
 	}
-	if err := cleanUser.Insert(0); err != nil {
+	if err := cleanUser.Insert(ctx, 0); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
@@ -762,6 +765,7 @@ type topUpRequest struct {
 }
 
 func TopUp(c *gin.Context) {
+	ctx := c.Request.Context()
 	req := topUpRequest{}
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
@@ -772,7 +776,7 @@ func TopUp(c *gin.Context) {
 		return
 	}
 	id := c.GetInt("id")
-	quota, err := model.Redeem(req.Key, id)
+	quota, err := model.Redeem(ctx, req.Key, id)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -795,6 +799,7 @@ type adminTopUpRequest struct {
 }
 
 func AdminTopUp(c *gin.Context) {
+	ctx := c.Request.Context()
 	req := adminTopUpRequest{}
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
@@ -815,7 +820,7 @@ func AdminTopUp(c *gin.Context) {
 	if req.Remark == "" {
 		req.Remark = fmt.Sprintf("Recharged via API %s", common.LogQuota(int64(req.Quota)))
 	}
-	model.RecordTopupLog(req.UserId, req.Remark, req.Quota)
+	model.RecordTopupLog(ctx, req.UserId, req.Remark, req.Quota)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",

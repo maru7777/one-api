@@ -53,6 +53,7 @@ func getWeChatIdByCode(code string) (string, error) {
 }
 
 func WeChatAuth(c *gin.Context) {
+	ctx := c.Request.Context()
 	if !config.WeChatAuthEnabled {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "The administrator has not enabled login and registration via WeChat",
@@ -88,7 +89,7 @@ func WeChatAuth(c *gin.Context) {
 			user.Role = model.RoleCommonUser
 			user.Status = model.UserStatusEnabled
 
-			if err := user.Insert(0); err != nil {
+			if err := user.Insert(ctx, 0); err != nil {
 				c.JSON(http.StatusOK, gin.H{
 					"success": false,
 					"message": err.Error(),

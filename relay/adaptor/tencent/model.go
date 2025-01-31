@@ -41,16 +41,16 @@ type ChatRequest struct {
 	// 1. Affects the diversity of the output text. The larger the value, the more diverse the generated text.
 	// 2. The value range is [0.0, 1.0]. If not provided, the recommended value for each model is used.
 	// 3. It is not recommended to use this unless necessary, as unreasonable values can affect the results.
-	TopP *float64 `json:"TopP"`
+	TopP *float64 `json:"TopP,omitempty"`
 	// Description:
 	// 1. Higher values make the output more random, while lower values make it more focused and deterministic.
 	// 2. The value range is [0.0, 2.0]. If not provided, the recommended value for each model is used.
 	// 3. It is not recommended to use this unless necessary, as unreasonable values can affect the results.
-	Temperature *float64 `json:"Temperature"`
+	Temperature *float64 `json:"Temperature,omitempty"`
 }
 
 type Error struct {
-	Code    int    `json:"Code"`
+	Code    string `json:"Code"`
 	Message string `json:"Message"`
 }
 
@@ -67,15 +67,41 @@ type ResponseChoices struct {
 }
 
 type ChatResponse struct {
-	Choices []ResponseChoices `json:"Choices,omitempty"` // Results
-	Created int64             `json:"Created,omitempty"` // Unix timestamp string
-	Id      string            `json:"Id,omitempty"`      // Session ID
-	Usage   Usage             `json:"Usage,omitempty"`   // Token count
-	Error   Error             `json:"Error,omitempty"`   // Error information. Note: This field may return null, indicating that no valid value was found.
-	Note    string            `json:"Note,omitempty"`    // Note
-	ReqID   string            `json:"Req_id,omitempty"`  // Unique request ID, returned with each request. Used for feedback on interface input parameters.
+	Choices []ResponseChoices `json:"Choices,omitempty"`   // 结果
+	Created int64             `json:"Created,omitempty"`   // unix 时间戳的字符串
+	Id      string            `json:"Id,omitempty"`        // 会话 id
+	Usage   Usage             `json:"Usage,omitempty"`     // token 数量
+	Error   Error             `json:"Error,omitempty"`     // 错误信息 注意：此字段可能返回 null，表示取不到有效值
+	Note    string            `json:"Note,omitempty"`      // 注释
+	ReqID   string            `json:"RequestId,omitempty"` // 唯一请求 Id，每次请求都会返回。用于反馈接口入参
 }
 
 type ChatResponseP struct {
 	Response ChatResponse `json:"Response,omitempty"`
+}
+
+type EmbeddingRequest struct {
+	InputList []string `json:"InputList"`
+}
+
+type EmbeddingData struct {
+	Embedding []float64 `json:"Embedding"`
+	Index     int       `json:"Index"`
+	Object    string    `json:"Object"`
+}
+
+type EmbeddingUsage struct {
+	PromptTokens int `json:"PromptTokens"`
+	TotalTokens  int `json:"TotalTokens"`
+}
+
+type EmbeddingResponse struct {
+	Data           []EmbeddingData `json:"Data"`
+	EmbeddingUsage EmbeddingUsage  `json:"Usage,omitempty"`
+	RequestId      string          `json:"RequestId,omitempty"`
+	Error          Error           `json:"Error,omitempty"`
+}
+
+type EmbeddingResponseP struct {
+	Response EmbeddingResponse `json:"Response,omitempty"`
 }

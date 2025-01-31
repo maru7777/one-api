@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -49,7 +50,7 @@ func GetRedemptionById(id int) (*Redemption, error) {
 	return &redemption, err
 }
 
-func Redeem(key string, userId int) (quota int64, err error) {
+func Redeem(ctx context.Context, key string, userId int) (quota int64, err error) {
 	if key == "" {
 		return 0, errors.New("No redemption code provided")
 	}
@@ -83,7 +84,7 @@ func Redeem(key string, userId int) (quota int64, err error) {
 	if err != nil {
 		return 0, errors.New("Redeem failed, " + err.Error())
 	}
-	RecordLog(userId, LogTypeTopup, fmt.Sprintf("Recharge %s through redemption code", common.LogQuota(redemption.Quota)))
+	RecordLog(ctx, userId, LogTypeTopup, fmt.Sprintf("Recharged %s using redemption code", common.LogQuota(redemption.Quota)))
 	return redemption.Quota, nil
 }
 

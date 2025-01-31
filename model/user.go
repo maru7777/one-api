@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -115,7 +116,7 @@ func DeleteUserById(id int) (err error) {
 	return user.Delete()
 }
 
-func (user *User) Insert(inviterId int) error {
+func (user *User) Insert(ctx context.Context, inviterId int) error {
 	var err error
 	if user.Password != "" {
 		user.Password, err = common.Password2Hash(user.Password)
@@ -131,16 +132,16 @@ func (user *User) Insert(inviterId int) error {
 		return result.Error
 	}
 	if config.QuotaForNewUser > 0 {
-		RecordLog(user.Id, LogTypeSystem, fmt.Sprintf("New user registration gives %s", common.LogQuota(config.QuotaForNewUser)))
+		RecordLog(ctx, user.Id, LogTypeSystem, fmt.Sprintf("新用户注册赠送 %s", common.LogQuota(config.QuotaForNewUser)))
 	}
 	if inviterId != 0 {
 		if config.QuotaForInvitee > 0 {
 			_ = IncreaseUserQuota(user.Id, config.QuotaForInvitee)
-			RecordLog(user.Id, LogTypeSystem, fmt.Sprintf("Use invitation code to give %s", common.LogQuota(config.QuotaForInvitee)))
+			RecordLog(ctx, user.Id, LogTypeSystem, fmt.Sprintf("Gifted %s for using invitation code", common.LogQuota(config.QuotaForInvitee)))
 		}
 		if config.QuotaForInviter > 0 {
 			_ = IncreaseUserQuota(inviterId, config.QuotaForInviter)
-			RecordLog(inviterId, LogTypeSystem, fmt.Sprintf("Invite users to give %s", common.LogQuota(config.QuotaForInviter)))
+			RecordLog(ctx, inviterId, LogTypeSystem, fmt.Sprintf("Gifted %s for inviting user", common.LogQuota(config.QuotaForInviter)))
 		}
 	}
 	// create default token
