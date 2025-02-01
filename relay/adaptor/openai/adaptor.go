@@ -103,7 +103,9 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 		}(request.Messages)
 	}
 
-	if request.Stream && strings.HasPrefix(request.Model, "gpt-4o-audio") && !config.EnforceIncludeUsage {
+	if request.Stream && !config.EnforceIncludeUsage &&
+		(strings.HasPrefix(request.Model, "gpt-4o-audio") ||
+			strings.HasPrefix(request.Model, "gpt-4o-mini-audio")) {
 		// TODO: Since it is not clear how to implement billing in stream mode,
 		// it is temporarily not supported
 		return nil, errors.New("set ENFORCE_INCLUDE_USAGE=true to enable stream mode for gpt-4o-audio")
