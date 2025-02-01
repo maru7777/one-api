@@ -1,5 +1,16 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Button, Divider, Form, Grid, Header, Image, Message, Modal, Segment } from 'semantic-ui-react';
+import {
+  Button,
+  Divider,
+  Form,
+  Grid,
+  Header,
+  Image,
+  Message,
+  Modal,
+  Segment,
+  Card,
+} from 'semantic-ui-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { UserContext } from '../context/User';
 import { API, getLogo, showError, showSuccess, showWarning } from '../helpers';
@@ -10,7 +21,7 @@ const LoginForm = () => {
   const [inputs, setInputs] = useState({
     username: '',
     password: '',
-    wechat_verification_code: ''
+    wechat_verification_code: '',
   });
   const [searchParams, setSearchParams] = useSearchParams();
   const [submitted, setSubmitted] = useState(false);
@@ -63,7 +74,7 @@ const LoginForm = () => {
     if (username && password) {
       const res = await API.post(`/api/user/login`, {
         username,
-        password
+        password,
       });
       const { success, message, data } = res.data;
       if (success) {
@@ -86,95 +97,149 @@ const LoginForm = () => {
   return (
     <Grid textAlign='center' style={{ marginTop: '48px' }}>
       <Grid.Column style={{ maxWidth: 450 }}>
-        <Header as='h2' color='' textAlign='center'>
-          <Image src={logo} /> User login
-        </Header>
-        <Form size='large'>
-          <Segment>
-            <Form.Input
-              fluid
-              icon='user'
-              iconPosition='left'
-              placeholder='Username / Email address'
-              name='username'
-              value={username}
-              onChange={handleChange}
-            />
-            <Form.Input
-              fluid
-              icon='lock'
-              iconPosition='left'
-              placeholder='Password'
-              name='password'
-              type='password'
-              value={password}
-              onChange={handleChange}
-            />
-            <Button color='green' fluid size='large' onClick={handleSubmit}>
-              Log in
-            </Button>
-          </Segment>
-        </Form>
-        <Message>
-          Forget password?
-          <Link to='/reset' className='btn btn-link'>
-            Click to reset
-          </Link>
-          ; No account?
-          <Link to='/register' className='btn btn-link'>
-            Click to register
-          </Link>
-        </Message>
-        {status.github_oauth || status.wechat_login || status.lark_client_id ? (
-          <>
-            <Divider horizontal>Or</Divider>
-            <div style={{ display: "flex", justifyContent: "center" }}>
-              {status.github_oauth ? (
-                <Button
-                  circular
-                  color='black'
-                  icon='github'
-                  onClick={() => onGitHubOAuthClicked(status.github_client_id)}
-                />
-              ) : (
-                <></>
-              )}
-              {status.wechat_login ? (
-                <Button
-                  circular
-                  color='green'
-                  icon='wechat'
-                  onClick={onWeChatLoginClicked}
-                />
-              ) : (
-                <></>
-              )}
-              {status.lark_client_id ? (
-                <div style={{
-                  background: "radial-gradient(circle, #FFFFFF, #FFFFFF, #00D6B9, #2F73FF, #0a3A9C)",
-                  width: "36px",
-                  height: "36px",
-                  borderRadius: "10em",
-                  display: "flex",
-                  cursor: "pointer"
+        <Card
+          fluid
+          className='chart-card'
+          style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.12)' }}
+        >
+          <Card.Content>
+            <Card.Header>
+              <Header
+                as='h2'
+                textAlign='center'
+                style={{ marginBottom: '1.5em' }}
+              >
+                <Image src={logo} style={{ marginBottom: '10px' }} />
+                <Header.Content>User Login</Header.Content>
+              </Header>
+            </Card.Header>
+            <Form size='large'>
+              <Form.Input
+                fluid
+                icon='user'
+                iconPosition='left'
+                placeholder='Username / Email Address'
+                name='username'
+                value={username}
+                onChange={handleChange}
+                style={{ marginBottom: '1em' }}
+              />
+              <Form.Input
+                fluid
+                icon='lock'
+                iconPosition='left'
+                placeholder='Password'
+                name='password'
+                type='password'
+                value={password}
+                onChange={handleChange}
+                style={{ marginBottom: '1.5em' }}
+              />
+              <Button
+                fluid
+                size='large'
+                style={{
+                  background: '#2F73FF', // Use a more modern blue
+                  color: 'white',
+                  marginBottom: '1.5em',
                 }}
-                  onClick={() => onLarkOAuthClicked(status.lark_client_id)}
-                >
-                  <Image
-                    src={larkIcon}
-                    avatar
-                    style={{ width: "16px", height: "16px", cursor: "pointer", margin: "auto" }}
-                    onClick={() => onLarkOAuthClicked(status.lark_client_id)}
-                  />
+                onClick={handleSubmit}
+              >
+                Log In
+              </Button>
+            </Form>
+
+            <Divider />
+            <Message style={{ background: 'transparent', boxShadow: 'none' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: '0.9em',
+                  color: '#666',
+                }}
+              >
+                <div>
+                  Forgot password?
+                  <Link to='/reset' style={{ color: '#2185d0' }}>
+                    Click to reset
+                  </Link>
                 </div>
-              ) : (
-                <></>
-              )}
-            </div>
-          </>
-        ) : (
-          <></>
-        )}
+                <div>
+                  No account?
+                  <Link to='/register' style={{ color: '#2185d0' }}>
+                    Click to register
+                  </Link>
+                </div>
+              </div>
+            </Message>
+
+            {(status.github_oauth ||
+              status.wechat_login ||
+              status.lark_client_id) && (
+              <>
+                <Divider
+                  horizontal
+                  style={{ color: '#666', fontSize: '0.9em' }}
+                >
+                  Log in with other methods
+                </Divider>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    gap: '1em',
+                    marginTop: '1em',
+                  }}
+                >
+                  {status.github_oauth && (
+                    <Button
+                      circular
+                      color='black'
+                      icon='github'
+                      onClick={() =>
+                        onGitHubOAuthClicked(status.github_client_id)
+                      }
+                    />
+                  )}
+                  {status.wechat_login && (
+                    <Button
+                      circular
+                      color='green'
+                      icon='wechat'
+                      onClick={onWeChatLoginClicked}
+                    />
+                  )}
+                  {status.lark_client_id && (
+                    <div
+                      style={{
+                        background:
+                          'radial-gradient(circle, #FFFFFF, #FFFFFF, #FFFFFF, #FFFFFF, #FFFFFF)',
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '10em',
+                        display: 'flex',
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => onLarkOAuthClicked(status.lark_client_id)}
+                    >
+                      <Image
+                        src={larkIcon}
+                        avatar
+                        style={{
+                          width: '36px',
+                          height: '36px',
+                          cursor: 'pointer',
+                          margin: 'auto',
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </Card.Content>
+        </Card>
         <Modal
           onClose={() => setShowWeChatLoginModal(false)}
           onOpen={() => setShowWeChatLoginModal(true)}
@@ -198,9 +263,13 @@ const LoginForm = () => {
                   onChange={handleChange}
                 />
                 <Button
-                  color=''
                   fluid
                   size='large'
+                  style={{
+                    background: '#2F73FF', // Use a more modern blue
+                    color: 'white',
+                    marginBottom: '1.5em',
+                  }}
                   onClick={onSubmitWeChatVerificationCode}
                 >
                   Log in

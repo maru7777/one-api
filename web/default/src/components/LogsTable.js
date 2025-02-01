@@ -1,21 +1,48 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Form, Header, Label, Pagination, Segment, Select, Table } from 'semantic-ui-react';
-import { API, isAdmin, showError, timestamp2string } from '../helpers';
+import {
+  Button,
+  Form,
+  Header,
+  Label,
+  Pagination,
+  Segment,
+  Select,
+  Table,
+} from 'semantic-ui-react';
+import {
+  API,
+  copy,
+  isAdmin,
+  showError,
+  showSuccess,
+  showWarning,
+  timestamp2string,
+} from '../helpers';
 
 import { ITEMS_PER_PAGE } from '../constants';
-import { renderQuota } from '../helpers/render';
+import { renderColorLabel, renderQuota } from '../helpers/render';
+import { Link } from 'react-router-dom';
 
-function renderTimestamp(timestamp) {
+function renderTimestamp(timestamp, request_id) {
   return (
-    <>
+    <code
+      onClick={async () => {
+        if (await copy(request_id)) {
+          showSuccess(`Request ID copied: ${request_id}`);
+        } else {
+          showWarning(`Failed to copy request ID: ${request_id}`);
+        }
+      }}
+      style={{ cursor: 'pointer' }}
+    >
       {timestamp2string(timestamp)}
-    </>
+    </code>
   );
 }
 
 const MODE_OPTIONS = [
-  { key: 'all', text: 'All users', value: 'all' },
-  { key: 'self', text: 'Current user', value: 'self' }
+  { key: 'all', text: 'All Users', value: 'all' },
+  { key: 'self', text: 'Current User', value: 'self' },
 ];
 
 const LOG_OPTIONS = [
@@ -23,22 +50,90 @@ const LOG_OPTIONS = [
   { key: '1', text: 'Recharge', value: 1 },
   { key: '2', text: 'Consumption', value: 2 },
   { key: '3', text: 'Management', value: 3 },
-  { key: '4', text: 'System', value: 4 }
+  { key: '4', text: 'System', value: 4 },
+  { key: '5', text: 'Test', value: 5 },
 ];
 
 function renderType(type) {
   switch (type) {
     case 1:
-      return <Label basic color='green'> Recharge </Label>;
+      return (
+        <Label basic color='green'>
+          Recharge
+        </Label>
+      );
     case 2:
-      return <Label basic color='olive'> Consumption </Label>;
+      return (
+        <Label basic color='olive'>
+          Consumption
+        </Label>
+      );
     case 3:
-      return <Label basic color='orange'> Management </Label>;
+      return (
+        <Label basic color='orange'>
+          Management
+        </Label>
+      );
     case 4:
-      return <Label basic color='purple'> System </Label>;
+      return (
+        <Label basic color='purple'>
+          System
+        </Label>
+      );
+    case 5:
+      return (
+        <Label basic color='violet'>
+          Test
+        </Label>
+      );
     default:
-      return <Label basic color='black'> Unknown </Label>;
+      return (
+        <Label basic color='black'>
+          Unknown
+        </Label>
+      );
   }
+}
+
+function getColorByElapsedTime(elapsedTime) {
+  if (elapsedTime === undefined || 0) return 'black';
+  if (elapsedTime < 1000) return 'green';
+  if (elapsedTime < 3000) return 'olive';
+  if (elapsedTime < 5000) return 'yellow';
+  if (elapsedTime < 10000) return 'orange';
+  return 'red';
+}
+
+function renderDetail(log) {
+  return (
+    <>
+      {log.content}
+      <br />
+      {log.elapsed_time && (
+        <Label
+          basic
+          size={'mini'}
+          color={getColorByElapsedTime(log.elapsed_time)}
+        >
+          {log.elapsed_time} ms
+        </Label>
+      )}
+      {log.is_stream && (
+        <>
+          <Label size={'mini'} color='pink'>
+            Stream
+          </Label>
+        </>
+      )}
+      {log.system_prompt_reset && (
+        <>
+          <Label basic size={'mini'} color='red'>
+            System Prompt Reset
+          </Label>
+        </>
+      )}
+    </>
+  );
 }
 
 const LogsTable = () => {
@@ -57,13 +152,20 @@ const LogsTable = () => {
     model_name: '',
     start_timestamp: timestamp2string(0),
     end_timestamp: timestamp2string(now.getTime() / 1000 + 3600),
-    channel: ''
+    channel: '',
   });
-  const { username, token_name, model_name, start_timestamp, end_timestamp, channel } = inputs;
+  const {
+    username,
+    token_name,
+    model_name,
+    start_timestamp,
+    end_timestamp,
+    channel,
+  } = inputs;
 
   const [stat, setStat] = useState({
     quota: 0,
-    token: 0
+    token: 0,
   });
 
   const handleInputChange = (e, { name, value }) => {
@@ -73,7 +175,9 @@ const LogsTable = () => {
   const getLogSelfStat = async () => {
     let localStartTimestamp = Date.parse(start_timestamp) / 1000;
     let localEndTimestamp = Date.parse(end_timestamp) / 1000;
-    let res = await API.get(`/api/log/self/stat?type=${logType}&token_name=${token_name}&model_name=${model_name}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}`);
+    let res = await API.get(
+      `/api/log/self/stat?type=${logType}&token_name=${token_name}&model_name=${model_name}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}`
+    );
     const { success, message, data } = res.data;
     if (success) {
       setStat(data);
@@ -85,7 +189,9 @@ const LogsTable = () => {
   const getLogStat = async () => {
     let localStartTimestamp = Date.parse(start_timestamp) / 1000;
     let localEndTimestamp = Date.parse(end_timestamp) / 1000;
-    let res = await API.get(`/api/log/stat?type=${logType}&username=${username}&token_name=${token_name}&model_name=${model_name}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}&channel=${channel}`);
+    let res = await API.get(
+      `/api/log/stat?type=${logType}&username=${username}&token_name=${token_name}&model_name=${model_name}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}&channel=${channel}`
+    );
     const { success, message, data } = res.data;
     if (success) {
       setStat(data);
@@ -103,6 +209,10 @@ const LogsTable = () => {
       }
     }
     setShowStat(!showStat);
+  };
+
+  const showUserTokenQuota = () => {
+    return logType !== 5;
   };
 
   const loadLogs = async (startIdx) => {
@@ -197,43 +307,88 @@ const LogsTable = () => {
 
   return (
     <>
-      <Segment>
+      <>
         <Header as='h3'>
-          Usages（Total consumption limit：
+          Usages (Total consumption limit:
           {showStat && renderQuota(stat.quota)}
-          {!showStat && <span onClick={handleEyeClick} style={{ cursor: 'pointer', color: 'gray' }}>click to view</span>}
-          ）
+          {!showStat && (
+            <span
+              onClick={handleEyeClick}
+              style={{ cursor: 'pointer', color: 'gray' }}
+            >
+              Click to view
+            </span>
+          )}
+          )
         </Header>
         <Form>
           <Form.Group>
-            <Form.Input fluid label={'Key name'} width={3} value={token_name}
-                        placeholder={'Optional values'} name='token_name' onChange={handleInputChange} />
-            <Form.Input fluid label='Model name' width={3} value={model_name} placeholder='Optional values'
-                        name='model_name'
-                        onChange={handleInputChange} />
-            <Form.Input fluid label='Start time' width={4} value={start_timestamp} type='datetime-local'
-                        name='start_timestamp'
-                        onChange={handleInputChange} />
-            <Form.Input fluid label='End time' width={4} value={end_timestamp} type='datetime-local'
-                        name='end_timestamp'
-                        onChange={handleInputChange} />
-            <Form.Button fluid label='Operation' width={2} onClick={refresh}>Query</Form.Button>
+            <Form.Input
+              fluid
+              label={'Token Name'}
+              width={3}
+              value={token_name}
+              placeholder={'Optional'}
+              name='token_name'
+              onChange={handleInputChange}
+            />
+            <Form.Input
+              fluid
+              label='Model Name'
+              width={3}
+              value={model_name}
+              placeholder='Optional'
+              name='model_name'
+              onChange={handleInputChange}
+            />
+            <Form.Input
+              fluid
+              label='Start Time'
+              width={4}
+              value={start_timestamp}
+              type='datetime-local'
+              name='start_timestamp'
+              onChange={handleInputChange}
+            />
+            <Form.Input
+              fluid
+              label='End Time'
+              width={4}
+              value={end_timestamp}
+              type='datetime-local'
+              name='end_timestamp'
+              onChange={handleInputChange}
+            />
+            <Form.Button fluid label='Action' width={2} onClick={refresh}>
+              Search
+            </Form.Button>
           </Form.Group>
-          {
-            isAdminUser && <>
+          {isAdminUser && (
+            <>
               <Form.Group>
-                <Form.Input fluid label={'Channel ID'} width={3} value={channel}
-                            placeholder='Optional values' name='channel'
-                            onChange={handleInputChange} />
-                <Form.Input fluid label={'User name'} width={3} value={username}
-                            placeholder={'Optional values'} name='username'
-                            onChange={handleInputChange} />
-
+                <Form.Input
+                  fluid
+                  label={'Channel ID'}
+                  width={3}
+                  value={channel}
+                  placeholder='Optional'
+                  name='channel'
+                  onChange={handleInputChange}
+                />
+                <Form.Input
+                  fluid
+                  label={'Username'}
+                  width={3}
+                  value={username}
+                  placeholder={'Optional'}
+                  name='username'
+                  onChange={handleInputChange}
+                />
               </Form.Group>
             </>
-          }
+          )}
         </Form>
-        <Table basic compact size='small'>
+        <Table basic={'very'} compact size='small'>
           <Table.Header>
             <Table.Row>
               <Table.HeaderCell
@@ -245,8 +400,8 @@ const LogsTable = () => {
               >
                 Time
               </Table.HeaderCell>
-              {
-                isAdminUser && <Table.HeaderCell
+              {isAdminUser && (
+                <Table.HeaderCell
                   style={{ cursor: 'pointer' }}
                   onClick={() => {
                     sortLog('channel');
@@ -255,27 +410,7 @@ const LogsTable = () => {
                 >
                   Channel
                 </Table.HeaderCell>
-              }
-              {
-                isAdminUser && <Table.HeaderCell
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => {
-                    sortLog('username');
-                  }}
-                  width={1}
-                >
-                  Users
-                </Table.HeaderCell>
-              }
-              <Table.HeaderCell
-                style={{ cursor: 'pointer' }}
-                onClick={() => {
-                  sortLog('token_name');
-                }}
-                width={1}
-              >
-                API Keys
-              </Table.HeaderCell>
+              )}
               <Table.HeaderCell
                 style={{ cursor: 'pointer' }}
                 onClick={() => {
@@ -294,33 +429,57 @@ const LogsTable = () => {
               >
                 Model
               </Table.HeaderCell>
-              <Table.HeaderCell
-                style={{ cursor: 'pointer' }}
-                onClick={() => {
-                  sortLog('prompt_tokens');
-                }}
-                width={1}
-              >
-                Prompt
-              </Table.HeaderCell>
-              <Table.HeaderCell
-                style={{ cursor: 'pointer' }}
-                onClick={() => {
-                  sortLog('completion_tokens');
-                }}
-                width={1}
-              >
-                Completion
-              </Table.HeaderCell>
-              <Table.HeaderCell
-                style={{ cursor: 'pointer' }}
-                onClick={() => {
-                  sortLog('quota');
-                }}
-                width={1}
-              >
-                Cost
-              </Table.HeaderCell>
+              {showUserTokenQuota() && (
+                <>
+                  {isAdminUser && (
+                    <Table.HeaderCell
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => {
+                        sortLog('username');
+                      }}
+                      width={1}
+                    >
+                      User
+                    </Table.HeaderCell>
+                  )}
+                  <Table.HeaderCell
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      sortLog('token_name');
+                    }}
+                    width={1}
+                  >
+                    Token
+                  </Table.HeaderCell>
+                  <Table.HeaderCell
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      sortLog('prompt_tokens');
+                    }}
+                    width={1}
+                  >
+                    Prompt
+                  </Table.HeaderCell>
+                  <Table.HeaderCell
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      sortLog('completion_tokens');
+                    }}
+                    width={1}
+                  >
+                    Completion
+                  </Table.HeaderCell>
+                  <Table.HeaderCell
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      sortLog('quota');
+                    }}
+                    width={1}
+                  >
+                    Quota
+                  </Table.HeaderCell>
+                </>
+              )}
               <Table.HeaderCell
                 style={{ cursor: 'pointer' }}
                 onClick={() => {
@@ -343,24 +502,64 @@ const LogsTable = () => {
                 if (log.deleted) return <></>;
                 return (
                   <Table.Row key={log.id}>
-                    <Table.Cell>{renderTimestamp(log.created_at)}</Table.Cell>
-                    {
-                      isAdminUser && (
-                        <Table.Cell>{log.channel ? <Label basic>{log.channel}</Label> : ''}</Table.Cell>
-                      )
-                    }
-                    {
-                      isAdminUser && (
-                        <Table.Cell>{log.username ? <Label>{log.username}</Label> : ''}</Table.Cell>
-                      )
-                    }
-                    <Table.Cell>{log.token_name ? <Label basic>{log.token_name}</Label> : ''}</Table.Cell>
+                    <Table.Cell>
+                      {renderTimestamp(log.created_at, log.request_id)}
+                    </Table.Cell>
+                    {isAdminUser && (
+                      <Table.Cell>
+                        {log.channel ? (
+                          <Label
+                            basic
+                            as={Link}
+                            to={`/channel/edit/${log.channel}`}
+                          >
+                            {log.channel}
+                          </Label>
+                        ) : (
+                          ''
+                        )}
+                      </Table.Cell>
+                    )}
                     <Table.Cell>{renderType(log.type)}</Table.Cell>
-                    <Table.Cell>{log.model_name ? <Label basic>{log.model_name}</Label> : ''}</Table.Cell>
-                    <Table.Cell>{log.prompt_tokens ? log.prompt_tokens : ''}</Table.Cell>
-                    <Table.Cell>{log.completion_tokens ? log.completion_tokens : ''}</Table.Cell>
-                    <Table.Cell>{log.quota ? renderQuota(log.quota, 6) : 'free'}</Table.Cell>
-                    <Table.Cell>{log.content}</Table.Cell>
+                    <Table.Cell>
+                      {log.model_name ? renderColorLabel(log.model_name) : ''}
+                    </Table.Cell>
+                    {showUserTokenQuota() && (
+                      <>
+                        {isAdminUser && (
+                          <Table.Cell>
+                            {log.username ? (
+                              <Label
+                                basic
+                                as={Link}
+                                to={`/user/edit/${log.user_id}`}
+                              >
+                                {log.username}
+                              </Label>
+                            ) : (
+                              ''
+                            )}
+                          </Table.Cell>
+                        )}
+                        <Table.Cell>
+                          {log.token_name
+                            ? renderColorLabel(log.token_name)
+                            : ''}
+                        </Table.Cell>
+
+                        <Table.Cell>
+                          {log.prompt_tokens ? log.prompt_tokens : ''}
+                        </Table.Cell>
+                        <Table.Cell>
+                          {log.completion_tokens ? log.completion_tokens : ''}
+                        </Table.Cell>
+                        <Table.Cell>
+                          {log.quota ? renderQuota(log.quota, 6) : ''}
+                        </Table.Cell>
+                      </>
+                    )}
+
+                    <Table.Cell>{renderDetail(log)}</Table.Cell>
                   </Table.Row>
                 );
               })}
@@ -379,7 +578,9 @@ const LogsTable = () => {
                     setLogType(value);
                   }}
                 />
-                <Button size='small' onClick={refresh} loading={loading}>Refresh</Button>
+                <Button size='small' onClick={refresh} loading={loading}>
+                  Refresh
+                </Button>
                 <Pagination
                   floated='right'
                   activePage={activePage}
@@ -395,7 +596,7 @@ const LogsTable = () => {
             </Table.Row>
           </Table.Footer>
         </Table>
-      </Segment>
+      </>
     </>
   );
 };

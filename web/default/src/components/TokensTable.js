@@ -1,7 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Dropdown, Form, Label, Pagination, Popup, Table } from 'semantic-ui-react';
+import {
+  Button,
+  Dropdown,
+  Form,
+  Label,
+  Pagination,
+  Popup,
+  Table,
+} from 'semantic-ui-react';
 import { Link } from 'react-router-dom';
-import { API, copy, showError, showSuccess, showWarning, timestamp2string } from '../helpers';
+import {
+  API,
+  copy,
+  showError,
+  showSuccess,
+  showWarning,
+  timestamp2string,
+} from '../helpers';
 
 import { ITEMS_PER_PAGE } from '../constants';
 import { renderQuota } from '../helpers/render';
@@ -20,25 +35,41 @@ const OPEN_LINK_OPTIONS = [
 ];
 
 function renderTimestamp(timestamp) {
-  return (
-    <>
-      {timestamp2string(timestamp)}
-    </>
-  );
+  return <>{timestamp2string(timestamp)}</>;
 }
 
 function renderStatus(status) {
   switch (status) {
     case 1:
-      return <Label basic color='green'>Enabled</Label>;
+      return (
+        <Label basic color='green'>
+          Enabled
+        </Label>
+      );
     case 2:
-      return <Label basic color='red'> Disabled </Label>;
+      return (
+        <Label basic color='red'>
+          Disabled
+        </Label>
+      );
     case 3:
-      return <Label basic color='yellow'> Expired </Label>;
+      return (
+        <Label basic color='yellow'>
+          Expired
+        </Label>
+      );
     case 4:
-      return <Label basic color='grey'> Exhausted </Label>;
+      return (
+        <Label basic color='grey'>
+          Exhausted
+        </Label>
+      );
     default:
-      return <Label basic color='black'> Unknown status </Label>;
+      return (
+        <Label basic color='black'>
+          Unknown Status
+        </Label>
+      );
   }
 }
 
@@ -95,14 +126,15 @@ const TokensTable = () => {
       serverAddress = window.location.origin;
     }
     let encodedServerAddress = encodeURIComponent(serverAddress);
-    // const nextLink = localStorage.getItem('chat_link');
-    // let nextUrl;
+    const nextLink = localStorage.getItem('chat_link');
+    let nextUrl;
 
-    // if (nextLink) {
-    //   nextUrl = nextLink + `/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
-    // } else {
-    //   nextUrl = `https://app.nextchat.dev/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
-    // }
+    if (nextLink) {
+      nextUrl =
+        nextLink + `/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
+    } else {
+      nextUrl = `https://app.nextchat.dev/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
+    }
 
     let url;
     switch (type) {
@@ -116,7 +148,9 @@ const TokensTable = () => {
         url = `https://chat.laisky.com?apikey=sk-${key}`;
         break;
       case 'lobechat':
-        url = nextLink + `/?settings={"keyVaults":{"openai":{"apiKey":"sk-${key}","baseURL":"${serverAddress}/v1"}}}`;
+        url =
+          nextLink +
+          `/?settings={"keyVaults":{"openai":{"apiKey":"sk-${key}","baseURL":"${serverAddress}/v1"}}}`;
         break;
       default:
         url = `sk-${key}`;
@@ -144,7 +178,8 @@ const TokensTable = () => {
     let defaultUrl;
 
     if (chatLink) {
-      defaultUrl = chatLink + `/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
+      defaultUrl =
+        chatLink + `/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
     } else {
       defaultUrl = `https://app.nextchat.dev/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
     }
@@ -159,7 +194,9 @@ const TokensTable = () => {
         break;
 
       case 'lobechat':
-        url = chatLink + `/?settings={"keyVaults":{"openai":{"apiKey":"sk-${key}","baseURL":"${serverAddress}/v1"}}}`;
+        url =
+          chatLink +
+          `/?settings={"keyVaults":{"openai":{"apiKey":"sk-${key}","baseURL":"${serverAddress}/v1"}}}`;
         break;
 
       default:
@@ -167,7 +204,7 @@ const TokensTable = () => {
     }
 
     window.open(url, '_blank');
-  }
+  };
 
   useEffect(() => {
     loadTokens(0, orderBy)
@@ -273,7 +310,7 @@ const TokensTable = () => {
         />
       </Form>
 
-      <Table basic compact size='small'>
+      <Table basic={'very'} compact size='small'>
         <Table.Header>
           <Table.Row>
             <Table.HeaderCell
@@ -336,81 +373,110 @@ const TokensTable = () => {
             )
             .map((token, idx) => {
               if (token.deleted) return <></>;
-              return (
+                return (
                 <Table.Row key={token.id}>
                   <Table.Cell>{token.name ? token.name : 'None'}</Table.Cell>
                   <Table.Cell>{renderStatus(token.status)}</Table.Cell>
                   <Table.Cell>{renderQuota(token.used_quota)}</Table.Cell>
-                  <Table.Cell>{token.unlimited_quota ? 'Unlimited' : renderQuota(token.remain_quota, 2)}</Table.Cell>
-                  <Table.Cell>{renderTimestamp(token.created_time)}</Table.Cell>
-                  <Table.Cell>{token.expired_time === -1 ? 'Never expires' : renderTimestamp(token.expired_time)}</Table.Cell>
                   <Table.Cell>
-                    <div>
+                  {token.unlimited_quota
+                    ? 'Unlimited'
+                    : renderQuota(token.remain_quota, 2)}
+                  </Table.Cell>
+                  <Table.Cell>{renderTimestamp(token.created_time)}</Table.Cell>
+                  <Table.Cell>
+                  {token.expired_time === -1
+                    ? 'Never Expires'
+                    : renderTimestamp(token.expired_time)}
+                  </Table.Cell>
+                  <Table.Cell>
+                  <div>
                     <Button.Group color='green' size={'small'}>
-                        <Button
-                          size={'small'}
-                          positive
-                          onClick={async () => {
-                            await onCopy('', token.key);
-                          }}
-                        >
-                          Copy
-                        </Button>
-                        <Dropdown
-                          className='button icon'
-                          floating
-                          options={COPY_OPTIONS.map(option => ({
-                            ...option,
-                            onClick: async () => {
-                              await onCopy(option.value, token.key);
-                            }
-                          }))}
-                          trigger={<></>}
-                        />
-                      </Button.Group>
-                      {' '}
-                      <Popup
-                        trigger={
-                          <Button size='small' negative>
-                            Delete
-                          </Button>
-                        }
-                        on='click'
-                        flowing
-                        hoverable
-                      >
-                        <Button
-                          negative
-                          onClick={() => {
-                            manageToken(token.id, 'delete', idx);
-                          }}
-                        >
-                          Delete Token {token.name}
-                        </Button>
-                      </Popup>
-                      <Button
-                        size={'small'}
-                        onClick={() => {
-                          manageToken(
-                            token.id,
-                            token.status === 1 ? 'disable' : 'enable',
-                            idx
-                          );
-                        }}
-                      >
-                        {token.status === 1 ? 'Disable' : 'Enable'}
+                    <Button
+                      size={'small'}
+                      positive
+                      onClick={async () => {
+                      await onCopy('', token.key);
+                      }}
+                    >
+                      Copy
+                    </Button>
+                    <Dropdown
+                      className='button icon'
+                      floating
+                      options={COPY_OPTIONS.map((option) => ({
+                      ...option,
+                      onClick: async () => {
+                        await onCopy(option.value, token.key);
+                      },
+                      }))}
+                      trigger={<></>}
+                    />
+                    </Button.Group>{' '}
+                    <Button.Group color='blue' size={'small'}>
+                    <Button
+                      size={'small'}
+                      positive
+                      onClick={() => {
+                      onOpenLink('', token.key);
+                      }}
+                    >
+                      Chat
+                    </Button>
+                    <Dropdown
+                      className='button icon'
+                      floating
+                      options={OPEN_LINK_OPTIONS.map((option) => ({
+                      ...option,
+                      onClick: async () => {
+                        await onOpenLink(option.value, token.key);
+                      },
+                      }))}
+                      trigger={<></>}
+                    />
+                    </Button.Group>{' '}
+                    <Popup
+                    trigger={
+                      <Button size='small' negative>
+                      Delete
                       </Button>
-                      <Button
-                        size={'small'}
-                        as={Link}
-                        to={'/token/edit/' + token.id}
-                      >
-                        Edit
-                      </Button>
-                    </div>
+                    }
+                    on='click'
+                    flowing
+                    hoverable
+                    >
+                    <Button
+                      negative
+                      onClick={() => {
+                      manageToken(token.id, 'delete', idx);
+                      }}
+                    >
+                      Delete Token {token.name}
+                    </Button>
+                    </Popup>
+                    <Button
+                    size={'small'}
+                    onClick={() => {
+                      manageToken(
+                      token.id,
+                      token.status === 1 ? 'disable' : 'enable',
+                      idx
+                      );
+                    }}
+                    >
+                    {token.status === 1 ? 'Disable' : 'Enable'}
+                    </Button>
+                    <Button
+                    size={'small'}
+                    as={Link}
+                    to={'/token/edit/' + token.id}
+                    >
+                    Edit
+                    </Button>
+                  </div>
                   </Table.Cell>
                 </Table.Row>
-              );
+                );
             })}
         </Table.Body>
 
@@ -420,14 +486,24 @@ const TokensTable = () => {
               <Button size='small' as={Link} to='/token/add' loading={loading}>
                 Add New Token
               </Button>
-              <Button size='small' onClick={refresh} loading={loading}>Refresh</Button>
+              <Button size='small' onClick={refresh} loading={loading}>
+                Refresh
+              </Button>
               <Dropdown
                 placeholder='Sort By'
                 selection
                 options={[
                   { key: '', text: 'Default Order', value: '' },
-                  { key: 'remain_quota', text: 'Sort by Remaining Quota', value: 'remain_quota' },
-                  { key: 'used_quota', text: 'Sort by Used Quota', value: 'used_quota' },
+                  {
+                    key: 'remain_quota',
+                    text: 'Sort by Remaining Quota',
+                    value: 'remain_quota',
+                  },
+                  {
+                    key: 'used_quota',
+                    text: 'Sort by Used Quota',
+                    value: 'used_quota',
+                  },
                 ]}
                 value={orderBy}
                 onChange={handleOrderByChange}

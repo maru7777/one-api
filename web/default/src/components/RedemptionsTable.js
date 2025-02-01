@@ -1,29 +1,56 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Form, Label, Popup, Pagination, Table } from 'semantic-ui-react';
+import {
+  Button,
+  Form,
+  Label,
+  Popup,
+  Pagination,
+  Table,
+} from 'semantic-ui-react';
 import { Link } from 'react-router-dom';
-import { API, copy, showError, showInfo, showSuccess, showWarning, timestamp2string } from '../helpers';
+import {
+  API,
+  copy,
+  showError,
+  showInfo,
+  showSuccess,
+  showWarning,
+  timestamp2string,
+} from '../helpers';
 
 import { ITEMS_PER_PAGE } from '../constants';
 import { renderQuota } from '../helpers/render';
 
 function renderTimestamp(timestamp) {
-  return (
-    <>
-      {timestamp2string(timestamp)}
-    </>
-  );
+  return <>{timestamp2string(timestamp)}</>;
 }
 
 function renderStatus(status) {
   switch (status) {
     case 1:
-      return <Label basic color='green'>Not used</Label>;
+      return (
+        <Label basic color='green'>
+          Unused
+        </Label>
+      );
     case 2:
-      return <Label basic color='red'> Disabled </Label>;
+      return (
+        <Label basic color='red'>
+          Disabled
+        </Label>
+      );
     case 3:
-      return <Label basic color='grey'> Used </Label>;
+      return (
+        <Label basic color='grey'>
+          Used
+        </Label>
+      );
     default:
-      return <Label basic color='black'> Unknown status </Label>;
+      return (
+        <Label basic color='black'>
+          Unknown status
+        </Label>
+      );
   }
 }
 
@@ -110,7 +137,9 @@ const RedemptionsTable = () => {
       return;
     }
     setSearching(true);
-    const res = await API.get(`/api/redemption/search?keyword=${searchKeyword}`);
+    const res = await API.get(
+      `/api/redemption/search?keyword=${searchKeyword}`
+    );
     const { success, message, data } = res.data;
     if (success) {
       setRedemptions(data);
@@ -159,7 +188,7 @@ const RedemptionsTable = () => {
         />
       </Form>
 
-      <Table basic compact size='small'>
+      <Table basic={'very'} compact size='small'>
         <Table.Header>
           <Table.Row>
             <Table.HeaderCell
@@ -222,80 +251,95 @@ const RedemptionsTable = () => {
             )
             .map((redemption, idx) => {
               if (redemption.deleted) return <></>;
-              return (
+                return (
                 <Table.Row key={redemption.id}>
                   <Table.Cell>{redemption.id}</Table.Cell>
-                  <Table.Cell>{redemption.name ? redemption.name : 'None'}</Table.Cell>
+                  <Table.Cell>
+                  {redemption.name ? redemption.name : 'None'}
+                  </Table.Cell>
                   <Table.Cell>{renderStatus(redemption.status)}</Table.Cell>
                   <Table.Cell>{renderQuota(redemption.quota)}</Table.Cell>
-                  <Table.Cell>{renderTimestamp(redemption.created_time)}</Table.Cell>
-                  <Table.Cell>{redemption.redeemed_time ? renderTimestamp(redemption.redeemed_time) : "Not yet redeemed"} </Table.Cell>
                   <Table.Cell>
-                    <div>
-                      <Button
-                        size={'small'}
-                        positive
-                        onClick={async () => {
-                          if (await copy(redemption.key)) {
-                            showSuccess('Copied to clipboard!');
-                          } else {
-                            showWarning('Unable to copy to clipboard, please copy manually. The redemption code has been filled in the search box.')
-                            setSearchKeyword(redemption.key);
-                          }
-                        }}
-                      >
-                        Copy
+                  {renderTimestamp(redemption.created_time)}
+                  </Table.Cell>
+                  <Table.Cell>
+                  {redemption.redeemed_time
+                    ? renderTimestamp(redemption.redeemed_time)
+                    : 'Not redeemed yet'}{' '}
+                  </Table.Cell>
+                  <Table.Cell>
+                  <div>
+                    <Button
+                    size={'small'}
+                    positive
+                    onClick={async () => {
+                      if (await copy(redemption.key)) {
+                      showSuccess('Copied to clipboard!');
+                      } else {
+                      showWarning(
+                        'Unable to copy to clipboard, please copy manually. The redemption code has been filled into the search box.'
+                      );
+                      setSearchKeyword(redemption.key);
+                      }
+                    }}
+                    >
+                    Copy
+                    </Button>
+                    <Popup
+                    trigger={
+                      <Button size='small' negative>
+                      Delete
                       </Button>
-                      <Popup
-                        trigger={
-                          <Button size='small' negative>
-                            Delete
-                          </Button>
-                        }
-                        on='click'
-                        flowing
-                        hoverable
-                      >
-                        <Button
-                          negative
-                          onClick={() => {
-                            manageRedemption(redemption.id, 'delete', idx);
-                          }}
-                        >
-                          Confirm deletion
-                        </Button>
-                      </Popup>
-                      <Button
-                        size={'small'}
-                        disabled={redemption.status === 3}  // used
-                        onClick={() => {
-                          manageRedemption(
-                            redemption.id,
-                            redemption.status === 1 ? 'disable' : 'enable',
-                            idx
-                          );
-                        }}
-                      >
-                        {redemption.status === 1 ? 'Disable' : 'Enable'}
-                      </Button>
-                      <Button
-                        size={'small'}
-                        as={Link}
-                        to={'/redemption/edit/' + redemption.id}
-                      >
-                        Edit
-                      </Button>
-                    </div>
+                    }
+                    on='click'
+                    flowing
+                    hoverable
+                    >
+                    <Button
+                      negative
+                      onClick={() => {
+                      manageRedemption(redemption.id, 'delete', idx);
+                      }}
+                    >
+                      Confirm deletion
+                    </Button>
+                    </Popup>
+                    <Button
+                    size={'small'}
+                    disabled={redemption.status === 3} // used
+                    onClick={() => {
+                      manageRedemption(
+                      redemption.id,
+                      redemption.status === 1 ? 'disable' : 'enable',
+                      idx
+                      );
+                    }}
+                    >
+                    {redemption.status === 1 ? 'Disable' : 'Enable'}
+                    </Button>
+                    <Button
+                    size={'small'}
+                    as={Link}
+                    to={'/redemption/edit/' + redemption.id}
+                    >
+                    Edit
+                    </Button>
+                  </div>
                   </Table.Cell>
                 </Table.Row>
-              );
+                );
             })}
         </Table.Body>
 
         <Table.Footer>
           <Table.Row>
             <Table.HeaderCell colSpan='8'>
-              <Button size='small' as={Link} to='/redemption/add' loading={loading}>
+              <Button
+                size='small'
+                as={Link}
+                to='/redemption/add'
+                loading={loading}
+              >
                 Add new redemption code
               </Button>
               <Pagination

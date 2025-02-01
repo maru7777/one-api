@@ -1,14 +1,16 @@
 import React from 'react';
-import { Segment, Header } from 'semantic-ui-react';
+import { Card } from 'semantic-ui-react';
 import RedemptionsTable from '../../components/RedemptionsTable';
 
 const Redemption = () => (
-  <>
-    <Segment>
-      <Header as='h3'>Manage Redeem Codes</Header>
-      <RedemptionsTable/>
-    </Segment>
-  </>
+  <div className='dashboard-container'>
+    <Card fluid className='chart-card'>
+      <Card.Content>
+        <Card.Header className='header'>Manage Redeem Code</Card.Header>
+        <RedemptionsTable />
+      </Card.Content>
+    </Card>
+  </div>
 );
 
 export default Redemption;

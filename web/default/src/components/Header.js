@@ -1,72 +1,93 @@
 import React, { useContext, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserContext } from '../context/User';
+import { useTranslation } from 'react-i18next';
 
-import { Button, Container, Dropdown, Icon, Menu, Segment } from 'semantic-ui-react';
-import { API, getLogo, getSystemName, isAdmin, isMobile, showSuccess } from '../helpers';
+import {
+  Button,
+  Container,
+  Dropdown,
+  Icon,
+  Menu,
+  Segment,
+} from 'semantic-ui-react';
+import {
+  API,
+  getLogo,
+  getSystemName,
+  isAdmin,
+  isMobile,
+  showSuccess,
+} from '../helpers';
 import '../index.css';
 
 // Header Buttons
 let headerButtons = [
   {
-    name: 'Home',
+    name: 'header.home',
     to: '/',
-    icon: 'home'
+    icon: 'home',
   },
   {
-    name: 'Channel',
+    name: 'header.channel',
     to: '/channel',
     icon: 'sitemap',
-    admin: true
+    admin: true,
   },
   {
-    name: 'API Keys',
+    name: 'header.token',
     to: '/token',
-    icon: 'key'
+    icon: 'key',
   },
   {
-    name: 'Redeem',
+    name: 'header.redemption',
     to: '/redemption',
     icon: 'dollar sign',
-    admin: true
+    admin: true,
   },
   {
-    name: 'Recharge',
+    name: 'header.topup',
     to: '/topup',
-    icon: 'cart'
+    icon: 'cart',
   },
   {
-    name: 'Users',
+    name: 'header.user',
     to: '/user',
     icon: 'user',
-    admin: true
+    admin: true,
   },
   {
-    name: 'Logs',
+    name: 'header.dashboard',
+    to: '/dashboard',
+    icon: 'chart bar',
+  },
+  {
+    name: 'header.log',
     to: '/log',
-    icon: 'book'
+    icon: 'book',
   },
   {
-    name: 'Settings',
+    name: 'header.setting',
     to: '/setting',
-    icon: 'setting'
+    icon: 'setting',
   },
   {
-    name: 'About',
+    name: 'header.about',
     to: '/about',
-    icon: 'info circle'
-  }
+    icon: 'info circle',
+  },
 ];
 
 if (localStorage.getItem('chat_link')) {
   headerButtons.splice(1, 0, {
-    name: 'Chat',
+    name: 'header.chat',
     to: '/chat',
-    icon: 'comments'
+    icon: 'comments',
   });
 }
 
 const Header = () => {
+  const { t, i18n } = useTranslation();
   const [userState, userDispatch] = useContext(UserContext);
   let navigate = useNavigate();
 
@@ -93,22 +114,43 @@ const Header = () => {
       if (isMobile) {
         return (
           <Menu.Item
+            key={button.name}
             onClick={() => {
               navigate(button.to);
               setShowSidebar(false);
             }}
+            style={{ fontSize: '15px' }}
           >
-            {button.name}
+            {t(button.name)}
           </Menu.Item>
         );
       }
       return (
-        <Menu.Item key={button.name} as={Link} to={button.to}>
-          <Icon name={button.icon} />
-          {button.name}
+        <Menu.Item
+          key={button.name}
+          as={Link}
+          to={button.to}
+          style={{
+            fontSize: '15px',
+            fontWeight: '400',
+            color: '#666',
+          }}
+        >
+          <Icon name={button.icon} style={{ marginRight: '4px' }} />
+          {t(button.name)}
         </Menu.Item>
       );
     });
+  };
+
+  // Add language switcher dropdown
+  const languageOptions = [
+    { key: 'zh', text: '中文', value: 'zh' },
+    { key: 'en', text: 'English', value: 'en' },
+  ];
+
+  const changeLanguage = (language) => {
+    i18n.changeLanguage(language);
   };
 
   if (isMobile()) {
@@ -120,21 +162,17 @@ const Header = () => {
           style={
             showSidebar
               ? {
-                borderBottom: 'none',
-                marginBottom: '0',
-                borderTop: 'none',
-                height: '51px'
-              }
+                  borderBottom: 'none',
+                  marginBottom: '0',
+                  borderTop: 'none',
+                  height: '51px',
+                }
               : { borderTop: 'none', height: '52px' }
           }
         >
           <Container>
             <Menu.Item as={Link} to='/'>
-              <img
-                src={logo}
-                alt='logo'
-                style={{ marginRight: '0.75em' }}
-              />
+              <img src={logo} alt='logo' style={{ marginRight: '0.75em' }} />
               <div style={{ fontSize: '20px' }}>
                 <b>{systemName}</b>
               </div>
@@ -151,8 +189,18 @@ const Header = () => {
             <Menu secondary vertical style={{ width: '100%', margin: 0 }}>
               {renderButtons(true)}
               <Menu.Item>
+                <Dropdown
+                  selection
+                  options={languageOptions}
+                  value={i18n.language}
+                  onChange={(_, { value }) => changeLanguage(value)}
+                />
+              </Menu.Item>
+              <Menu.Item>
                 {userState.user ? (
-                  <Button onClick={logout}>Log out</Button>
+                  <Button onClick={logout} style={{ color: '#666666' }}>
+                    {t('header.logout')}
+                  </Button>
                 ) : (
                   <>
                     <Button
@@ -161,7 +209,7 @@ const Header = () => {
                         navigate('/login');
                       }}
                     >
-                      Log in
+                      {t('header.login')}
                     </Button>
                     <Button
                       onClick={() => {
@@ -169,7 +217,7 @@ const Header = () => {
                         navigate('/register');
                       }}
                     >
-                      Sign up
+                      {t('header.register')}
                     </Button>
                   </>
                 )}
@@ -185,32 +233,75 @@ const Header = () => {
 
   return (
     <>
-      <Menu borderless style={{ borderTop: 'none' }}>
+      <Menu
+        borderless
+        style={{
+          borderTop: 'none',
+          boxShadow: 'rgba(0, 0, 0, 0.04) 0px 2px 12px 0px',
+          border: 'none',
+        }}
+      >
         <Container>
           <Menu.Item as={Link} to='/' className={'hide-on-mobile'}>
             <img src={logo} alt='logo' style={{ marginRight: '0.75em' }} />
-            <div style={{ fontSize: '20px' }}>
-              <b>{systemName}</b>
+            <div
+              style={{
+                fontSize: '18px',
+                fontWeight: '500',
+                color: '#333',
+              }}
+            >
+              {systemName}
             </div>
           </Menu.Item>
           {renderButtons(false)}
           <Menu.Menu position='right'>
+            <Dropdown
+              item
+              options={languageOptions}
+              value={i18n.language}
+              onChange={(_, { value }) => changeLanguage(value)}
+              style={{
+                fontSize: '15px',
+                fontWeight: '400',
+                color: '#666',
+              }}
+            />
             {userState.user ? (
               <Dropdown
                 text={userState.user.username}
                 pointing
                 className='link item'
+                style={{
+                  fontSize: '15px',
+                  fontWeight: '400',
+                  color: '#666',
+                }}
               >
                 <Dropdown.Menu>
-                  <Dropdown.Item onClick={logout}>Log out</Dropdown.Item>
+                  <Dropdown.Item
+                    onClick={logout}
+                    style={{
+                      fontSize: '15px',
+                      fontWeight: '400',
+                      color: '#666',
+                    }}
+                  >
+                    {t('header.logout')}
+                  </Dropdown.Item>
                 </Dropdown.Menu>
               </Dropdown>
             ) : (
               <Menu.Item
-                name='Log in'
+                name={t('header.login')}
                 as={Link}
                 to='/login'
                 className='btn btn-link'
+                style={{
+                  fontSize: '15px',
+                  fontWeight: '400',
+                  color: '#666',
+                }}
               />
             )}
           </Menu.Menu>

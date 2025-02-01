@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Form, Header, Segment } from 'semantic-ui-react';
+import { Button, Form, Card } from 'semantic-ui-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { API, downloadTextAsFile, showError, showSuccess } from '../../helpers';
 import { renderQuota, renderQuotaWithPrompt } from '../../helpers/render';
@@ -13,7 +13,7 @@ const EditRedemption = () => {
   const originInputs = {
     name: '',
     quota: 100000,
-    count: 1
+    count: 1,
   };
   const [inputs, setInputs] = useState(originInputs);
   const { name, quota, count } = inputs;
@@ -21,7 +21,7 @@ const EditRedemption = () => {
   const handleCancel = () => {
     navigate('/redemption');
   };
-  
+
   const handleInputChange = (e, { name, value }) => {
     setInputs((inputs) => ({ ...inputs, [name]: value }));
   };
@@ -49,10 +49,13 @@ const EditRedemption = () => {
     localInputs.quota = parseInt(localInputs.quota);
     let res;
     if (isEdit) {
-      res = await API.put(`/api/redemption/`, { ...localInputs, id: parseInt(redemptionId) });
+      res = await API.put(`/api/redemption/`, {
+        ...localInputs,
+        id: parseInt(redemptionId),
+      });
     } else {
       res = await API.post(`/api/redemption/`, {
-        ...localInputs
+        ...localInputs,
       });
     }
     const { success, message, data } = res.data;
@@ -67,61 +70,67 @@ const EditRedemption = () => {
       showError(message);
     }
     if (!isEdit && data) {
-      let text = "";
+      let text = '';
       for (let i = 0; i < data.length; i++) {
-        text += data[i] + "\n";
+        text += data[i] + '\n';
       }
       downloadTextAsFile(text, `${inputs.name}.txt`);
     }
   };
 
   return (
-    <>
-      <Segment loading={loading}>
-        <Header as='h3'>{isEdit ? 'Update redemption code information' : 'Create a new redemption code'}</Header>
-        <Form autoComplete='new-password'>
-          <Form.Field>
-            <Form.Input
-              label='Name'
-              name='name'
-              placeholder={'Please enter a name'}
-              onChange={handleInputChange}
-              value={name}
-              autoComplete='new-password'
-              required={!isEdit}
-            />
-          </Form.Field>
-          <Form.Field>
-            <Form.Input
-              label={`Quota${renderQuotaWithPrompt(quota)}`}
-              name='quota'
-              placeholder={'Please enter the quota included in a single redemption code'}
-              onChange={handleInputChange}
-              value={quota}
-              autoComplete='new-password'
-              type='number'
-            />
-          </Form.Field>
-          {
-            !isEdit && <>
-              <Form.Field>
-                <Form.Input
-                  label='Generate quantity'
-                  name='count'
-                  placeholder={'Please enter the quantity to generate'}
-                  onChange={handleInputChange}
-                  value={count}
-                  autoComplete='new-password'
-                  type='number'
-                />
-              </Form.Field>
-            </>
-          }
-          <Button positive onClick={submit}>Submit</Button>
-          <Button onClick={handleCancel}>Cancel</Button>
-        </Form>
-      </Segment>
-    </>
+    <div className='dashboard-container'>
+      <Card fluid className='chart-card'>
+        <Card.Content>
+          <Card.Header className='header'>
+            {isEdit ? 'Update Redemption Code Information' : 'Create New Redemption Code'}
+          </Card.Header>
+          <Form loading={loading} autoComplete='new-password'>
+            <Form.Field>
+              <Form.Input
+                label='Name'
+                name='name'
+                placeholder={'Please enter name'}
+                onChange={handleInputChange}
+                value={name}
+                autoComplete='new-password'
+                required={!isEdit}
+              />
+            </Form.Field>
+            <Form.Field>
+              <Form.Input
+                label={`Quota ${renderQuotaWithPrompt(quota)}`}
+                name='quota'
+                placeholder={'Please enter the quota included in each redemption code'}
+                onChange={handleInputChange}
+                value={quota}
+                autoComplete='new-password'
+                type='number'
+              />
+            </Form.Field>
+            {!isEdit && (
+              <>
+                <Form.Field>
+                  <Form.Input
+                    label='Quantity'
+                    name='count'
+                    placeholder={'Please enter the quantity to generate'}
+                    onChange={handleInputChange}
+                    value={count}
+                    autoComplete='new-password'
+                    type='number'
+                  />
+                </Form.Field>
+              </>
+            )}
+            <Button positive onClick={submit}>
+              Submit
+            </Button>
+            <Button onClick={handleCancel}>Cancel</Button>
+          </Form>
+        </Card.Content>
+      </Card>
+    </div>
   );
 };
 

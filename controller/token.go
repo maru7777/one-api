@@ -287,11 +287,14 @@ func ConsumeToken(c *gin.Context) {
 		return
 	}
 
-	model.RecordConsumeLog(c.Request.Context(),
-		userID, 0, 0, 0, tokenPatch.AddReason, cleanToken.Name,
-		int64(tokenPatch.AddUsedQuota),
-		fmt.Sprintf("External (%s) consumed %s",
-			tokenPatch.AddReason, common.LogQuota(int64(tokenPatch.AddUsedQuota))))
+	model.RecordConsumeLog(c.Request.Context(), &model.Log{
+		UserId:    userID,
+		ModelName: tokenPatch.AddReason,
+		TokenName: cleanToken.Name,
+		Quota:     int(tokenPatch.AddUsedQuota),
+		Content: fmt.Sprintf("External (%s) consumed %s",
+			tokenPatch.AddReason, common.LogQuota(int64(tokenPatch.AddUsedQuota))),
+	})
 
 	err = cleanToken.Update()
 	if err != nil {

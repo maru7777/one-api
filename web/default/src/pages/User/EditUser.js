@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Form, Header, Segment } from 'semantic-ui-react';
+import { Button, Form, Card } from 'semantic-ui-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { API, showError, showSuccess } from '../../helpers';
 import { renderQuota, renderQuotaWithPrompt } from '../../helpers/render';
@@ -16,30 +16,40 @@ const EditUser = () => {
     wechat_id: '',
     email: '',
     quota: 0,
-    group: 'default'
+    group: 'default',
   });
   const [groupOptions, setGroupOptions] = useState([]);
-  const { username, display_name, password, github_id, wechat_id, email, quota, group } =
-    inputs;
+  const {
+    username,
+    display_name,
+    password,
+    github_id,
+    wechat_id,
+    email,
+    quota,
+    group,
+  } = inputs;
   const handleInputChange = (e, { name, value }) => {
     setInputs((inputs) => ({ ...inputs, [name]: value }));
   };
   const fetchGroups = async () => {
     try {
       let res = await API.get(`/api/group/`);
-      setGroupOptions(res.data.data.map((group) => ({
-        key: group,
-        text: group,
-        value: group,
-      })));
+      setGroupOptions(
+        res.data.data.map((group) => ({
+          key: group,
+          text: group,
+          value: group,
+        }))
+      );
     } catch (error) {
       showError(error.message);
     }
   };
   const navigate = useNavigate();
   const handleCancel = () => {
-    navigate("/setting");
-  }
+    navigate('/setting');
+  };
   const loadUser = async () => {
     let res = undefined;
     if (userId) {
@@ -83,107 +93,113 @@ const EditUser = () => {
   };
 
   return (
-    <>
-      <Segment loading={loading}>
-        <Header as='h3'>Update user information</Header>
-        <Form autoComplete='new-password'>
-          <Form.Field>
-            <Form.Input
-              label='Username'
-              name='username'
-              placeholder={'Please enter a new username'}
-              onChange={handleInputChange}
-              value={username}
-              autoComplete='new-password'
-            />
-          </Form.Field>
-          <Form.Field>
-            <Form.Input
-              label='Password'
-              name='password'
-              type={'password'}
-              placeholder={'Please enter a new password, at least 8 characters'}
-              onChange={handleInputChange}
-              value={password}
-              autoComplete='new-password'
-            />
-          </Form.Field>
-          <Form.Field>
-            <Form.Input
-              label='Display name'
-              name='display_name'
-              placeholder={'Please enter a new display name'}
-              onChange={handleInputChange}
-              value={display_name}
-              autoComplete='new-password'
-            />
-          </Form.Field>
-          {
-            userId && <>
-              <Form.Field>
-                <Form.Dropdown
-                  label='Group'
-                  placeholder={'Please select a group'}
-                  name='group'
-                  fluid
-                  search
-                  selection
-                  allowAdditions
-                  additionLabel={'Please edit the group rate on the system settings page to add a new group:'}
-                  onChange={handleInputChange}
-                  value={inputs.group}
-                  autoComplete='new-password'
-                  options={groupOptions}
-                />
-              </Form.Field>
-              <Form.Field>
-                <Form.Input
-                  label={`Remaining quota${renderQuotaWithPrompt(quota)}`}
-                  name='quota'
-                  placeholder={'Please enter a new remaining quota'}
-                  onChange={handleInputChange}
-                  value={quota}
-                  type={'number'}
-                  autoComplete='new-password'
-                />
-              </Form.Field>
-            </>
-          }
-          <Form.Field>
-            <Form.Input
-              label='Bound GitHub account'
-              name='github_id'
-              value={github_id}
-              autoComplete='new-password'
-              placeholder='This item is read-only, users need to bind through the relevant binding button on the personal settings page, cannot be directly modified'
-              readOnly
-            />
-          </Form.Field>
-          <Form.Field>
-            <Form.Input
-              label='Bound WeChat account'
-              name='wechat_id'
-              value={wechat_id}
-              autoComplete='new-password'
-              placeholder='This item is read-only, users need to bind through the relevant binding button on the personal settings page, cannot be directly modified'
-              readOnly
-            />
-          </Form.Field>
-          <Form.Field>
-            <Form.Input
-              label='Bound email account'
-              name='email'
-              value={email}
-              autoComplete='new-password'
-              placeholder='This item is read-only, users need to bind through the relevant binding button on the personal settings page, cannot be directly modified'
-              readOnly
-            />
-          </Form.Field>
-          <Button onClick={handleCancel}>Cancel</Button>
-          <Button positive onClick={submit}>Submit</Button>
-        </Form>
-      </Segment>
-    </>
+    <div className='dashboard-container'>
+      <Card fluid className='chart-card'>
+        <Card.Content>
+          <Card.Header className='header'>Update User Information</Card.Header>
+          <Form loading={loading} autoComplete='new-password'>
+            <Form.Field>
+              <Form.Input
+                label='Username'
+                name='username'
+                placeholder={'Please enter new username'}
+                onChange={handleInputChange}
+                value={username}
+                autoComplete='new-password'
+              />
+            </Form.Field>
+            <Form.Field>
+              <Form.Input
+                label='Password'
+                name='password'
+                type={'password'}
+                placeholder={'Please enter new password, minimum 8 characters'}
+                onChange={handleInputChange}
+                value={password}
+                autoComplete='new-password'
+              />
+            </Form.Field>
+            <Form.Field>
+              <Form.Input
+                label='Display Name'
+                name='display_name'
+                placeholder={'Please enter new display name'}
+                onChange={handleInputChange}
+                value={display_name}
+                autoComplete='new-password'
+              />
+            </Form.Field>
+            {userId && (
+              <>
+                <Form.Field>
+                  <Form.Dropdown
+                    label='Group'
+                    placeholder={'Please select group'}
+                    name='group'
+                    fluid
+                    search
+                    selection
+                    allowAdditions
+                    additionLabel={
+                      'Please edit group ratios in system settings to add new groups:'
+                    }
+                    onChange={handleInputChange}
+                    value={inputs.group}
+                    autoComplete='new-password'
+                    options={groupOptions}
+                  />
+                </Form.Field>
+                <Form.Field>
+                  <Form.Input
+                    label={`Remaining Quota ${renderQuotaWithPrompt(quota)}`}
+                    name='quota'
+                    placeholder={'Please enter new remaining quota'}
+                    onChange={handleInputChange}
+                    value={quota}
+                    type={'number'}
+                    autoComplete='new-password'
+                  />
+                </Form.Field>
+              </>
+            )}
+            <Form.Field>
+              <Form.Input
+                label='Bound GitHub Account'
+                name='github_id'
+                value={github_id}
+                autoComplete='new-password'
+                placeholder='This field is read-only. Users need to bind through the relevant button on the personal settings page, cannot be modified directly'
+                readOnly
+              />
+            </Form.Field>
+            <Form.Field>
+              <Form.Input
+                label='Bound WeChat Account'
+                name='wechat_id'
+                value={wechat_id}
+                autoComplete='new-password'
+                placeholder='This field is read-only. Users need to bind through the relevant button on the personal settings page, cannot be modified directly'
+                readOnly
+              />
+            </Form.Field>
+            <Form.Field>
+              <Form.Input
+                label='Bound Email Account'
+                name='email'
+                value={email}
+                autoComplete='new-password'
+                placeholder='This field is read-only. Users need to bind through the relevant button on the personal settings page, cannot be modified directly'
+                readOnly
+              />
+            </Form.Field>
+            <Button onClick={handleCancel}>Cancel</Button>
+            <Button positive onClick={submit}>
+              Submit
+            </Button>
+          </Form>
+        </Card.Content>
+      </Card>
+    </div>
   );
 };
 

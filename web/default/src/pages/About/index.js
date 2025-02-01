@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Header, Segment } from 'semantic-ui-react';
+import { Card, Header, Segment } from 'semantic-ui-react';
 import { API, showError } from '../../helpers';
 import { marked } from 'marked';
 
@@ -28,31 +28,38 @@ const About = () => {
   useEffect(() => {
     displayAbout().then();
   }, []);
-
   return (
     <>
-      {
-        aboutLoaded && about === '' ? <>
-          <Segment>
-            <Header as='h3'>About</Header>
-            <p>You can set the content about in the settings page, support HTML & Markdown</p>
-            Project Repository Address：
-            <a href='https://github.com/Laisky/one-api'>
-              https://github.com/Laisky/one-api
-            </a>
-          </Segment>
-        </> : <>
-          {
-            about.startsWith('https://') ? <iframe
+      {aboutLoaded && about === '' ? (
+        <div className='dashboard-container'>
+          <Card fluid className='chart-card'>
+            <Card.Content>
+              <Card.Header className='header'>About the System</Card.Header>
+              <p>You can set the about content on the settings page, supporting HTML & Markdown</p>
+              Project repository address:
+              <a href='https://github.com/Laisky/one-api'>
+                https://github.com/Laisky/one-api
+              </a>
+            </Card.Content>
+          </Card>
+        </div>
+      ) : (
+        <>
+          {about.startsWith('https://') ? (
+            <iframe
               src={about}
               style={{ width: '100%', height: '100vh', border: 'none' }}
-            /> : <div style={{ fontSize: 'larger' }} dangerouslySetInnerHTML={{ __html: about }}></div>
-          }
+            />
+          ) : (
+            <div
+              style={{ fontSize: 'larger' }}
+              dangerouslySetInnerHTML={{ __html: about }}
+            ></div>
+          )}
         </>
-      }
+      )}
     </>
   );
 };
-
 
 export default About;

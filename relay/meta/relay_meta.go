@@ -2,6 +2,7 @@ package meta
 
 import (
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common/ctxkey"
@@ -33,6 +34,7 @@ type Meta struct {
 	PromptTokens    int // only for DoResponse
 	ChannelRatio    float64
 	SystemPrompt    string
+	StartTime       time.Time
 }
 
 // GetMappedModelName returns the mapped model name and a bool indicating if the model name is mapped
@@ -70,6 +72,7 @@ func GetByContext(c *gin.Context) *Meta {
 		RequestURLPath:  c.Request.URL.String(),
 		ChannelRatio:    c.GetFloat64(ctxkey.ChannelRatio), // add by Laisky
 		SystemPrompt:    c.GetString(ctxkey.SystemPrompt),
+		StartTime:       time.Now(),
 	}
 	cfg, ok := c.Get(ctxkey.Config)
 	if ok {
