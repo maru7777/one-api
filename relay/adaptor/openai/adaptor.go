@@ -86,7 +86,8 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 	}
 
 	// o1/o1-mini/o1-preview do not support system prompt/max_tokens/temperature
-	if strings.HasPrefix(request.Model, "o1") {
+	if strings.HasPrefix(request.Model, "o1") ||
+		strings.HasPrefix(request.Model, "o3") {
 		temperature := float64(1)
 		request.Temperature = &temperature // Only the default (1) value is supported
 

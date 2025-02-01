@@ -34,7 +34,7 @@ type GeneralOpenAIRequest struct {
 	MaxTokens           int       `json:"max_tokens,omitempty"`
 	MaxCompletionTokens *int      `json:"max_completion_tokens,omitempty"`
 	N                   int       `json:"n,omitempty"`
-	// ReasoningEffort constrains effort on reasoning for reasoning models, o1 models only.
+	// ReasoningEffort constrains effort on reasoning for reasoning models, reasoning models only.
 	ReasoningEffort string `json:"reasoning_effort,omitempty" binding:"omitempty,oneof=low medium high"`
 	// Modalities currently the model only programmatically allows modalities = [“text”, “audio”]
 	Modalities       []string        `json:"modalities,omitempty"`
