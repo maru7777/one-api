@@ -98,6 +98,7 @@ var ModelRatio = map[string]float64{
 	"claude-2.1":                 8.0 / 1000 * USD,
 	"claude-3-haiku-20240307":    0.25 / 1000 * USD,
 	"claude-3-5-haiku-20241022":  1.0 / 1000 * USD,
+	"claude-3-5-haiku-latest":    1.0 / 1000 * USD,
 	"claude-3-sonnet-20240229":   3.0 / 1000 * USD,
 	"claude-3-5-sonnet-20240620": 3.0 / 1000 * USD,
 	"claude-3-5-sonnet-20241022": 3.0 / 1000 * USD,
@@ -131,15 +132,29 @@ var ModelRatio = map[string]float64{
 	"gemini-2.0-flash-thinking-exp-01-21": 0.075 * MILLI_USD,
 	"aqa":                                 1,
 	// https://open.bigmodel.cn/pricing
-	"glm-4":         0.1 * RMB,
-	"glm-4v":        0.1 * RMB,
-	"glm-3-turbo":   0.005 * RMB,
-	"embedding-2":   0.0005 * RMB,
-	"chatglm_turbo": 0.3572, // ￥0.005 / 1k tokens
-	"chatglm_pro":   0.7143, // ￥0.01 / 1k tokens
-	"chatglm_std":   0.3572, // ￥0.005 / 1k tokens
-	"chatglm_lite":  0.1429, // ￥0.002 / 1k tokens
-	"cogview-3":     0.25 * RMB,
+	"glm-zero-preview": 0.01 * RMB,
+	"glm-4-plus":       0.05 * RMB,
+	"glm-4-0520":       0.1 * RMB,
+	"glm-4-airx":       0.01 * RMB,
+	"glm-4-air":        0.0005 * RMB,
+	"glm-4-long":       0.001 * RMB,
+	"glm-4-flashx":     0.0001 * RMB,
+	"glm-4-flash":      0,
+	"glm-4":            0.1 * RMB,   // deprecated model, available until 2025/06
+	"glm-3-turbo":      0.001 * RMB, // deprecated model, available until 2025/06
+	"glm-4v-plus":      0.004 * RMB,
+	"glm-4v":           0.05 * RMB,
+	"glm-4v-flash":     0,
+	"cogview-3-plus":   0.06 * RMB,
+	"cogview-3":        0.1 * RMB,
+	"cogview-3-flash":  0,
+	"cogviewx":         0.5 * RMB,
+	"cogviewx-flash":   0,
+	"charglm-4":        0.001 * RMB,
+	"emohaa":           0.015 * RMB,
+	"codegeex-4":       0.0001 * RMB,
+	"embedding-2":      0.0005 * RMB,
+	"embedding-3":      0.0005 * RMB,
 	// https://help.aliyun.com/zh/dashscope/developer-reference/tongyi-thousand-questions-metering-and-billing
 	"qwen-turbo":                  1.4286, // ￥0.02 / 1k tokens
 	"qwen-turbo-latest":           1.4286,
@@ -226,9 +241,19 @@ var ModelRatio = map[string]float64{
 	"embedding-bert-512-v1":       0.0715, // ¥0.001 / 1k tokens
 	"embedding_s1_v1":             0.0715, // ¥0.001 / 1k tokens
 	"semantic_similarity_s1_v1":   0.0715, // ¥0.001 / 1k tokens
-	"hunyuan":                     7.143,  // ¥0.1 / 1k tokens  // https://cloud.tencent.com/document/product/1729/97731#e0e6be58-60c8-469f-bdeb-6c264ce3b4d0
-	"ChatStd":                     0.01 * RMB,
-	"ChatPro":                     0.1 * RMB,
+	// https://cloud.tencent.com/document/product/1729/97731#e0e6be58-60c8-469f-bdeb-6c264ce3b4d0
+	"hunyuan-turbo":             0.015 * RMB,
+	"hunyuan-large":             0.004 * RMB,
+	"hunyuan-large-longcontext": 0.006 * RMB,
+	"hunyuan-standard":          0.0008 * RMB,
+	"hunyuan-standard-256K":     0.0005 * RMB,
+	"hunyuan-translation-lite":  0.005 * RMB,
+	"hunyuan-role":              0.004 * RMB,
+	"hunyuan-functioncall":      0.004 * RMB,
+	"hunyuan-code":              0.004 * RMB,
+	"hunyuan-turbo-vision":      0.08 * RMB,
+	"hunyuan-vision":            0.018 * RMB,
+	"hunyuan-embedding":         0.0007 * RMB,
 	// https://platform.moonshot.cn/pricing
 	"moonshot-v1-8k":   0.012 * RMB,
 	"moonshot-v1-32k":  0.024 * RMB,

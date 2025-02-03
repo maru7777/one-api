@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Header, Segment } from 'semantic-ui-react';
+import { useTranslation } from 'react-i18next';
+import { Card } from 'semantic-ui-react';
 import { API, showError } from '../../helpers';
 import { marked } from 'marked';
 
 const About = () => {
+  const { t } = useTranslation();
   const [about, setAbout] = useState('');
   const [aboutLoaded, setAboutLoaded] = useState(false);
 
@@ -20,7 +22,7 @@ const About = () => {
       localStorage.setItem('about', aboutContent);
     } else {
       showError(message);
-      setAbout('Failed to load the About content...');
+      setAbout(t('about.loading_failed'));
     }
     setAboutLoaded(true);
   };
@@ -28,17 +30,18 @@ const About = () => {
   useEffect(() => {
     displayAbout().then();
   }, []);
+
   return (
     <>
       {aboutLoaded && about === '' ? (
         <div className='dashboard-container'>
           <Card fluid className='chart-card'>
             <Card.Content>
-              <Card.Header className='header'>About the System</Card.Header>
-              <p>You can set the about content on the settings page, supporting HTML & Markdown</p>
-              Project repository address:
-              <a href='https://github.com/Laisky/one-api'>
-                https://github.com/Laisky/one-api
+              <Card.Header className='header'>{t('about.title')}</Card.Header>
+              <p>{t('about.description')}</p>
+              {t('about.repository')}
+              <a href='https://github.com/songquanpeng/one-api'>
+                https://github.com/songquanpeng/one-api
               </a>
             </Card.Content>
           </Card>
@@ -51,10 +54,16 @@ const About = () => {
               style={{ width: '100%', height: '100vh', border: 'none' }}
             />
           ) : (
-            <div
-              style={{ fontSize: 'larger' }}
-              dangerouslySetInnerHTML={{ __html: about }}
-            ></div>
+            <div className='dashboard-container'>
+              <Card fluid className='chart-card'>
+                <Card.Content>
+                  <div
+                    style={{ fontSize: 'larger' }}
+                    dangerouslySetInnerHTML={{ __html: about }}
+                  ></div>
+                </Card.Content>
+              </Card>
+            </div>
           )}
         </>
       )}

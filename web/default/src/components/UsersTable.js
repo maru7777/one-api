@@ -10,6 +10,7 @@ import {
 } from 'semantic-ui-react';
 import { Link } from 'react-router-dom';
 import { API, showError, showSuccess } from '../helpers';
+import { useTranslation } from 'react-i18next';
 
 import { ITEMS_PER_PAGE } from '../constants';
 import {
@@ -19,20 +20,23 @@ import {
   renderText,
 } from '../helpers/render';
 
-function renderRole(role) {
+function renderRole(role, t) {
   switch (role) {
     case 1:
-      return <Label>Regular user</Label>;
+      return <Label>{t('user.table.role_types.normal')}</Label>;
     case 10:
-      return <Label color='yellow'>Administrator</Label>;
+      return <Label color='yellow'>{t('user.table.role_types.admin')}</Label>;
     case 100:
-      return <Label color='orange'>Super administrator</Label>;
+      return (
+        <Label color='orange'>{t('user.table.role_types.super_admin')}</Label>
+      );
     default:
-      return <Label color='red'>Unknown Identity</Label>;
+      return <Label color='red'>{t('user.table.role_types.unknown')}</Label>;
   }
 }
 
 const UsersTable = () => {
+  const { t } = useTranslation();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activePage, setActivePage] = useState(1);
@@ -83,7 +87,7 @@ const UsersTable = () => {
       });
       const { success, message } = res.data;
       if (success) {
-        showSuccess('Operation successfully completed!');
+        showSuccess(t('user.messages.operation_success'));
         let user = res.data.data;
         let newUsers = [...users];
         let realIdx = (activePage - 1) * ITEMS_PER_PAGE + idx;
@@ -103,17 +107,17 @@ const UsersTable = () => {
   const renderStatus = (status) => {
     switch (status) {
       case 1:
-        return <Label basic>Activated</Label>;
+        return <Label basic>{t('user.table.status_types.activated')}</Label>;
       case 2:
         return (
           <Label basic color='red'>
-            Banned
+            {t('user.table.status_types.banned')}
           </Label>
         );
       default:
         return (
           <Label basic color='grey'>
-            Unknown status
+            {t('user.table.status_types.unknown')}
           </Label>
         );
     }
@@ -175,7 +179,7 @@ const UsersTable = () => {
           icon='search'
           fluid
           iconPosition='left'
-          placeholder='Search user ID, username, display name, and email address...'
+          placeholder={t('user.search')}
           value={searchKeyword}
           loading={searching}
           onChange={handleKeywordChange}
@@ -191,7 +195,7 @@ const UsersTable = () => {
                 sortUser('id');
               }}
             >
-              ID
+              {t('user.table.id')}
             </Table.HeaderCell>
             <Table.HeaderCell
               style={{ cursor: 'pointer' }}
@@ -199,7 +203,7 @@ const UsersTable = () => {
                 sortUser('username');
               }}
             >
-              Username
+              {t('user.table.username')}
             </Table.HeaderCell>
             <Table.HeaderCell
               style={{ cursor: 'pointer' }}
@@ -207,7 +211,7 @@ const UsersTable = () => {
                 sortUser('group');
               }}
             >
-              Group
+              {t('user.table.group')}
             </Table.HeaderCell>
             <Table.HeaderCell
               style={{ cursor: 'pointer' }}
@@ -215,7 +219,7 @@ const UsersTable = () => {
                 sortUser('quota');
               }}
             >
-              Statistics
+              {t('user.table.quota')}
             </Table.HeaderCell>
             <Table.HeaderCell
               style={{ cursor: 'pointer' }}
@@ -223,7 +227,7 @@ const UsersTable = () => {
                 sortUser('role');
               }}
             >
-              User Role
+              {t('user.table.role_text')}
             </Table.HeaderCell>
             <Table.HeaderCell
               style={{ cursor: 'pointer' }}
@@ -231,9 +235,9 @@ const UsersTable = () => {
                 sortUser('status');
               }}
             >
-              Status
+              {t('user.table.status_text')}
             </Table.HeaderCell>
-            <Table.HeaderCell>Operation</Table.HeaderCell>
+            <Table.HeaderCell>{t('user.table.actions')}</Table.HeaderCell>
           </Table.Row>
         </Table.Header>
 
@@ -265,54 +269,56 @@ const UsersTable = () => {
                   {/*</Table.Cell>*/}
                   <Table.Cell>
                     <Popup
-                      content='Remaining Quota'
-                      trigger={<Label basic>{renderQuota(user.quota)}</Label>}
-                    />
-                    <Popup
-                      content='Used Quota'
+                      content={t('user.table.remaining_quota')}
                       trigger={
-                        <Label basic>{renderQuota(user.used_quota)}</Label>
+                        <Label basic>{renderQuota(user.quota, t)}</Label>
                       }
                     />
                     <Popup
-                      content='Request Count'
+                      content={t('user.table.used_quota')}
+                      trigger={
+                        <Label basic>{renderQuota(user.used_quota, t)}</Label>
+                      }
+                    />
+                    <Popup
+                      content={t('user.table.request_count')}
                       trigger={
                         <Label basic>{renderNumber(user.request_count)}</Label>
                       }
                     />
                   </Table.Cell>
-                  <Table.Cell>{renderRole(user.role)}</Table.Cell>
+                  <Table.Cell>{renderRole(user.role, t)}</Table.Cell>
                   <Table.Cell>{renderStatus(user.status)}</Table.Cell>
                   <Table.Cell>
                     <div>
                       <Button
-                        size={'small'}
+                        size={'tiny'}
                         positive
                         onClick={() => {
                           manageUser(user.username, 'promote', idx);
                         }}
                         disabled={user.role === 100}
                       >
-                        Promote
+                        {t('user.buttons.promote')}
                       </Button>
                       <Button
-                        size={'small'}
+                        size={'tiny'}
                         color={'yellow'}
                         onClick={() => {
                           manageUser(user.username, 'demote', idx);
                         }}
                         disabled={user.role === 100}
                       >
-                        Demote
+                        {t('user.buttons.demote')}
                       </Button>
                       <Popup
                         trigger={
                           <Button
-                            size='small'
+                            size='tiny'
                             negative
                             disabled={user.role === 100}
                           >
-                            Delete
+                            {t('user.buttons.delete')}
                           </Button>
                         }
                         on='click'
@@ -321,15 +327,16 @@ const UsersTable = () => {
                       >
                         <Button
                           negative
+                          size={'tiny'}
                           onClick={() => {
                             manageUser(user.username, 'delete', idx);
                           }}
                         >
-                          Delete User {user.username}
+                          {t('user.buttons.delete_user')} {user.username}
                         </Button>
                       </Popup>
                       <Button
-                        size={'small'}
+                        size={'tiny'}
                         onClick={() => {
                           manageUser(
                             user.username,
@@ -339,14 +346,16 @@ const UsersTable = () => {
                         }}
                         disabled={user.role === 100}
                       >
-                        {user.status === 1 ? 'Disable' : 'Enable'}
+                        {user.status === 1
+                          ? t('user.buttons.disable')
+                          : t('user.buttons.enable')}
                       </Button>
                       <Button
-                        size={'small'}
+                        size={'tiny'}
                         as={Link}
                         to={'/user/edit/' + user.id}
                       >
-                        Edit
+                        {t('user.buttons.edit')}
                       </Button>
                     </div>
                   </Table.Cell>
@@ -359,22 +368,26 @@ const UsersTable = () => {
           <Table.Row>
             <Table.HeaderCell colSpan='7'>
               <Button size='small' as={Link} to='/user/add' loading={loading}>
-                Add New User
+                {t('user.buttons.add')}
               </Button>
               <Dropdown
-                placeholder='Sort By'
+                placeholder={t('user.table.sort_by')}
                 selection
                 options={[
-                  { key: '', text: 'Default Order', value: '' },
-                  { key: 'quota', text: 'Sort by Remaining Quota', value: 'quota' },
+                  { key: '', text: t('user.table.sort.default'), value: '' },
+                  {
+                    key: 'quota',
+                    text: t('user.table.sort.by_quota'),
+                    value: 'quota',
+                  },
                   {
                     key: 'used_quota',
-                    text: 'Sort by Used Quota',
+                    text: t('user.table.sort.by_used_quota'),
                     value: 'used_quota',
                   },
                   {
                     key: 'request_count',
-                    text: 'Sort by Request Count',
+                    text: t('user.table.sort.by_request_count'),
                     value: 'request_count',
                   },
                 ]}

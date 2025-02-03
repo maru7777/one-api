@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	gutils "github.com/Laisky/go-utils/v4"
+	gutils "github.com/Laisky/go-utils/v5"
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/common/logger"

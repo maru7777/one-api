@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	gutils "github.com/Laisky/go-utils/v4"
+	gutils "github.com/Laisky/go-utils/v5"
 	"github.com/songquanpeng/one-api/common/config"
 )
 

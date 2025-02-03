@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button, Form, Card } from 'semantic-ui-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { API, showError, showSuccess } from '../../helpers';
 import { renderQuota, renderQuotaWithPrompt } from '../../helpers/render';
 
 const EditUser = () => {
+  const { t } = useTranslation();
   const params = useParams();
   const userId = params.id;
   const [loading, setLoading] = useState(true);
@@ -86,7 +88,7 @@ const EditUser = () => {
     }
     const { success, message } = res.data;
     if (success) {
-      showSuccess('User information updated successfully!');
+      showSuccess(t('user.messages.update_success'));
     } else {
       showError(message);
     }
@@ -96,13 +98,13 @@ const EditUser = () => {
     <div className='dashboard-container'>
       <Card fluid className='chart-card'>
         <Card.Content>
-          <Card.Header className='header'>Update User Information</Card.Header>
+          <Card.Header className='header'>{t('user.edit.title')}</Card.Header>
           <Form loading={loading} autoComplete='new-password'>
             <Form.Field>
               <Form.Input
-                label='Username'
+                label={t('user.edit.username')}
                 name='username'
-                placeholder={'Please enter new username'}
+                placeholder={t('user.edit.username_placeholder')}
                 onChange={handleInputChange}
                 value={username}
                 autoComplete='new-password'
@@ -110,10 +112,10 @@ const EditUser = () => {
             </Form.Field>
             <Form.Field>
               <Form.Input
-                label='Password'
+                label={t('user.edit.password')}
                 name='password'
                 type={'password'}
-                placeholder={'Please enter new password, minimum 8 characters'}
+                placeholder={t('user.edit.password_placeholder')}
                 onChange={handleInputChange}
                 value={password}
                 autoComplete='new-password'
@@ -121,9 +123,9 @@ const EditUser = () => {
             </Form.Field>
             <Form.Field>
               <Form.Input
-                label='Display Name'
+                label={t('user.edit.display_name')}
                 name='display_name'
-                placeholder={'Please enter new display name'}
+                placeholder={t('user.edit.display_name_placeholder')}
                 onChange={handleInputChange}
                 value={display_name}
                 autoComplete='new-password'
@@ -133,16 +135,14 @@ const EditUser = () => {
               <>
                 <Form.Field>
                   <Form.Dropdown
-                    label='Group'
-                    placeholder={'Please select group'}
+                    label={t('user.edit.group')}
+                    placeholder={t('user.edit.group_placeholder')}
                     name='group'
                     fluid
                     search
                     selection
                     allowAdditions
-                    additionLabel={
-                      'Please edit group ratios in system settings to add new groups:'
-                    }
+                    additionLabel={t('user.edit.group_addition')}
                     onChange={handleInputChange}
                     value={inputs.group}
                     autoComplete='new-password'
@@ -151,9 +151,12 @@ const EditUser = () => {
                 </Form.Field>
                 <Form.Field>
                   <Form.Input
-                    label={`Remaining Quota ${renderQuotaWithPrompt(quota)}`}
+                    label={`${t('user.edit.quota')}${renderQuotaWithPrompt(
+                      quota,
+                      t
+                    )}`}
                     name='quota'
-                    placeholder={'Please enter new remaining quota'}
+                    placeholder={t('user.edit.quota_placeholder')}
                     onChange={handleInputChange}
                     value={quota}
                     type={'number'}
@@ -164,37 +167,39 @@ const EditUser = () => {
             )}
             <Form.Field>
               <Form.Input
-                label='Bound GitHub Account'
+                label={t('user.edit.github_id')}
                 name='github_id'
                 value={github_id}
                 autoComplete='new-password'
-                placeholder='This field is read-only. Users need to bind through the relevant button on the personal settings page, cannot be modified directly'
+                placeholder={t('user.edit.github_id_placeholder')}
                 readOnly
               />
             </Form.Field>
             <Form.Field>
               <Form.Input
-                label='Bound WeChat Account'
+                label={t('user.edit.wechat_id')}
                 name='wechat_id'
                 value={wechat_id}
                 autoComplete='new-password'
-                placeholder='This field is read-only. Users need to bind through the relevant button on the personal settings page, cannot be modified directly'
+                placeholder={t('user.edit.wechat_id_placeholder')}
                 readOnly
               />
             </Form.Field>
             <Form.Field>
               <Form.Input
-                label='Bound Email Account'
+                label={t('user.edit.email')}
                 name='email'
                 value={email}
                 autoComplete='new-password'
-                placeholder='This field is read-only. Users need to bind through the relevant button on the personal settings page, cannot be modified directly'
+                placeholder={t('user.edit.email_placeholder')}
                 readOnly
               />
             </Form.Field>
-            <Button onClick={handleCancel}>Cancel</Button>
+            <Button onClick={handleCancel}>
+              {t('user.edit.buttons.cancel')}
+            </Button>
             <Button positive onClick={submit}>
-              Submit
+              {t('user.edit.buttons.submit')}
             </Button>
           </Form>
         </Card.Content>

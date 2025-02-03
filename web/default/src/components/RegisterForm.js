@@ -6,15 +6,16 @@ import {
   Header,
   Image,
   Message,
-  Segment,
   Card,
   Divider,
 } from 'semantic-ui-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { API, getLogo, showError, showInfo, showSuccess } from '../helpers';
 import Turnstile from 'react-turnstile';
 
 const RegisterForm = () => {
+  const { t } = useTranslation();
   const [inputs, setInputs] = useState({
     username: '',
     password: '',
@@ -28,6 +29,8 @@ const RegisterForm = () => {
   const [turnstileSiteKey, setTurnstileSiteKey] = useState('');
   const [turnstileToken, setTurnstileToken] = useState('');
   const [loading, setLoading] = useState(false);
+  const [disableButton, setDisableButton] = useState(false);
+  const [countdown, setCountdown] = useState(30);
   const logo = getLogo();
   let affCode = new URLSearchParams(window.location.search).get('aff');
   if (affCode) {
@@ -46,6 +49,19 @@ const RegisterForm = () => {
     }
   });
 
+  useEffect(() => {
+    let countdownInterval = null;
+    if (disableButton && countdown > 0) {
+      countdownInterval = setInterval(() => {
+        setCountdown(countdown - 1);
+      }, 1000);
+    } else if (countdown === 0) {
+      setDisableButton(false);
+      setCountdown(30);
+    }
+    return () => clearInterval(countdownInterval);
+  }, [disableButton, countdown]);
+
   let navigate = useNavigate();
 
   function handleChange(e) {
@@ -56,16 +72,16 @@ const RegisterForm = () => {
 
   async function handleSubmit(e) {
     if (password.length < 8) {
-      showInfo('Password length must not be less than 8 characters!');
+      showInfo(t('messages.error.password_length'));
       return;
     }
     if (password !== password2) {
-      showInfo('The two passwords entered do not match');
+      showInfo(t('messages.error.password_mismatch'));
       return;
     }
     if (username && password) {
       if (turnstileEnabled && turnstileToken === '') {
-        showInfo('Please try again in a few seconds, Turnstile is checking the user environment!');
+        showInfo(t('messages.error.turnstile_wait'));
         return;
       }
       setLoading(true);
@@ -80,7 +96,7 @@ const RegisterForm = () => {
       const { success, message } = res.data;
       if (success) {
         navigate('/login');
-        showSuccess('Registration successful!');
+        showSuccess(t('messages.success.register'));
       } else {
         showError(message);
       }
@@ -91,18 +107,21 @@ const RegisterForm = () => {
   const sendVerificationCode = async () => {
     if (inputs.email === '') return;
     if (turnstileEnabled && turnstileToken === '') {
-      showInfo('Please try again in a few seconds, Turnstile is checking the user environment!');
+      showInfo(t('messages.error.turnstile_wait'));
       return;
     }
+    setDisableButton(true);
     setLoading(true);
     const res = await API.get(
       `/api/verification?email=${inputs.email}&turnstile=${turnstileToken}`
     );
     const { success, message } = res.data;
     if (success) {
-      showSuccess('Verification code sent successfully, please check your email!');
+      showSuccess(t('messages.success.verification_code'));
     } else {
       showError(message);
+      setDisableButton(false);
+      setCountdown(30);
     }
     setLoading(false);
   };
@@ -123,7 +142,7 @@ const RegisterForm = () => {
                 style={{ marginBottom: '1.5em' }}
               >
                 <Image src={logo} style={{ marginBottom: '10px' }} />
-                <Header.Content>New User Registration</Header.Content>
+                <Header.Content>{t('auth.register.title')}</Header.Content>
               </Header>
             </Card.Header>
             <Form size='large'>
@@ -131,7 +150,7 @@ const RegisterForm = () => {
                 fluid
                 icon='user'
                 iconPosition='left'
-                placeholder='Enter username, up to 12 characters'
+                placeholder={t('auth.register.username')}
                 onChange={handleChange}
                 name='username'
                 style={{ marginBottom: '1em' }}
@@ -140,7 +159,7 @@ const RegisterForm = () => {
                 fluid
                 icon='lock'
                 iconPosition='left'
-                placeholder='Enter password, minimum 8 characters, maximum 20 characters'
+                placeholder={t('auth.register.password')}
                 onChange={handleChange}
                 name='password'
                 type='password'
@@ -150,7 +169,7 @@ const RegisterForm = () => {
                 fluid
                 icon='lock'
                 iconPosition='left'
-                placeholder='Re-enter password'
+                placeholder={t('auth.register.confirm_password')}
                 onChange={handleChange}
                 name='password2'
                 type='password'
@@ -163,16 +182,15 @@ const RegisterForm = () => {
                     fluid
                     icon='mail'
                     iconPosition='left'
-                    placeholder='Enter email address'
+                    placeholder={t('auth.register.email')}
                     onChange={handleChange}
                     name='email'
                     type='email'
                     action={
-                      <Button
-                        onClick={sendVerificationCode}
-                        disabled={loading}
-                      >
-                        Get Verification Code
+                      <Button onClick={sendVerificationCode} disabled={loading}>
+                        {disableButton
+                          ? t('auth.register.get_code_retry', { countdown })
+                          : t('auth.register.get_code')}
                       </Button>
                     }
                     style={{ marginBottom: '1em' }}
@@ -181,7 +199,7 @@ const RegisterForm = () => {
                     fluid
                     icon='lock'
                     iconPosition='left'
-                    placeholder='Enter verification code'
+                    placeholder={t('auth.register.verification_code')}
                     onChange={handleChange}
                     name='verification_code'
                     style={{ marginBottom: '1em' }}
@@ -217,7 +235,7 @@ const RegisterForm = () => {
                 }}
                 loading={loading}
               >
-                Register
+                {t('auth.register.button')}
               </Button>
             </Form>
 
@@ -230,9 +248,12 @@ const RegisterForm = () => {
                   color: '#666',
                 }}
               >
-                Already have an account?
-                <Link to='/login' style={{ color: '#2185d0' }}>
-                  Click to login
+                {t('auth.register.has_account')}
+                <Link
+                  to='/login'
+                  style={{ color: '#2185d0', marginLeft: '2px' }}
+                >
+                  {t('auth.register.login')}
                 </Link>
               </div>
             </Message>

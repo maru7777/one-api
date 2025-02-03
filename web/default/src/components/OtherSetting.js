@@ -1,10 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Divider, Form, Grid, Header, Message, Modal } from 'semantic-ui-react';
-import { API, showError, showSuccess } from '../helpers';
-import { marked } from 'marked';
+import { useTranslation } from 'react-i18next';
+import {
+  Button,
+  Divider,
+  Form,
+  Grid,
+  Header,
+  Message,
+  Modal,
+} from 'semantic-ui-react';
 import { Link } from 'react-router-dom';
+import { API, showError, showSuccess, verifyJSON } from '../helpers';
+import { marked } from 'marked';
 
 const OtherSetting = () => {
+  const { t } = useTranslation();
   let [inputs, setInputs] = useState({
     Footer: '',
     Notice: '',
@@ -12,13 +22,13 @@ const OtherSetting = () => {
     SystemName: '',
     Logo: '',
     HomePageContent: '',
-    Theme: ''
+    Theme: '',
   });
   let [loading, setLoading] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updateData, setUpdateData] = useState({
     tag_name: '',
-    content: ''
+    content: '',
   });
 
   const getOptions = async () => {
@@ -45,7 +55,7 @@ const OtherSetting = () => {
     setLoading(true);
     const res = await API.put('/api/option/', {
       key,
-      value
+      value,
     });
     const { success, message } = res.data;
     if (success) {
@@ -62,10 +72,6 @@ const OtherSetting = () => {
 
   const submitNotice = async () => {
     await updateOption('Notice', inputs.Notice);
-  };
-
-  const submitFooter = async () => {
-    await updateOption('Footer', inputs.Footer);
   };
 
   const submitSystemName = async () => {
@@ -89,8 +95,7 @@ const OtherSetting = () => {
   };
 
   const openGitHubRelease = () => {
-    window.location =
-      'https://github.com/songquanpeng/one-api/releases/latest';
+    window.location = 'https://github.com/songquanpeng/one-api/releases/latest';
   };
 
   const checkUpdate = async () => {
@@ -103,7 +108,7 @@ const OtherSetting = () => {
     } else {
       setUpdateData({
         tag_name: tag_name,
-        content: marked.parse(body)
+        content: marked.parse(body),
       });
       setShowUpdateModal(true);
     }
@@ -113,86 +118,110 @@ const OtherSetting = () => {
     <Grid columns={1}>
       <Grid.Column>
         <Form loading={loading}>
-          <Header as='h3'>General Settings</Header>
-          <Form.Button onClick={checkUpdate}>Check for updates</Form.Button>
+          <Header as='h3'>{t('setting.other.notice.title')}</Header>
           <Form.Group widths='equal'>
             <Form.TextArea
-              label='Announcement'
-              placeholder='Enter the new announcement content here, supports Markdown & HTML code'
+              label={t('setting.other.notice.content')}
+              placeholder={t('setting.other.notice.content_placeholder')}
               value={inputs.Notice}
               name='Notice'
               onChange={handleInputChange}
-              style={{ minHeight: 150, fontFamily: 'JetBrains Mono, Consolas' }}
+              style={{ minHeight: 100, fontFamily: 'JetBrains Mono, Consolas' }}
             />
           </Form.Group>
-          <Form.Button onClick={submitNotice}>Save Announcement</Form.Button>
+          <Form.Button onClick={submitNotice}>
+            {t('setting.other.notice.buttons.save')}
+          </Form.Button>
+
           <Divider />
-          <Header as='h3'>Personalization Settings</Header>
+          <Header as='h3'>{t('setting.other.system.title')}</Header>
           <Form.Group widths='equal'>
             <Form.Input
-              label='System Name'
-              placeholder='Enter the system name here'
+              label={t('setting.other.system.name')}
+              placeholder={t('setting.other.system.name_placeholder')}
               value={inputs.SystemName}
               name='SystemName'
               onChange={handleInputChange}
             />
           </Form.Group>
-          <Form.Button onClick={submitSystemName}>Set system name</Form.Button>
+          <Form.Button onClick={submitSystemName}>
+            {t('setting.other.system.buttons.save_name')}
+          </Form.Button>
           <Form.Group widths='equal'>
             <Form.Input
-              label={<label>Theme Name (<Link
-                to='https://github.com/songquanpeng/one-api/blob/main/web/README.md'>Available Themes</Link>)</label>}
-              placeholder='Please enter theme name'
+              label={
+                <label>
+                  {t('setting.other.system.theme.title')}（
+                  <Link to='https://github.com/songquanpeng/one-api/blob/main/web/README.md'>
+                    {t('setting.other.system.theme.link')}
+                  </Link>
+                  ）
+                </label>
+              }
+              placeholder={t('setting.other.system.theme.placeholder')}
               value={inputs.Theme}
               name='Theme'
               onChange={handleInputChange}
             />
           </Form.Group>
-          <Form.Button onClick={submitTheme}>Set Theme (Restart Required)</Form.Button>
+          <Form.Button onClick={submitTheme}>
+            {t('setting.other.system.buttons.save_theme')}
+          </Form.Button>
           <Form.Group widths='equal'>
             <Form.Input
-              label='Logo Image URL'
-              placeholder='Enter the Logo image URL here'
+              label={t('setting.other.system.logo')}
+              placeholder={t('setting.other.system.logo_placeholder')}
               value={inputs.Logo}
               name='Logo'
               type='url'
               onChange={handleInputChange}
             />
           </Form.Group>
-          <Form.Button onClick={submitLogo}>Settings Logo</Form.Button>
+          <Form.Button onClick={submitLogo}>
+            {t('setting.other.system.buttons.save_logo')}
+          </Form.Button>
+
+          <Divider />
+          <Header as='h3'>{t('setting.other.content.title')}</Header>
           <Form.Group widths='equal'>
             <Form.TextArea
-              label='Home Page Content'
-              placeholder='Enter the homepage content here, supports Markdown & HTML code. Once set, the status information of the homepage will not be displayed. If a link is entered, it will be used as the src attribute of the iframe, allowing you to set any webpage as the homepage.。'
+              label={t('setting.other.content.homepage.title')}
+              placeholder={t('setting.other.content.homepage.placeholder')}
               value={inputs.HomePageContent}
               name='HomePageContent'
               onChange={handleInputChange}
               style={{ minHeight: 150, fontFamily: 'JetBrains Mono, Consolas' }}
             />
           </Form.Group>
-          <Form.Button onClick={() => submitOption('HomePageContent')}>Save Home Page Content</Form.Button>
+          <Form.Button onClick={() => submitOption('HomePageContent')}>
+            {t('setting.other.content.buttons.save_homepage')}
+          </Form.Button>
           <Form.Group widths='equal'>
             <Form.TextArea
-              label='About'
-              placeholder='Enter new about content here, supports Markdown & HTML code. If a link is entered, it will be used as the src attribute of the iframe, allowing you to set any webpage as the about page.。'
+              label={t('setting.other.content.about.title')}
+              placeholder={t('setting.other.content.about.placeholder')}
               value={inputs.About}
               name='About'
               onChange={handleInputChange}
               style={{ minHeight: 150, fontFamily: 'JetBrains Mono, Consolas' }}
             />
           </Form.Group>
-          <Form.Button onClick={submitAbout}>Save About</Form.Button>
-          <Message>Removing One API's copyright notice requires prior authorization. Project maintenance requires significant effort - if this project is meaningful to you, please actively support it.</Message>
+          <Form.Button onClick={submitAbout}>
+            {t('setting.other.content.buttons.save_about')}
+          </Form.Button>
+          <Message>{t('setting.other.copyright.notice')}</Message>
           <Form.Group widths='equal'>
             <Form.Input
-              label='Footer'
-              placeholder='Enter the new footer here, leave blank to use the default footer, supports HTML code.'
+              label={t('setting.other.content.footer.title')}
+              placeholder={t('setting.other.content.footer.placeholder')}
               value={inputs.Footer}
               name='Footer'
               onChange={handleInputChange}
             />
           </Form.Group>
-          <Form.Button onClick={submitFooter}>Set Footer</Form.Button>
+          <Form.Button onClick={() => submitOption('Footer')}>
+            {t('setting.other.content.buttons.save_footer')}
+          </Form.Button>
         </Form>
       </Grid.Column>
       <Modal

@@ -240,16 +240,31 @@ func PreConsumeTokenQuota(tokenId int, quota int64) (err error) {
 			if err != nil {
 				logger.SysError("failed to fetch user email: " + err.Error())
 			}
-			prompt := "Your quota is about to run out"
+			prompt := "Quota Reminder"
+			var contentText string
 			if noMoreQuota {
-				prompt = "Your quota has been used up"
+				contentText = "Your quota has been exhausted"
+			} else {
+				contentText = "Your quota is about to be exhausted"
 			}
 			if email != "" {
 				topUpLink := fmt.Sprintf("%s/topup", config.ServerAddress)
-				err = message.SendEmail(prompt, email,
-					fmt.Sprintf("%s, the current remaining quota is %d, in order not to affect your use, please recharge in time. <br/> Recharge link: <a href='%s'>%s</a>", prompt, userQuota, topUpLink, topUpLink))
+				content := message.EmailTemplate(
+					prompt,
+					fmt.Sprintf(`
+								<p>Hello!</p>
+								<p>%s, your current remaining quota is <strong>%d</strong>.</p>
+								<p>To avoid any disruption to your service, please top up in a timely manner.</p>
+								<p style="text-align: center; margin: 30px 0;">
+									<a href="%s" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">Top Up Now</a>
+								</p>
+								<p style="color: #666;">If the button does not work, please copy the following link and paste it into your browser:</p>
+								<p style="background-color: #f8f8f8; padding: 10px; border-radius: 4px; word-break: break-all;">%s</p>
+							`, contentText, userQuota, topUpLink, topUpLink),
+				)
+				err = message.SendEmail(prompt, email, content)
 				if err != nil {
-					logger.SysError("failed to send email" + err.Error())
+					logger.SysError("failed to send email: " + err.Error())
 				}
 			}
 		}()

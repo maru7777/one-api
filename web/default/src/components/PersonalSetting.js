@@ -1,12 +1,29 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Button, Divider, Form, Header, Image, Message, Modal } from 'semantic-ui-react';
+import { useTranslation } from 'react-i18next';
+import {
+  Button,
+  Divider,
+  Form,
+  Header,
+  Image,
+  Message,
+  Modal,
+} from 'semantic-ui-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { API, copy, showError, showInfo, showNotice, showSuccess } from '../helpers';
+import {
+  API,
+  copy,
+  showError,
+  showInfo,
+  showNotice,
+  showSuccess,
+} from '../helpers';
 import Turnstile from 'react-turnstile';
 import { UserContext } from '../context/User';
 import { onGitHubOAuthClicked, onLarkOAuthClicked } from './utils';
 
 const PersonalSetting = () => {
+  const { t } = useTranslation();
   const [userState, userDispatch] = useContext(UserContext);
   let navigate = useNavigate();
 
@@ -14,7 +31,7 @@ const PersonalSetting = () => {
     wechat_verification_code: '',
     email_verification_code: '',
     email: '',
-    self_account_deletion_confirmation: ''
+    self_account_deletion_confirmation: '',
   });
   const [status, setStatus] = useState({});
   const [showWeChatBindModal, setShowWeChatBindModal] = useState(false);
@@ -26,8 +43,8 @@ const PersonalSetting = () => {
   const [loading, setLoading] = useState(false);
   const [disableButton, setDisableButton] = useState(false);
   const [countdown, setCountdown] = useState(30);
-  const [affLink, setAffLink] = useState("");
-  const [systemToken, setSystemToken] = useState("");
+  const [affLink, setAffLink] = useState('');
+  const [systemToken, setSystemToken] = useState('');
 
   useEffect(() => {
     let status = localStorage.getItem('status');
@@ -63,7 +80,7 @@ const PersonalSetting = () => {
     const { success, message, data } = res.data;
     if (success) {
       setSystemToken(data);
-      setAffLink("");
+      setAffLink('');
       await copy(data);
       showSuccess(`Token has been reset and copied to the clipboard`);
     } else {
@@ -77,7 +94,7 @@ const PersonalSetting = () => {
     if (success) {
       let link = `${window.location.origin}/register?aff=${data}`;
       setAffLink(link);
-      setSystemToken("");
+      setSystemToken('');
       await copy(link);
       showSuccess(`Invitation link has been copied to the clipboard`);
     } else {
@@ -169,18 +186,24 @@ const PersonalSetting = () => {
 
   return (
     <div style={{ lineHeight: '40px' }}>
-      <Header as='h3'>General Settings</Header>
-      <Message>
-        Note that, The token generated here is used for system management，Not for requesting OpenAI related services，Please be aware。
-      </Message>
+      <Header as='h3'>{t('setting.personal.general.title')}</Header>
+      <Message>{t('setting.personal.general.system_token_notice')}</Message>
       <Button as={Link} to={`/user/edit/`}>
-        Update Personal Information
+        {t('setting.personal.general.buttons.update_profile')}
       </Button>
-      <Button onClick={generateAccessToken}>Generate system access token</Button>
-      <Button onClick={getAffLink}>Copy invitation link</Button>
-      <Button onClick={() => {
-        setShowAccountDeleteModal(true);
-      }}>Delete Account</Button>
+      <Button onClick={generateAccessToken}>
+        {t('setting.personal.general.buttons.generate_token')}
+      </Button>
+      <Button onClick={getAffLink}>
+        {t('setting.personal.general.buttons.copy_invite')}
+      </Button>
+      <Button
+        onClick={() => {
+          setShowAccountDeleteModal(true);
+        }}
+      >
+        {t('setting.personal.general.buttons.delete_account')}
+      </Button>
 
       {systemToken && (
         <Form.Input
@@ -201,18 +224,12 @@ const PersonalSetting = () => {
         />
       )}
       <Divider />
-      <Header as='h3'>Account binding</Header>
-      {
-        status.wechat_login && (
-          <Button
-            onClick={() => {
-              setShowWeChatBindModal(true);
-            }}
-          >
-            Bind WeChat Account
-          </Button>
-        )
-      }
+      <Header as='h3'>{t('setting.personal.binding.title')}</Header>
+      {status.wechat_login && (
+        <Button onClick={() => setShowWeChatBindModal(true)}>
+          {t('setting.personal.binding.buttons.bind_wechat')}
+        </Button>
+      )}
       <Modal
         onClose={() => setShowWeChatBindModal(false)}
         onOpen={() => setShowWeChatBindModal(true)}
@@ -223,41 +240,37 @@ const PersonalSetting = () => {
           <Modal.Description>
             <Image src={status.wechat_qrcode} fluid />
             <div style={{ textAlign: 'center' }}>
-              <p>
-                Scan the QR code with WeChat, follow the official account and enter 'verification code' to get the verification code (valid within three minutes)
-              </p>
+              <p>{t('setting.personal.binding.wechat.description')}</p>
             </div>
             <Form size='large'>
               <Form.Input
                 fluid
-                placeholder='Verification code'
+                placeholder={t(
+                  'setting.personal.binding.wechat.verification_code'
+                )}
                 name='wechat_verification_code'
                 value={inputs.wechat_verification_code}
                 onChange={handleInputChange}
               />
               <Button color='' fluid size='large' onClick={bindWeChat}>
-                Bind
+                {t('setting.personal.binding.wechat.bind')}
               </Button>
             </Form>
           </Modal.Description>
         </Modal.Content>
       </Modal>
-      {
-        status.github_oauth && (
-          <Button onClick={()=>{onGitHubOAuthClicked(status.github_client_id)}}>Bind GitHub Account</Button>
-        )
-      }
-      {
-        status.lark_client_id && (
-          <Button onClick={()=>{onLarkOAuthClicked(status.lark_client_id)}}>Bind Lark Account</Button>
-        )
-      }
-      <Button
-        onClick={() => {
-          setShowEmailBindModal(true);
-        }}
-      >
-        Bind email address
+      {status.github_oauth && (
+        <Button onClick={() => onGitHubOAuthClicked(status.github_client_id)}>
+          {t('setting.personal.binding.buttons.bind_github')}
+        </Button>
+      )}
+      {status.lark_client_id && (
+        <Button onClick={() => onLarkOAuthClicked(status.lark_client_id)}>
+          {t('setting.personal.binding.buttons.bind_lark')}
+        </Button>
+      )}
+      <Button onClick={() => setShowEmailBindModal(true)}>
+        {t('setting.personal.binding.buttons.bind_email')}
       </Button>
       <Modal
         onClose={() => setShowEmailBindModal(false)}
@@ -266,57 +279,72 @@ const PersonalSetting = () => {
         size={'tiny'}
         style={{ maxWidth: '450px' }}
       >
-        <Modal.Header>Bind email address</Modal.Header>
+        <Modal.Header>{t('setting.personal.binding.email.title')}</Modal.Header>
         <Modal.Content>
           <Modal.Description>
             <Form size='large'>
               <Form.Input
                 fluid
-                placeholder='Enter email address'
+                placeholder={t(
+                  'setting.personal.binding.email.email_placeholder'
+                )}
                 onChange={handleInputChange}
                 name='email'
                 type='email'
                 action={
-                  <Button onClick={sendVerificationCode} disabled={disableButton || loading}>
-                    {disableButton ? `Resend(${countdown})` : 'Get verification code'}
+                  <Button
+                    onClick={sendVerificationCode}
+                    disabled={disableButton || loading}
+                  >
+                    {disableButton
+                      ? t('setting.personal.binding.email.get_code_retry', {
+                          countdown,
+                        })
+                      : t('setting.personal.binding.email.get_code')}
                   </Button>
                 }
               />
               <Form.Input
                 fluid
-                placeholder='Verification code'
+                placeholder={t(
+                  'setting.personal.binding.email.code_placeholder'
+                )}
                 name='email_verification_code'
                 value={inputs.email_verification_code}
                 onChange={handleInputChange}
               />
-              {turnstileEnabled ? (
+              {turnstileEnabled && (
                 <Turnstile
                   sitekey={turnstileSiteKey}
                   onVerify={(token) => {
                     setTurnstileToken(token);
                   }}
                 />
-              ) : (
-                <></>
               )}
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
-              <Button
-                color=''
-                fluid
-                size='large'
-                onClick={bindEmail}
-                loading={loading}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginTop: '1rem',
+                }}
               >
-                Confirm binding
-              </Button>
-              <div style={{ width: '1rem' }}></div>
-              <Button
-                fluid
-                size='large'
-                onClick={() => setShowEmailBindModal(false)}
-              >
-                Cancel
-              </Button>
+                <Button
+                  color=''
+                  fluid
+                  size='large'
+                  onClick={bindEmail}
+                  loading={loading}
+                >
+                  {t('setting.personal.binding.email.bind')}
+                </Button>
+                <div style={{ width: '1rem' }}></div>
+                <Button
+                  fluid
+                  size='large'
+                  onClick={() => setShowEmailBindModal(false)}
+                >
+                  {t('setting.personal.binding.email.cancel')}
+                </Button>
               </div>
             </Form>
           </Modal.Description>
@@ -329,29 +357,40 @@ const PersonalSetting = () => {
         size={'tiny'}
         style={{ maxWidth: '450px' }}
       >
-        <Modal.Header>Dangerous operation</Modal.Header>
+        <Modal.Header>
+          {t('setting.personal.delete_account.title')}
+        </Modal.Header>
         <Modal.Content>
-        <Message>You are deleting your own account, all data will be cleared and cannot be recovered</Message>
+          <Message>{t('setting.personal.delete_account.warning')}</Message>
           <Modal.Description>
             <Form size='large'>
               <Form.Input
                 fluid
-                placeholder={`Enter your account name ${userState?.user?.username} To confirm deletion`}
+                placeholder={t(
+                  'setting.personal.delete_account.confirm_placeholder',
+                  {
+                    username: userState?.user?.username,
+                  }
+                )}
                 name='self_account_deletion_confirmation'
                 value={inputs.self_account_deletion_confirmation}
                 onChange={handleInputChange}
               />
-              {turnstileEnabled ? (
+              {turnstileEnabled && (
                 <Turnstile
                   sitekey={turnstileSiteKey}
                   onVerify={(token) => {
                     setTurnstileToken(token);
                   }}
                 />
-              ) : (
-                <></>
               )}
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginTop: '1rem',
+                }}
+              >
                 <Button
                   color='red'
                   fluid
@@ -359,7 +398,7 @@ const PersonalSetting = () => {
                   onClick={deleteAccount}
                   loading={loading}
                 >
-                  Confirm deletion
+                  {t('setting.personal.delete_account.buttons.confirm')}
                 </Button>
                 <div style={{ width: '1rem' }}></div>
                 <Button
@@ -367,7 +406,7 @@ const PersonalSetting = () => {
                   size='large'
                   onClick={() => setShowAccountDeleteModal(false)}
                 >
-                  Cancel
+                  {t('setting.personal.delete_account.buttons.cancel')}
                 </Button>
               </div>
             </Form>

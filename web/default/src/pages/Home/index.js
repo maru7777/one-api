@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Card, Grid, Header, Segment } from 'semantic-ui-react';
+import { useTranslation } from 'react-i18next';
+import { Card, Grid, Header } from 'semantic-ui-react';
 import { API, showError, showNotice, timestamp2string } from '../../helpers';
 import { StatusContext } from '../../context/Status';
 import { marked } from 'marked';
@@ -7,6 +8,7 @@ import { UserContext } from '../../context/User';
 import { Link } from 'react-router-dom';
 
 const Home = () => {
+  const { t } = useTranslation();
   const [statusState, statusDispatch] = useContext(StatusContext);
   const [homePageContentLoaded, setHomePageContentLoaded] = useState(false);
   const [homePageContent, setHomePageContent] = useState('');
@@ -40,7 +42,7 @@ const Home = () => {
       localStorage.setItem('home_page_content', content);
     } else {
       showError(message);
-      setHomePageContent('Failed to load homepage content...');
+      setHomePageContent(t('home.loading_failed'));
     }
     setHomePageContentLoaded(true);
   };
@@ -61,23 +63,19 @@ const Home = () => {
         <div className='dashboard-container'>
           <Card fluid className='chart-card'>
             <Card.Content>
-              <Card.Header className='header'>Welcome to One API</Card.Header>
+              <Card.Header className='header'>
+                {t('home.welcome.title')}
+              </Card.Header>
               <Card.Description style={{ lineHeight: '1.6' }}>
-                <p>
-                  One API is an LLM API interface management and distribution system that helps you better manage and use LLM APIs from various vendors.
-                </p>
-                {!userState.user && (
-                  <p>
-                    To use, please <Link to='/login'>log in</Link> or <Link to='/register'>register</Link>.
-                  </p>
-                )}
+                <p>{t('home.welcome.description')}</p>
+                {!userState.user && <p>{t('home.welcome.login_notice')}</p>}
               </Card.Description>
             </Card.Content>
           </Card>
           <Card fluid className='chart-card'>
             <Card.Content>
               <Card.Header>
-                <Header as='h3'>System Status</Header>
+                <Header as='h3'>{t('home.system_status.title')}</Header>
               </Card.Header>
               <Grid columns={2} stackable>
                 <Grid.Column>
@@ -89,7 +87,7 @@ const Home = () => {
                     <Card.Content>
                       <Card.Header>
                         <Header as='h3' style={{ color: '#444' }}>
-                          System Information
+                          {t('home.system_status.info.title')}
                         </Header>
                       </Card.Header>
                       <Card.Description
@@ -103,7 +101,9 @@ const Home = () => {
                           }}
                         >
                           <i className='info circle icon'></i>
-                          <span style={{ fontWeight: 'bold' }}>Name:</span>
+                          <span style={{ fontWeight: 'bold' }}>
+                            {t('home.system_status.info.name')}
+                          </span>
                           <span>{statusState?.status?.system_name}</span>
                         </p>
                         <p
@@ -114,7 +114,9 @@ const Home = () => {
                           }}
                         >
                           <i className='code branch icon'></i>
-                          <span style={{ fontWeight: 'bold' }}>Version:</span>
+                          <span style={{ fontWeight: 'bold' }}>
+                            {t('home.system_status.info.version')}
+                          </span>
                           <span>
                             {statusState?.status?.version || 'unknown'}
                           </span>
@@ -127,13 +129,15 @@ const Home = () => {
                           }}
                         >
                           <i className='github icon'></i>
-                          <span style={{ fontWeight: 'bold' }}>Source Code:</span>
+                          <span style={{ fontWeight: 'bold' }}>
+                            {t('home.system_status.info.source')}
+                          </span>
                           <a
                             href='https://github.com/songquanpeng/one-api'
                             target='_blank'
                             style={{ color: '#2185d0' }}
                           >
-                            GitHub Repository
+                            {t('home.system_status.info.source_link')}
                           </a>
                         </p>
                         <p
@@ -144,7 +148,9 @@ const Home = () => {
                           }}
                         >
                           <i className='clock outline icon'></i>
-                          <span style={{ fontWeight: 'bold' }}>Start Time:</span>
+                          <span style={{ fontWeight: 'bold' }}>
+                            {t('home.system_status.info.start_time')}
+                          </span>
                           <span>{getStartTimeString()}</span>
                         </p>
                       </Card.Description>
@@ -161,7 +167,7 @@ const Home = () => {
                     <Card.Content>
                       <Card.Header>
                         <Header as='h3' style={{ color: '#444' }}>
-                          System Configuration
+                          {t('home.system_status.config.title')}
                         </Header>
                       </Card.Header>
                       <Card.Description
@@ -175,7 +181,9 @@ const Home = () => {
                           }}
                         >
                           <i className='envelope icon'></i>
-                          <span style={{ fontWeight: 'bold' }}>Email Verification:</span>
+                          <span style={{ fontWeight: 'bold' }}>
+                            {t('home.system_status.config.email_verify')}
+                          </span>
                           <span
                             style={{
                               color: statusState?.status?.email_verification
@@ -185,8 +193,8 @@ const Home = () => {
                             }}
                           >
                             {statusState?.status?.email_verification
-                              ? 'Enabled'
-                              : 'Disabled'}
+                              ? t('home.system_status.config.enabled')
+                              : t('home.system_status.config.disabled')}
                           </span>
                         </p>
                         <p
@@ -198,7 +206,7 @@ const Home = () => {
                         >
                           <i className='github icon'></i>
                           <span style={{ fontWeight: 'bold' }}>
-                            GitHub Authentication:
+                            {t('home.system_status.config.github_oauth')}
                           </span>
                           <span
                             style={{
@@ -209,8 +217,8 @@ const Home = () => {
                             }}
                           >
                             {statusState?.status?.github_oauth
-                              ? 'Enabled'
-                              : 'Disabled'}
+                              ? t('home.system_status.config.enabled')
+                              : t('home.system_status.config.disabled')}
                           </span>
                         </p>
                         <p
@@ -222,7 +230,7 @@ const Home = () => {
                         >
                           <i className='wechat icon'></i>
                           <span style={{ fontWeight: 'bold' }}>
-                            WeChat Authentication:
+                            {t('home.system_status.config.wechat_login')}
                           </span>
                           <span
                             style={{
@@ -233,8 +241,8 @@ const Home = () => {
                             }}
                           >
                             {statusState?.status?.wechat_login
-                              ? 'Enabled'
-                              : 'Disabled'}
+                              ? t('home.system_status.config.enabled')
+                              : t('home.system_status.config.disabled')}
                           </span>
                         </p>
                         <p
@@ -246,7 +254,7 @@ const Home = () => {
                         >
                           <i className='shield alternate icon'></i>
                           <span style={{ fontWeight: 'bold' }}>
-                            Turnstile Check:
+                            {t('home.system_status.config.turnstile')}
                           </span>
                           <span
                             style={{
@@ -257,8 +265,8 @@ const Home = () => {
                             }}
                           >
                             {statusState?.status?.turnstile_check
-                              ? 'Enabled'
-                              : 'Disabled'}
+                              ? t('home.system_status.config.enabled')
+                              : t('home.system_status.config.disabled')}
                           </span>
                         </p>
                       </Card.Description>
@@ -267,7 +275,7 @@ const Home = () => {
                 </Grid.Column>
               </Grid>
             </Card.Content>
-          </Card>{' '}
+          </Card>
         </div>
       ) : (
         <>

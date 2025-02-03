@@ -1,8 +1,16 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Divider, Form, Grid, Header } from 'semantic-ui-react';
-import { API, showError, showSuccess, timestamp2string, verifyJSON } from '../helpers';
+import {
+  API,
+  showError,
+  showSuccess,
+  timestamp2string,
+  verifyJSON,
+} from '../helpers';
 
 const OperationSetting = () => {
+  const { t } = useTranslation();
   let now = new Date();
   let [inputs, setInputs] = useState({
     QuotaForNewUser: 0,
@@ -23,11 +31,13 @@ const OperationSetting = () => {
     DisplayInCurrencyEnabled: '',
     DisplayTokenStatEnabled: '',
     ApproximateTokenEnabled: '',
-    RetryTimes: 0
+    RetryTimes: 0,
   });
   const [originInputs, setOriginInputs] = useState({});
   let [loading, setLoading] = useState(false);
-  let [historyTimestamp, setHistoryTimestamp] = useState(timestamp2string(now.getTime() / 1000 - 30 * 24 * 3600)); // a month ago
+  let [historyTimestamp, setHistoryTimestamp] = useState(
+    timestamp2string(now.getTime() / 1000 - 30 * 24 * 3600)
+  ); // a month ago
 
   const getOptions = async () => {
     const res = await API.get('/api/option/');
@@ -35,7 +45,11 @@ const OperationSetting = () => {
     if (success) {
       let newInputs = {};
       data.forEach((item) => {
-        if (item.key === 'ModelRatio' || item.key === 'GroupRatio' || item.key === 'CompletionRatio') {
+        if (
+          item.key === 'ModelRatio' ||
+          item.key === 'GroupRatio' ||
+          item.key === 'CompletionRatio'
+        ) {
           item.value = JSON.stringify(JSON.parse(item.value), null, 2);
         }
         if (item.value === '{}') {
@@ -61,7 +75,7 @@ const OperationSetting = () => {
     }
     const res = await API.put('/api/option/', {
       key,
-      value
+      value,
     });
     const { success, message } = res.data;
     if (success) {
@@ -83,11 +97,22 @@ const OperationSetting = () => {
   const submitConfig = async (group) => {
     switch (group) {
       case 'monitor':
-        if (originInputs['ChannelDisableThreshold'] !== inputs.ChannelDisableThreshold) {
-          await updateOption('ChannelDisableThreshold', inputs.ChannelDisableThreshold);
+        if (
+          originInputs['ChannelDisableThreshold'] !==
+          inputs.ChannelDisableThreshold
+        ) {
+          await updateOption(
+            'ChannelDisableThreshold',
+            inputs.ChannelDisableThreshold
+          );
         }
-        if (originInputs['QuotaRemindThreshold'] !== inputs.QuotaRemindThreshold) {
-          await updateOption('QuotaRemindThreshold', inputs.QuotaRemindThreshold);
+        if (
+          originInputs['QuotaRemindThreshold'] !== inputs.QuotaRemindThreshold
+        ) {
+          await updateOption(
+            'QuotaRemindThreshold',
+            inputs.QuotaRemindThreshold
+          );
         }
         break;
       case 'ratio':
@@ -146,7 +171,9 @@ const OperationSetting = () => {
 
   const deleteHistoryLogs = async () => {
     console.log(inputs);
-    const res = await API.delete(`/api/log/?target_timestamp=${Date.parse(historyTimestamp) / 1000}`);
+    const res = await API.delete(
+      `/api/log/?target_timestamp=${Date.parse(historyTimestamp) / 1000}`
+    );
     const { success, message, data } = res.data;
     if (success) {
       showSuccess(`$cleared {data} logs!`);
@@ -159,40 +186,218 @@ const OperationSetting = () => {
     <Grid columns={1}>
       <Grid.Column>
         <Form loading={loading}>
-          <Header as='h3'>
-            General Settings
-          </Header>
+          <Header as='h3'>{t('setting.operation.quota.title')}</Header>
+          <Form.Group widths='equal'>
+            <Form.Input
+              label={t('setting.operation.quota.new_user')}
+              name='QuotaForNewUser'
+              onChange={handleInputChange}
+              autoComplete='new-password'
+              value={inputs.QuotaForNewUser}
+              type='number'
+              min='0'
+              placeholder={t('setting.operation.quota.new_user_placeholder')}
+            />
+            <Form.Input
+              label={t('setting.operation.quota.pre_consume')}
+              name='PreConsumedQuota'
+              onChange={handleInputChange}
+              autoComplete='new-password'
+              value={inputs.PreConsumedQuota}
+              type='number'
+              min='0'
+              placeholder={t('setting.operation.quota.pre_consume_placeholder')}
+            />
+            <Form.Input
+              label={t('setting.operation.quota.inviter_reward')}
+              name='QuotaForInviter'
+              onChange={handleInputChange}
+              autoComplete='new-password'
+              value={inputs.QuotaForInviter}
+              type='number'
+              min='0'
+              placeholder={t(
+                'setting.operation.quota.inviter_reward_placeholder'
+              )}
+            />
+            <Form.Input
+              label={t('setting.operation.quota.invitee_reward')}
+              name='QuotaForInvitee'
+              onChange={handleInputChange}
+              autoComplete='new-password'
+              value={inputs.QuotaForInvitee}
+              type='number'
+              min='0'
+              placeholder={t(
+                'setting.operation.quota.invitee_reward_placeholder'
+              )}
+            />
+          </Form.Group>
+          <Form.Button
+            onClick={() => {
+              submitConfig('quota').then();
+            }}
+          >
+            {t('setting.operation.quota.buttons.save')}
+          </Form.Button>
+          <Divider />
+          <Header as='h3'>{t('setting.operation.ratio.title')}</Header>
+          <Form.Group widths='equal'>
+            <Form.TextArea
+              label={t('setting.operation.ratio.model.title')}
+              name='ModelRatio'
+              onChange={handleInputChange}
+              style={{ minHeight: 250, fontFamily: 'JetBrains Mono, Consolas' }}
+              autoComplete='new-password'
+              value={inputs.ModelRatio}
+              placeholder={t('setting.operation.ratio.model.placeholder')}
+            />
+          </Form.Group>
+          <Form.Group widths='equal'>
+            <Form.TextArea
+              label={t('setting.operation.ratio.completion.title')}
+              name='CompletionRatio'
+              onChange={handleInputChange}
+              style={{ minHeight: 250, fontFamily: 'JetBrains Mono, Consolas' }}
+              autoComplete='new-password'
+              value={inputs.CompletionRatio}
+              placeholder={t('setting.operation.ratio.completion.placeholder')}
+            />
+          </Form.Group>
+          <Form.Group widths='equal'>
+            <Form.TextArea
+              label={t('setting.operation.ratio.group.title')}
+              name='GroupRatio'
+              onChange={handleInputChange}
+              style={{ minHeight: 250, fontFamily: 'JetBrains Mono, Consolas' }}
+              autoComplete='new-password'
+              value={inputs.GroupRatio}
+              placeholder={t('setting.operation.ratio.group.placeholder')}
+            />
+          </Form.Group>
+          <Form.Button
+            onClick={() => {
+              submitConfig('ratio').then();
+            }}
+          >
+            {t('setting.operation.ratio.buttons.save')}
+          </Form.Button>
+          <Divider />
+          <Header as='h3'>{t('setting.operation.log.title')}</Header>
+          <Form.Group inline>
+            <Form.Checkbox
+              checked={inputs.LogConsumeEnabled === 'true'}
+              label={t('setting.operation.log.enable_consume')}
+              name='LogConsumeEnabled'
+              onChange={handleInputChange}
+            />
+          </Form.Group>
           <Form.Group widths={4}>
             <Form.Input
-              label='Recharge Link'
+              label={t('setting.operation.log.target_time')}
+              value={historyTimestamp}
+              type='datetime-local'
+              name='history_timestamp'
+              onChange={(e, { name, value }) => {
+                setHistoryTimestamp(value);
+              }}
+            />
+          </Form.Group>
+          <Form.Button
+            onClick={() => {
+              deleteHistoryLogs().then();
+            }}
+          >
+            {t('setting.operation.log.buttons.clean')}
+          </Form.Button>
+
+          <Divider />
+          <Header as='h3'>{t('setting.operation.monitor.title')}</Header>
+          <Form.Group widths={3}>
+            <Form.Input
+              label={t('setting.operation.monitor.max_response_time')}
+              name='ChannelDisableThreshold'
+              onChange={handleInputChange}
+              autoComplete='new-password'
+              value={inputs.ChannelDisableThreshold}
+              type='number'
+              min='0'
+              placeholder={t(
+                'setting.operation.monitor.max_response_time_placeholder'
+              )}
+            />
+            <Form.Input
+              label={t('setting.operation.monitor.quota_reminder')}
+              name='QuotaRemindThreshold'
+              onChange={handleInputChange}
+              autoComplete='new-password'
+              value={inputs.QuotaRemindThreshold}
+              type='number'
+              min='0'
+              placeholder={t(
+                'setting.operation.monitor.quota_reminder_placeholder'
+              )}
+            />
+          </Form.Group>
+          <Form.Group inline>
+            <Form.Checkbox
+              checked={inputs.AutomaticDisableChannelEnabled === 'true'}
+              label={t('setting.operation.monitor.auto_disable')}
+              name='AutomaticDisableChannelEnabled'
+              onChange={handleInputChange}
+            />
+            <Form.Checkbox
+              checked={inputs.AutomaticEnableChannelEnabled === 'true'}
+              label={t('setting.operation.monitor.auto_enable')}
+              name='AutomaticEnableChannelEnabled'
+              onChange={handleInputChange}
+            />
+          </Form.Group>
+          <Form.Button
+            onClick={() => {
+              submitConfig('monitor').then();
+            }}
+          >
+            {t('setting.operation.monitor.buttons.save')}
+          </Form.Button>
+
+          <Divider />
+          <Header as='h3'>{t('setting.operation.general.title')}</Header>
+          <Form.Group widths={4}>
+            <Form.Input
+              label={t('setting.operation.general.topup_link')}
               name='TopUpLink'
               onChange={handleInputChange}
               autoComplete='new-password'
               value={inputs.TopUpLink}
               type='link'
-              placeholder='For example, the purchase link of the card issuing website'
+              placeholder={t(
+                'setting.operation.general.topup_link_placeholder'
+              )}
             />
             <Form.Input
-              label='Chat Page Link'
+              label={t('setting.operation.general.chat_link')}
               name='ChatLink'
               onChange={handleInputChange}
               autoComplete='new-password'
               value={inputs.ChatLink}
               type='link'
-              placeholder='For example, the deployment address of ChatGPT Next Web'
+              placeholder={t('setting.operation.general.chat_link_placeholder')}
             />
             <Form.Input
-              label='Unit Dollar Quota'
+              label={t('setting.operation.general.quota_per_unit')}
               name='QuotaPerUnit'
               onChange={handleInputChange}
               autoComplete='new-password'
               value={inputs.QuotaPerUnit}
               type='number'
               step='0.01'
-              placeholder='Quota that can be exchanged for one unit of currency'
+              placeholder={t(
+                'setting.operation.general.quota_per_unit_placeholder'
+              )}
             />
             <Form.Input
-              label='Retry Times on Failure'
+              label={t('setting.operation.general.retry_times')}
               name='RetryTimes'
               type={'number'}
               step='1'
@@ -200,186 +405,38 @@ const OperationSetting = () => {
               onChange={handleInputChange}
               autoComplete='new-password'
               value={inputs.RetryTimes}
-              placeholder='Number of retry attempts on failure'
+              placeholder={t(
+                'setting.operation.general.retry_times_placeholder'
+              )}
             />
           </Form.Group>
           <Form.Group inline>
             <Form.Checkbox
               checked={inputs.DisplayInCurrencyEnabled === 'true'}
-              label='Display quota in the form of currency'
+              label={t('setting.operation.general.display_in_currency')}
               name='DisplayInCurrencyEnabled'
               onChange={handleInputChange}
             />
             <Form.Checkbox
               checked={inputs.DisplayTokenStatEnabled === 'true'}
-              label='Billing Related API displays token quota instead of user quota'
+              label={t('setting.operation.general.display_token_stat')}
               name='DisplayTokenStatEnabled'
               onChange={handleInputChange}
             />
             <Form.Checkbox
               checked={inputs.ApproximateTokenEnabled === 'true'}
-              label='Estimate the number of tokens in an approximate way to reduce computational load'
+              label={t('setting.operation.general.approximate_token')}
               name='ApproximateTokenEnabled'
               onChange={handleInputChange}
             />
           </Form.Group>
-          <Form.Button onClick={() => {
-            submitConfig('general').then();
-          }}>Save General Settings</Form.Button>
-          <Divider />
-          <Header as='h3'>
-            LogsSettings
-          </Header>
-          <Form.Group inline>
-            <Form.Checkbox
-              checked={inputs.LogConsumeEnabled === 'true'}
-              label='Enable quota consumption log recording'
-              name='LogConsumeEnabled'
-              onChange={handleInputChange}
-            />
-          </Form.Group>
-          <Form.Group widths={4}>
-            <Form.Input label='Target Time' value={historyTimestamp} type='datetime-local'
-                        name='history_timestamp'
-                        onChange={(e, { name, value }) => {
-                          setHistoryTimestamp(value);
-                        }} />
-          </Form.Group>
-          <Form.Button onClick={() => {
-            deleteHistoryLogs().then();
-            }}>Clear History Logs</Form.Button>
-            <Divider />
-            <Header as='h3'>
-            Monitoring Settings
-            </Header>
-            <Form.Group widths={3}>
-            <Form.Input
-              label='Maximum Response Time'
-              name='ChannelDisableThreshold'
-              onChange={handleInputChange}
-              autoComplete='new-password'
-              value={inputs.ChannelDisableThreshold}
-              type='number'
-              min='0'
-              placeholder='Unit in seconds. When all operating channels are tested, channels will be automatically disabled if this time is exceeded'
-            />
-            <Form.Input
-              label='Quota Reminder Threshold'
-              name='QuotaRemindThreshold'
-              onChange={handleInputChange}
-              autoComplete='new-password'
-              value={inputs.QuotaRemindThreshold}
-              type='number'
-              min='0'
-              placeholder='Email will be sent to remind users when the quota is below this'
-            />
-            </Form.Group>
-            <Form.Group inline>
-            <Form.Checkbox
-              checked={inputs.AutomaticDisableChannelEnabled === 'true'}
-              label='Automatically disable the channel when it fails'
-              name='AutomaticDisableChannelEnabled'
-              onChange={handleInputChange}
-            />
-            <Form.Checkbox
-              checked={inputs.AutomaticEnableChannelEnabled === 'true'}
-              label='Automatically enable the channel when it succeeds'
-              name='AutomaticEnableChannelEnabled'
-              onChange={handleInputChange}
-            />
-            </Form.Group>
-            <Form.Button onClick={() => {
-            submitConfig('monitor').then();
-          }}>Save Monitoring Settings</Form.Button>
-          <Divider />
-          <Header as='h3'>
-            Quota Settings
-          </Header>
-          <Form.Group widths={4}>
-            <Form.Input
-              label='Initial quota for new users'
-              name='QuotaForNewUser'
-              onChange={handleInputChange}
-              autoComplete='new-password'
-              value={inputs.QuotaForNewUser}
-              type='number'
-              min='0'
-              placeholder='For example：100'
-            />
-            <Form.Input
-              label='Request for pre-deducted quota'
-              name='PreConsumedQuota'
-              onChange={handleInputChange}
-              autoComplete='new-password'
-              value={inputs.PreConsumedQuota}
-              type='number'
-              min='0'
-              placeholder='Refund more or less after the request ends'
-            />
-            <Form.Input
-              label='Invite new users to reward quota'
-              name='QuotaForInviter'
-              onChange={handleInputChange}
-              autoComplete='new-password'
-              value={inputs.QuotaForInviter}
-              type='number'
-              min='0'
-              placeholder='For example：2000'
-            />
-            <Form.Input
-              label='New user rewards quota using invitation code'
-              name='QuotaForInvitee'
-              onChange={handleInputChange}
-              autoComplete='new-password'
-              value={inputs.QuotaForInvitee}
-              type='number'
-              min='0'
-              placeholder='For example：1000'
-            />
-          </Form.Group>
-          <Form.Button onClick={() => {
-            submitConfig('quota').then();
-          }}>Save Quota Settings</Form.Button>
-          <Divider />
-          <Header as='h3'>
-            Rate Settings
-          </Header>
-          <Form.Group widths='equal'>
-            <Form.TextArea
-              label='model rate'
-              name='ModelRatio'
-              onChange={handleInputChange}
-              style={{ minHeight: 250, fontFamily: 'JetBrains Mono, Consolas' }}
-              autoComplete='new-password'
-              value={inputs.ModelRatio}
-              placeholder='Is a JSON text，Key is model name，Value is the rate'
-            />
-          </Form.Group>
-          <Form.Group widths='equal'>
-            <Form.TextArea
-              label='Completion Ratio'
-              name='CompletionRatio'
-              onChange={handleInputChange}
-              style={{ minHeight: 250, fontFamily: 'JetBrains Mono, Consolas' }}
-              autoComplete='new-password'
-              value={inputs.CompletionRatio}
-              placeholder='Should be a JSON text, where keys are model names and values are ratios. This ratio setting represents the proportion of ModelCompletion rate to Prompt rate, which can forcefully override One API internal ratios'
-            />
-          </Form.Group>
-          <Form.Group widths='equal'>
-            <Form.TextArea
-              label='group rate'
-              name='GroupRatio'
-              onChange={handleInputChange}
-              style={{ minHeight: 250, fontFamily: 'JetBrains Mono, Consolas' }}
-              autoComplete='new-password'
-              value={inputs.GroupRatio}
-              placeholder='Is a JSON text，Key is group name，Value is the rate'
-            />
-          </Form.Group>
-          <Form.Button onClick={() => {
-            submitConfig('ratio').then();
-          }}>Save Rate Settings</Form.Button>
+          <Form.Button
+            onClick={() => {
+              submitConfig('general').then();
+            }}
+          >
+            {t('setting.operation.general.buttons.save')}
+          </Form.Button>
         </Form>
       </Grid.Column>
     </Grid>

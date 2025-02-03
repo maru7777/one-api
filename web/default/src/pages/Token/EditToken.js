@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Button,
   Form,
@@ -18,6 +19,7 @@ import {
 import { renderQuotaWithPrompt } from '../../helpers/render';
 
 const EditToken = () => {
+  const { t } = useTranslation();
   const params = useParams();
   const tokenId = params.id;
   const isEdit = tokenId !== undefined;
@@ -60,46 +62,60 @@ const EditToken = () => {
   };
 
   const loadToken = async () => {
-    let res = await API.get(`/api/token/${tokenId}`);
-    const { success, message, data } = res.data;
-    if (success) {
-      if (data.expired_time !== -1) {
-        data.expired_time = timestamp2string(data.expired_time);
-      }
-      if (data.models === '') {
-        data.models = [];
+    try {
+      let res = await API.get(`/api/token/${tokenId}`);
+      const { success, message, data } = res.data || {};
+      if (success && data) {
+        if (data.expired_time !== -1) {
+          data.expired_time = timestamp2string(data.expired_time);
+        }
+        if (data.models === '') {
+          data.models = [];
+        } else {
+          data.models = data.models.split(',');
+        }
+        setInputs(data);
       } else {
-        data.models = data.models.split(',');
+        showError(message || 'Failed to load token');
       }
-      setInputs(data);
-    } else {
-      showError(message);
+    } catch (error) {
+      showError(error.message || 'Network error');
     }
     setLoading(false);
   };
-  useEffect(() => {
-    if (isEdit) {
-      loadToken().then();
-    }
-    loadAvailableModels().then();
-  }, []);
 
   const loadAvailableModels = async () => {
-    let res = await API.get(`/api/user/available_models`);
-    const { success, message, data } = res.data;
-    if (success) {
-      let options = data.map((model) => {
-        return {
-          key: model,
-          text: model,
-          value: model,
-        };
-      });
-      setModelOptions(options);
-    } else {
-      showError(message);
+    try {
+      let res = await API.get(`/api/user/available_models`);
+      const { success, message, data } = res.data || {};
+      if (success && data) {
+        let options = data.map((model) => {
+          return {
+            key: model,
+            text: model,
+            value: model,
+          };
+        });
+        setModelOptions(options);
+      } else {
+        showError(message || 'Failed to load models');
+      }
+    } catch (error) {
+      showError(error.message || 'Network error');
     }
   };
+
+  useEffect(() => {
+    if (isEdit) {
+      loadToken().catch((error) => {
+        showError(error.message || 'Failed to load token');
+        setLoading(false);
+      });
+    }
+    loadAvailableModels().catch((error) => {
+      showError(error.message || 'Failed to load models');
+    });
+  }, []);
 
   const submit = async () => {
     if (!isEdit && inputs.name === '') return;
@@ -108,7 +124,7 @@ const EditToken = () => {
     if (localInputs.expired_time !== -1) {
       let time = Date.parse(localInputs.expired_time);
       if (isNaN(time)) {
-        showError('Expiration time format error!');
+        showError(t('token.edit.messages.expire_time_invalid'));
         return;
       }
       localInputs.expired_time = Math.ceil(time / 1000);
@@ -126,9 +142,9 @@ const EditToken = () => {
     const { success, message } = res.data;
     if (success) {
       if (isEdit) {
-        showSuccess('Token updated successfully！');
+        showSuccess(t('token.edit.messages.update_success'));
       } else {
-        showSuccess('Token created successfully, please click copy on the list page to get the token!');
+        showSuccess(t('token.edit.messages.create_success'));
         setInputs(originInputs);
       }
     } else {
@@ -141,14 +157,14 @@ const EditToken = () => {
       <Card fluid className='chart-card'>
         <Card.Content>
           <Card.Header className='header'>
-            {isEdit ? 'Update Token Information' : 'Create New Token'}
+            {isEdit ? t('token.edit.title_edit') : t('token.edit.title_create')}
           </Card.Header>
           <Form loading={loading} autoComplete='new-password'>
             <Form.Field>
               <Form.Input
-                label='Name'
+                label={t('token.edit.name')}
                 name='name'
-                placeholder={'Please enter name'}
+                placeholder={t('token.edit.name_placeholder')}
                 onChange={handleInputChange}
                 value={name}
                 autoComplete='new-password'
@@ -157,8 +173,8 @@ const EditToken = () => {
             </Form.Field>
             <Form.Field>
               <Form.Dropdown
-                label='Model Scope'
-                placeholder={'Please select allowed models, leave blank for no restriction'}
+                label={t('token.edit.models')}
+                placeholder={t('token.edit.models_placeholder')}
                 name='models'
                 fluid
                 multiple
@@ -175,11 +191,9 @@ const EditToken = () => {
             </Form.Field>
             <Form.Field>
               <Form.Input
-                label='IP Restriction'
+                label={t('token.edit.ip_limit')}
                 name='subnet'
-                placeholder={
-                  'Please enter allowed subnets, e.g., 192.168.0.0/24, use commas to separate multiple subnets'
-                }
+                placeholder={t('token.edit.ip_limit_placeholder')}
                 onChange={handleInputChange}
                 value={inputs.subnet}
                 autoComplete='new-password'
@@ -187,11 +201,9 @@ const EditToken = () => {
             </Form.Field>
             <Form.Field>
               <Form.Input
-                label='Expiration Time'
+                label={t('token.edit.expire_time')}
                 name='expired_time'
-                placeholder={
-                  'Please enter expiration time, format: yyyy-MM-dd HH:mm:ss, -1 means no restriction'
-                }
+                placeholder={t('token.edit.expire_time_placeholder')}
                 onChange={handleInputChange}
                 value={expired_time}
                 autoComplete='new-password'
@@ -205,7 +217,7 @@ const EditToken = () => {
                   setExpiredTime(0, 0, 0, 0);
                 }}
               >
-                Never Expires
+                {t('token.edit.buttons.never_expire')}
               </Button>
               <Button
                 type={'button'}
@@ -213,7 +225,7 @@ const EditToken = () => {
                   setExpiredTime(1, 0, 0, 0);
                 }}
               >
-                Expires in One Month
+                {t('token.edit.buttons.expire_1_month')}
               </Button>
               <Button
                 type={'button'}
@@ -221,7 +233,7 @@ const EditToken = () => {
                   setExpiredTime(0, 1, 0, 0);
                 }}
               >
-                Expires in One Day
+                {t('token.edit.buttons.expire_1_day')}
               </Button>
               <Button
                 type={'button'}
@@ -229,7 +241,7 @@ const EditToken = () => {
                   setExpiredTime(0, 0, 1, 0);
                 }}
               >
-                Expires in One Hour
+                {t('token.edit.buttons.expire_1_hour')}
               </Button>
               <Button
                 type={'button'}
@@ -237,17 +249,18 @@ const EditToken = () => {
                   setExpiredTime(0, 0, 0, 1);
                 }}
               >
-                Expires in One Minute
+                {t('token.edit.buttons.expire_1_minute')}
               </Button>
             </div>
-            <Message>
-              Note, the token quota is only used to limit the maximum usage of the token itself, actual usage is subject to the account's remaining quota.
-            </Message>
+            <Message>{t('token.edit.quota_notice')}</Message>
             <Form.Field>
               <Form.Input
-                label={`Quota ${renderQuotaWithPrompt(remain_quota)}`}
+                label={`${t('token.edit.quota')}${renderQuotaWithPrompt(
+                  remain_quota,
+                  t
+                )}`}
                 name='remain_quota'
-                placeholder={'Please enter quota'}
+                placeholder={t('token.edit.quota_placeholder')}
                 onChange={handleInputChange}
                 value={remain_quota}
                 autoComplete='new-password'
@@ -261,13 +274,15 @@ const EditToken = () => {
                 setUnlimitedQuota();
               }}
             >
-              {unlimited_quota ? 'Cancel Unlimited Quota' : 'Set as Unlimited Quota'}
+              {unlimited_quota
+                ? t('token.edit.buttons.cancel_unlimited')
+                : t('token.edit.buttons.unlimited_quota')}
             </Button>
             <Button floated='right' positive onClick={submit}>
-              Submit
+              {t('token.edit.buttons.submit')}
             </Button>
             <Button floated='right' onClick={handleCancel}>
-              Cancel
+              {t('token.edit.buttons.cancel')}
             </Button>
           </Form>
         </Card.Content>

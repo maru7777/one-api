@@ -12,6 +12,7 @@ import (
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/ctxkey"
+	"github.com/songquanpeng/one-api/common/i18n"
 	"github.com/songquanpeng/one-api/common/random"
 	"github.com/songquanpeng/one-api/model"
 )
@@ -33,7 +34,7 @@ func Login(c *gin.Context) {
 	err := json.NewDecoder(c.Request.Body).Decode(&loginRequest)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
-			"message": "Invalid parameter",
+			"message": i18n.Translate(c, "invalid_parameter"),
 			"success": false,
 		})
 		return
@@ -42,7 +43,7 @@ func Login(c *gin.Context) {
 	password := loginRequest.Password
 	if username == "" || password == "" {
 		c.JSON(http.StatusOK, gin.H{
-			"message": "Invalid parameter",
+			"message": i18n.Translate(c, "invalid_parameter"),
 			"success": false,
 		})
 		return
@@ -135,14 +136,14 @@ func Register(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "Invalid parameter",
+			"message": i18n.Translate(c, "invalid_parameter"),
 		})
 		return
 	}
 	if err := common.Validate.Struct(&user); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "Input is illegal " + err.Error(),
+			"message": i18n.Translate(c, "invalid_input"),
 		})
 		return
 	}
@@ -384,7 +385,7 @@ func UpdateUser(c *gin.Context) {
 	if err != nil || updatedUser.Id == 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "Invalid parameter",
+			"message": i18n.Translate(c, "invalid_parameter"),
 		})
 		return
 	}
@@ -394,7 +395,7 @@ func UpdateUser(c *gin.Context) {
 	if err := common.Validate.Struct(&updatedUser); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "Input is illegal " + err.Error(),
+			"message": i18n.Translate(c, "invalid_input"),
 		})
 		return
 	}
@@ -448,7 +449,7 @@ func UpdateSelf(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "Invalid parameter",
+			"message": i18n.Translate(c, "invalid_parameter"),
 		})
 		return
 	}
@@ -558,14 +559,14 @@ func CreateUser(c *gin.Context) {
 	if err != nil || user.Username == "" || user.Password == "" {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "Invalid parameter",
+			"message": i18n.Translate(c, "invalid_parameter"),
 		})
 		return
 	}
 	if err := common.Validate.Struct(&user); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "Input is illegal " + err.Error(),
+			"message": i18n.Translate(c, "invalid_input"),
 		})
 		return
 	}
@@ -614,7 +615,7 @@ func ManageUser(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "Invalid parameter",
+			"message": i18n.Translate(c, "invalid_parameter"),
 		})
 		return
 	}

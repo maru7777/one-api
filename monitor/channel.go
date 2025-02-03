@@ -31,18 +31,32 @@ func notifyRootUser(subject string, content string) {
 func DisableChannel(channelId int, channelName string, reason string) {
 	model.UpdateChannelStatusById(channelId, model.ChannelStatusAutoDisabled)
 	logger.SysLog(fmt.Sprintf("channel #%d has been disabled: %s", channelId, reason))
-	subject := fmt.Sprintf("Channel %s (#%d) has been disabled", channelName, channelId)
-	content := fmt.Sprintf("Channel %s (#%d) has been disabled, reason: %s", channelName, channelId, reason)
+	subject := fmt.Sprintf("Channel Status Change Reminder")
+	content := message.EmailTemplate(
+		subject,
+		fmt.Sprintf(`
+            <p>Hello!</p>
+            <p>Channel “<strong>%s</strong>” (#%d) has been disabled.</p>
+            <p>Reason for disabling:</p>
+            <p style="background-color: #f8f8f8; padding: 10px; border-radius: 4px;">%s</p>
+        `, channelName, channelId, reason),
+	)
 	notifyRootUser(subject, content)
 }
 
 func MetricDisableChannel(channelId int, successRate float64) {
 	model.UpdateChannelStatusById(channelId, model.ChannelStatusAutoDisabled)
 	logger.SysLog(fmt.Sprintf("channel #%d has been disabled due to low success rate: %.2f", channelId, successRate*100))
-	subject := fmt.Sprintf("Channel #%d has been disabled", channelId)
-	content := fmt.Sprintf("The channel (#%d) has been automatically disabled by the system due to "+
-		"a success rate of %.2f%% over the last %d calls, which is below the threshold of %.2f%%.",
-		channelId, successRate*100, config.MetricQueueSize, config.MetricSuccessRateThreshold*100)
+	subject := fmt.Sprintf("Channel Status Change Reminder")
+	content := message.EmailTemplate(
+		subject,
+		fmt.Sprintf(`
+            <p>Hello!</p>
+            <p>Channel #%d has been automatically disabled by the system.</p>
+            <p>Reason for disabling:</p>
+            <p style="background-color: #f8f8f8; padding: 10px; border-radius: 4px;">In the last %d calls, the success rate of this channel was <strong>%.2f%%</strong>, which is below the system threshold of <strong>%.2f%%</strong>.</p>
+        `, channelId, config.MetricQueueSize, successRate*100, config.MetricSuccessRateThreshold*100),
+	)
 	notifyRootUser(subject, content)
 }
 
@@ -50,7 +64,14 @@ func MetricDisableChannel(channelId int, successRate float64) {
 func EnableChannel(channelId int, channelName string) {
 	model.UpdateChannelStatusById(channelId, model.ChannelStatusEnabled)
 	logger.SysLog(fmt.Sprintf("channel #%d has been enabled", channelId))
-	subject := fmt.Sprintf("Channel %s (#%d) has been enabled", channelName, channelId)
-	content := fmt.Sprintf("Channel %s (#%d) has been enabled", channelName, channelId)
+	subject := fmt.Sprintf("Channel Status Change Reminder")
+	content := message.EmailTemplate(
+		subject,
+		fmt.Sprintf(`
+            <p>Hello!</p>
+            <p>Channel “<strong>%s</strong>” (#%d) has been re-enabled.</p>
+            <p>You can now continue using this channel.</p>
+        `, channelName, channelId),
+	)
 	notifyRootUser(subject, content)
 }

@@ -8,21 +8,23 @@ import {
   Card,
   Message,
 } from 'semantic-ui-react';
-import { API, showError, showInfo, showSuccess } from '../helpers';
+import { useTranslation } from 'react-i18next';
+import { API, getLogo, showError, showInfo, showSuccess } from '../helpers';
 import Turnstile from 'react-turnstile';
 
 const PasswordResetForm = () => {
+  const { t } = useTranslation();
   const [inputs, setInputs] = useState({
     email: '',
   });
   const { email } = inputs;
-
   const [loading, setLoading] = useState(false);
   const [turnstileEnabled, setTurnstileEnabled] = useState(false);
   const [turnstileSiteKey, setTurnstileSiteKey] = useState('');
   const [turnstileToken, setTurnstileToken] = useState('');
   const [disableButton, setDisableButton] = useState(false);
   const [countdown, setCountdown] = useState(30);
+  const logo = getLogo();
 
   useEffect(() => {
     let status = localStorage.getItem('status');
@@ -66,10 +68,12 @@ const PasswordResetForm = () => {
     );
     const { success, message } = res.data;
     if (success) {
-      showSuccess('Reset email sent successfully, please check your email!');
+      showSuccess(t('auth.reset.notice'));
       setInputs({ ...inputs, email: '' });
     } else {
       showError(message);
+      setDisableButton(false);
+      setCountdown(30);
     }
     setLoading(false);
   }
@@ -89,8 +93,8 @@ const PasswordResetForm = () => {
                 textAlign='center'
                 style={{ marginBottom: '1.5em' }}
               >
-                <Image src='/logo.png' style={{ marginBottom: '10px' }} />
-                <Header.Content>Password Reset</Header.Content>
+                <Image src={logo} style={{ marginBottom: '10px' }} />
+                <Header.Content>{t('auth.reset.title')}</Header.Content>
               </Header>
             </Card.Header>
             <Form size='large'>
@@ -98,7 +102,7 @@ const PasswordResetForm = () => {
                 fluid
                 icon='mail'
                 iconPosition='left'
-                placeholder='Email Address'
+                placeholder={t('auth.reset.email')}
                 name='email'
                 value={email}
                 onChange={handleChange}
@@ -133,12 +137,14 @@ const PasswordResetForm = () => {
                   marginBottom: '1.5em',
                 }}
               >
-                {disableButton ? `Retry (${countdown})` : 'Submit'}
+                {disableButton
+                  ? t('auth.register.get_code_retry', { countdown })
+                  : t('auth.reset.button')}
               </Button>
             </Form>
             <Message style={{ background: 'transparent', boxShadow: 'none' }}>
               <p style={{ fontSize: '0.9em', color: '#666' }}>
-                The system will send an email with a reset link to your email address. Please check your inbox.
+                {t('auth.reset.notice')}
               </p>
             </Message>
           </Card.Content>

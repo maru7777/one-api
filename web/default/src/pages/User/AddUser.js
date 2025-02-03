@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Button, Form, Header, Segment } from 'semantic-ui-react';
+import { useTranslation } from 'react-i18next';
+import { Button, Form, Card } from 'semantic-ui-react';
 import { API, showError, showSuccess } from '../../helpers';
 
 const AddUser = () => {
+  const { t } = useTranslation();
   const originInputs = {
     username: '',
     display_name: '',
@@ -20,7 +22,7 @@ const AddUser = () => {
     const res = await API.post(`/api/user/`, inputs);
     const { success, message } = res.data;
     if (success) {
-      showSuccess('User account created successfully!');
+      showSuccess(t('user.messages.create_success'));
       setInputs(originInputs);
     } else {
       showError(message);
@@ -28,49 +30,51 @@ const AddUser = () => {
   };
 
   return (
-    <>
-      <Segment>
-        <Header as="h3">Create new user account</Header>
-        <Form autoComplete="off">
-          <Form.Field>
-            <Form.Input
-              label="Username"
-              name="username"
-              placeholder={'Please enter username'}
-              onChange={handleInputChange}
-              value={username}
-              autoComplete="off"
-              required
-            />
-          </Form.Field>
-          <Form.Field>
-            <Form.Input
-              label="Display name"
-              name="display_name"
-              placeholder={'Please enter display name'}
-              onChange={handleInputChange}
-              value={display_name}
-              autoComplete="off"
-            />
-          </Form.Field>
-          <Form.Field>
-            <Form.Input
-              label="Password"
-              name="password"
-              type={'password'}
-              placeholder={'Please enter password'}
-              onChange={handleInputChange}
-              value={password}
-              autoComplete="off"
-              required
-            />
-          </Form.Field>
-          <Button positive type={'submit'} onClick={submit}>
-            Submit
-          </Button>
-        </Form>
-      </Segment>
-    </>
+    <div className='dashboard-container'>
+      <Card fluid className='chart-card'>
+        <Card.Content>
+          <Card.Header className='header'>{t('user.add.title')}</Card.Header>
+          <Form autoComplete='off'>
+            <Form.Field>
+              <Form.Input
+                label={t('user.edit.username')}
+                name='username'
+                placeholder={t('user.edit.username_placeholder')}
+                onChange={handleInputChange}
+                value={username}
+                autoComplete='off'
+                required
+              />
+            </Form.Field>
+            <Form.Field>
+              <Form.Input
+                label={t('user.edit.display_name')}
+                name='display_name'
+                placeholder={t('user.edit.display_name_placeholder')}
+                onChange={handleInputChange}
+                value={display_name}
+                autoComplete='off'
+              />
+            </Form.Field>
+            <Form.Field>
+              <Form.Input
+                label={t('user.edit.password')}
+                name='password'
+                type='password'
+                placeholder={t('user.edit.password_placeholder')}
+                onChange={handleInputChange}
+                value={password}
+                autoComplete='off'
+                required
+              />
+            </Form.Field>
+            <Button positive type='submit' onClick={submit}>
+              {t('user.edit.buttons.submit')}
+            </Button>
+          </Form>
+        </Card.Content>
+      </Card>
+    </div>
   );
 };
 

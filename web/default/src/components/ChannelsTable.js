@@ -198,7 +198,7 @@ const ChannelsTable = () => {
     }
     const { success, message } = res.data;
     if (success) {
-      showSuccess('Operation successfully completed!');
+      showSuccess(t('channel.messages.operation_success'));
       let channel = res.data.data;
       let newChannels = [...channels];
       let realIdx = (activePage - 1) * ITEMS_PER_PAGE + idx;
@@ -325,13 +325,8 @@ const ChannelsTable = () => {
       newChannels[realIdx].response_time = time * 1000;
       newChannels[realIdx].test_time = Date.now() / 1000;
       setChannels(newChannels);
-      showInfo(
-        t('channel.messages.test_success', {
-          name: name,
-          model: model,
-          time: time.toFixed(2),
-          message: message,
-        })
+      showSuccess(
+        t('channel.messages.test_success', { name, model, time, message })
       );
     } else {
       showError(message);
@@ -375,7 +370,7 @@ const ChannelsTable = () => {
       newChannels[realIdx].balance = balance;
       newChannels[realIdx].balance_updated_time = Date.now() / 1000;
       setChannels(newChannels);
-      showInfo(t('channel.messages.balance_update_success', { name: name }));
+      showSuccess(t('channel.messages.balance_update_success', { name }));
     } else {
       showError(message);
     }
@@ -594,13 +589,13 @@ const ChannelsTable = () => {
                       defaultValue={channel.test_model}
                       onChange={(event, data) => {
                         switchTestModel(idx, data.value);
-                        }}
-                      />
-                      </Table.Cell>
-                      <Table.Cell>
-                      <div>
-                        <Button
-                        size={'small'}
+                      }}
+                    />
+                  </Table.Cell>
+                  <Table.Cell>
+                    <div>
+                      <Button
+                        size={'tiny'}
                         positive
                         onClick={() => {
                           testChannel(
@@ -615,7 +610,7 @@ const ChannelsTable = () => {
                       </Button>
                       <Popup
                         trigger={
-                          <Button size='small' negative>
+                          <Button size='tiny' negative>
                             {t('channel.buttons.delete')}
                           </Button>
                         }
@@ -624,6 +619,7 @@ const ChannelsTable = () => {
                         hoverable
                       >
                         <Button
+                          size={'tiny'}
                           negative
                           onClick={() => {
                             manageChannel(channel.id, 'delete', idx);
@@ -633,7 +629,7 @@ const ChannelsTable = () => {
                         </Button>
                       </Popup>
                       <Button
-                        size={'small'}
+                        size={'tiny'}
                         onClick={() => {
                           manageChannel(
                             channel.id,
@@ -647,7 +643,7 @@ const ChannelsTable = () => {
                           : t('channel.buttons.enable')}
                       </Button>
                       <Button
-                        size={'small'}
+                        size={'tiny'}
                         as={Link}
                         to={'/channel/edit/' + channel.id}
                       >
@@ -663,16 +659,11 @@ const ChannelsTable = () => {
         <Table.Footer>
           <Table.Row>
             <Table.HeaderCell colSpan={showDetail ? '10' : '8'}>
-              <Button
-                size='small'
-                as={Link}
-                to='/channel/add'
-                loading={loading}
-              >
+              <Button size='tiny' as={Link} to='/channel/add' loading={loading}>
                 {t('channel.buttons.add')}
               </Button>
               <Button
-                size='small'
+                size='tiny'
                 loading={loading}
                 onClick={() => {
                   testChannels('all');
@@ -681,7 +672,7 @@ const ChannelsTable = () => {
                 {t('channel.buttons.test_all')}
               </Button>
               <Button
-                size='small'
+                size='tiny'
                 loading={loading}
                 onClick={() => {
                   testChannels('disabled');
@@ -691,7 +682,7 @@ const ChannelsTable = () => {
               </Button>
               <Popup
                 trigger={
-                  <Button size='small' loading={loading}>
+                  <Button size='tiny' loading={loading}>
                     {t('channel.buttons.delete_disabled')}
                   </Button>
                 }
@@ -700,7 +691,7 @@ const ChannelsTable = () => {
                 hoverable
               >
                 <Button
-                  size='small'
+                  size='tiny'
                   loading={loading}
                   negative
                   onClick={deleteAllDisabledChannels}
@@ -712,17 +703,17 @@ const ChannelsTable = () => {
                 floated='right'
                 activePage={activePage}
                 onPageChange={onPaginationChange}
-                size='small'
+                size='tiny'
                 siblingRange={1}
                 totalPages={
                   Math.ceil(channels.length / ITEMS_PER_PAGE) +
                   (channels.length % ITEMS_PER_PAGE === 0 ? 1 : 0)
                 }
               />
-              <Button size='small' onClick={refresh} loading={loading}>
+              <Button size='tiny' onClick={refresh} loading={loading}>
                 {t('channel.buttons.refresh')}
               </Button>
-              <Button size='small' onClick={toggleShowDetail}>
+              <Button size='tiny' onClick={toggleShowDetail}>
                 {showDetail
                   ? t('channel.buttons.hide_detail')
                   : t('channel.buttons.show_detail')}

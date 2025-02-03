@@ -1,8 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Divider, Form, Grid, Header, Modal, Message } from 'semantic-ui-react';
+import { useTranslation } from 'react-i18next';
+import {
+  Button,
+  Divider,
+  Form,
+  Grid,
+  Header,
+  Modal,
+  Message,
+} from 'semantic-ui-react';
 import { API, removeTrailingSlash, showError } from '../helpers';
 
 const SystemSetting = () => {
+  const { t } = useTranslation();
   let [inputs, setInputs] = useState({
     PasswordLoginEnabled: '',
     PasswordRegisterEnabled: '',
@@ -31,13 +41,14 @@ const SystemSetting = () => {
     TurnstileSecretKey: '',
     RegisterEnabled: '',
     EmailDomainRestrictionEnabled: '',
-    EmailDomainWhitelist: ''
+    EmailDomainWhitelist: '',
   });
   const [originInputs, setOriginInputs] = useState({});
   let [loading, setLoading] = useState(false);
   const [EmailDomainWhitelist, setEmailDomainWhitelist] = useState([]);
   const [restrictedDomainInput, setRestrictedDomainInput] = useState('');
-  const [showPasswordWarningModal, setShowPasswordWarningModal] = useState(false);
+  const [showPasswordWarningModal, setShowPasswordWarningModal] =
+    useState(false);
 
   const getOptions = async () => {
     const res = await API.get('/api/option/');
@@ -49,13 +60,15 @@ const SystemSetting = () => {
       });
       setInputs({
         ...newInputs,
-        EmailDomainWhitelist: newInputs.EmailDomainWhitelist.split(',')
+        EmailDomainWhitelist: newInputs.EmailDomainWhitelist.split(','),
       });
       setOriginInputs(newInputs);
 
-      setEmailDomainWhitelist(newInputs.EmailDomainWhitelist.split(',').map((item) => {
-        return { key: item, text: item, value: item };
-      }));
+      setEmailDomainWhitelist(
+        newInputs.EmailDomainWhitelist.split(',').map((item) => {
+          return { key: item, text: item, value: item };
+        })
+      );
     } else {
       showError(message);
     }
@@ -83,7 +96,7 @@ const SystemSetting = () => {
     }
     const res = await API.put('/api/option/', {
       key,
-      value
+      value,
     });
     const { success, message } = res.data;
     if (success) {
@@ -91,7 +104,8 @@ const SystemSetting = () => {
         value = value.split(',');
       }
       setInputs((inputs) => ({
-        ...inputs, [key]: value
+        ...inputs,
+        [key]: value,
       }));
     } else {
       showError(message);
@@ -155,13 +169,16 @@ const SystemSetting = () => {
     }
   };
 
-
   const submitEmailDomainWhitelist = async () => {
     if (
-      originInputs['EmailDomainWhitelist'] !== inputs.EmailDomainWhitelist.join(',') &&
+      originInputs['EmailDomainWhitelist'] !==
+        inputs.EmailDomainWhitelist.join(',') &&
       inputs.SMTPToken !== ''
     ) {
-      await updateOption('EmailDomainWhitelist', inputs.EmailDomainWhitelist.join(','));
+      await updateOption(
+        'EmailDomainWhitelist',
+        inputs.EmailDomainWhitelist.join(',')
+      );
     }
   };
 
@@ -216,7 +233,7 @@ const SystemSetting = () => {
     }
   };
 
-   const submitLarkOAuth = async () => {
+  const submitLarkOAuth = async () => {
     if (originInputs['LarkClientId'] !== inputs.LarkClientId) {
       await updateOption('LarkClientId', inputs.LarkClientId);
     }
@@ -242,60 +259,71 @@ const SystemSetting = () => {
 
   const submitNewRestrictedDomain = () => {
     const localDomainList = inputs.EmailDomainWhitelist;
-    if (restrictedDomainInput !== '' && !localDomainList.includes(restrictedDomainInput)) {
+    if (
+      restrictedDomainInput !== '' &&
+      !localDomainList.includes(restrictedDomainInput)
+    ) {
       setRestrictedDomainInput('');
       setInputs({
         ...inputs,
         EmailDomainWhitelist: [...localDomainList, restrictedDomainInput],
       });
-      setEmailDomainWhitelist([...EmailDomainWhitelist, {
-        key: restrictedDomainInput,
-        text: restrictedDomainInput,
-        value: restrictedDomainInput,
-      }]);
+      setEmailDomainWhitelist([
+        ...EmailDomainWhitelist,
+        {
+          key: restrictedDomainInput,
+          text: restrictedDomainInput,
+          value: restrictedDomainInput,
+        },
+      ]);
     }
-  }
+  };
 
   return (
     <Grid columns={1}>
       <Grid.Column>
         <Form loading={loading}>
-          <Header as='h3'>General Settings</Header>
+          <Header as='h3'>{t('setting.system.general.title')}</Header>
           <Form.Group widths='equal'>
             <Form.Input
-              label='Server Address'
-              placeholder='For example: https://yourdomain.com'
+              label={t('setting.system.general.server_address')}
+              placeholder={t(
+                'setting.system.general.server_address_placeholder'
+              )}
               value={inputs.ServerAddress}
               name='ServerAddress'
               onChange={handleInputChange}
             />
           </Form.Group>
           <Form.Button onClick={submitServerAddress}>
-            Update Server Address
+            {t('setting.system.general.buttons.update')}
           </Form.Button>
           <Divider />
-          <Header as='h3'>Configure Login/Registration</Header>
+          <Header as='h3'>{t('setting.system.login.title')}</Header>
           <Form.Group inline>
             <Form.Checkbox
               checked={inputs.PasswordLoginEnabled === 'true'}
-              label='Allow login via password'
+              label={t('setting.system.login.password_login')}
               name='PasswordLoginEnabled'
               onChange={handleInputChange}
             />
-            {
-              showPasswordWarningModal &&
+            {showPasswordWarningModal && (
               <Modal
                 open={showPasswordWarningModal}
                 onClose={() => setShowPasswordWarningModal(false)}
                 size={'tiny'}
                 style={{ maxWidth: '450px' }}
               >
-                <Modal.Header>Warning</Modal.Header>
+                <Modal.Header>
+                  {t('setting.system.password_login.warning.title')}
+                </Modal.Header>
                 <Modal.Content>
-                  <p>Canceling password login will cause all users (including administrators) who have not bound other login methods to be unable to log in via password, confirm cancel?</p>
+                  <p>{t('setting.system.password_login.warning.content')}</p>
                 </Modal.Content>
                 <Modal.Actions>
-                  <Button onClick={() => setShowPasswordWarningModal(false)}>Cancel</Button>
+                  <Button onClick={() => setShowPasswordWarningModal(false)}>
+                    {t('setting.system.password_login.warning.buttons.cancel')}
+                  </Button>
                   <Button
                     color='yellow'
                     onClick={async () => {
@@ -303,32 +331,32 @@ const SystemSetting = () => {
                       await updateOption('PasswordLoginEnabled', 'false');
                     }}
                   >
-                    Confirm
+                    {t('setting.system.password_login.warning.buttons.confirm')}
                   </Button>
                 </Modal.Actions>
               </Modal>
-            }
+            )}
             <Form.Checkbox
               checked={inputs.PasswordRegisterEnabled === 'true'}
-              label='Allow registration via password'
+              label={t('setting.system.login.password_register')}
               name='PasswordRegisterEnabled'
               onChange={handleInputChange}
             />
             <Form.Checkbox
               checked={inputs.EmailVerificationEnabled === 'true'}
-              label='Email verification is required when registering via password'
+              label={t('setting.system.login.email_verification')}
               name='EmailVerificationEnabled'
               onChange={handleInputChange}
             />
             <Form.Checkbox
               checked={inputs.GitHubOAuthEnabled === 'true'}
-              label='Allow login & registration via GitHub account'
+              label={t('setting.system.login.github_oauth')}
               name='GitHubOAuthEnabled'
               onChange={handleInputChange}
             />
             <Form.Checkbox
               checked={inputs.WeChatAuthEnabled === 'true'}
-              label='Allow login & registration via WeChat'
+              label={t('setting.system.login.wechat_login')}
               name='WeChatAuthEnabled'
               onChange={handleInputChange}
             />
@@ -336,304 +364,295 @@ const SystemSetting = () => {
           <Form.Group inline>
             <Form.Checkbox
               checked={inputs.RegisterEnabled === 'true'}
-              label='Allow new user registration (if this option is off, new users will not be able to register in any way)'
+              label={t('setting.system.login.registration')}
               name='RegisterEnabled'
               onChange={handleInputChange}
             />
             <Form.Checkbox
               checked={inputs.TurnstileCheckEnabled === 'true'}
-              label='Enable Turnstile user verification'
+              label={t('setting.system.login.turnstile')}
               name='TurnstileCheckEnabled'
               onChange={handleInputChange}
             />
           </Form.Group>
           <Divider />
-          <Header as='h3'>
-            Configure Email Domain Whitelist
-            <Header.Subheader>To prevent malicious users from using temporary emails to sign up in bulk</Header.Subheader>
-          </Header>
-          <Form.Group widths={3}>
+          <Header as='h3'>{t('setting.system.email_restriction.title')}</Header>
+          <Message>{t('setting.system.email_restriction.subtitle')}</Message>
+          <Form.Group inline>
             <Form.Checkbox
-              label='Enable Email Domain Whitelist'
+              checked={inputs.EmailDomainRestrictionEnabled === 'true'}
+              label={t('setting.system.email_restriction.enable')}
               name='EmailDomainRestrictionEnabled'
               onChange={handleInputChange}
-              checked={inputs.EmailDomainRestrictionEnabled === 'true'}
             />
           </Form.Group>
-          <Form.Group widths={2}>
-            <Form.Dropdown
-              label='Allowed Email Domains'
-              placeholder='Allowed Email Domains'
-              name='EmailDomainWhitelist'
-              required
-              fluid
-              multiple
-              selection
-              onChange={handleInputChange}
-              value={inputs.EmailDomainWhitelist}
-              autoComplete='new-password'
-              options={EmailDomainWhitelist}
-            />
+          <Form.Group widths={3}>
             <Form.Input
-              label='Add New Allowed Email Domain'
-              action={
-                <Button type='button' onClick={() => {
-                  submitNewRestrictedDomain();
-                }}>Add</Button>
-              }
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  submitNewRestrictedDomain();
-                }
-              }}
-              autoComplete='new-password'
-              placeholder='Enter new allowed email domain'
+              label={t('setting.system.email_restriction.add_domain')}
+              placeholder={t(
+                'setting.system.email_restriction.add_domain_placeholder'
+              )}
               value={restrictedDomainInput}
               onChange={(e, { value }) => {
                 setRestrictedDomainInput(value);
               }}
+              action={
+                <Button
+                  onClick={() => {
+                    if (restrictedDomainInput === '') return;
+                    setEmailDomainWhitelist([
+                      ...EmailDomainWhitelist,
+                      {
+                        key: restrictedDomainInput,
+                        text: restrictedDomainInput,
+                        value: restrictedDomainInput,
+                      },
+                    ]);
+                    setRestrictedDomainInput('');
+                  }}
+                >
+                  {t('setting.system.email_restriction.buttons.fill')}
+                </Button>
+              }
             />
           </Form.Group>
-          <Form.Button onClick={submitEmailDomainWhitelist}>Save Email Domain Whitelist Settings</Form.Button>
+          <Form.Dropdown
+            label={t('setting.system.email_restriction.allowed_domains')}
+            placeholder={t('setting.system.email_restriction.allowed_domains')}
+            fluid
+            multiple
+            search
+            selection
+            allowAdditions
+            value={EmailDomainWhitelist.map((item) => item.value)}
+            options={EmailDomainWhitelist}
+            onAddItem={(e, { value }) => {
+              setEmailDomainWhitelist([
+                ...EmailDomainWhitelist,
+                {
+                  key: value,
+                  text: value,
+                  value: value,
+                },
+              ]);
+            }}
+            onChange={(e, { value }) => {
+              let newEmailDomainWhitelist = [];
+              value.forEach((item) => {
+                newEmailDomainWhitelist.push({
+                  key: item,
+                  text: item,
+                  value: item,
+                });
+              });
+              setEmailDomainWhitelist(newEmailDomainWhitelist);
+            }}
+          />
+          <Form.Button onClick={submitEmailDomainWhitelist}>
+            {t('setting.system.email_restriction.buttons.save')}
+          </Form.Button>
+
           <Divider />
-          <Header as='h3'>
-            Configure SMTP
-            <Header.Subheader>To support the system email sending</Header.Subheader>
-          </Header>
+          <Header as='h3'>{t('setting.system.smtp.title')}</Header>
+          <Message>{t('setting.system.smtp.subtitle')}</Message>
           <Form.Group widths={3}>
             <Form.Input
-              label='SMTP Server Address'
+              label={t('setting.system.smtp.server')}
+              placeholder={t('setting.system.smtp.server_placeholder')}
               name='SMTPServer'
               onChange={handleInputChange}
-              autoComplete='new-password'
               value={inputs.SMTPServer}
-              placeholder='For example: smtp.qq.com'
             />
             <Form.Input
-              label='SMTP Port'
+              label={t('setting.system.smtp.port')}
+              placeholder={t('setting.system.smtp.port_placeholder')}
               name='SMTPPort'
               onChange={handleInputChange}
-              autoComplete='new-password'
               value={inputs.SMTPPort}
-              placeholder='Default: 587'
             />
             <Form.Input
-              label='SMTP Account'
+              label={t('setting.system.smtp.account')}
+              placeholder={t('setting.system.smtp.account_placeholder')}
               name='SMTPAccount'
               onChange={handleInputChange}
-              autoComplete='new-password'
               value={inputs.SMTPAccount}
-              placeholder='Usually an email address'
             />
           </Form.Group>
           <Form.Group widths={3}>
             <Form.Input
-              label='SMTP Sender Email'
+              label={t('setting.system.smtp.from')}
+              placeholder={t('setting.system.smtp.from_placeholder')}
               name='SMTPFrom'
               onChange={handleInputChange}
-              autoComplete='new-password'
               value={inputs.SMTPFrom}
-              placeholder='Usually consistent with the email address'
             />
             <Form.Input
-              label='SMTP Access Credential'
+              label={t('setting.system.smtp.token')}
+              placeholder={t('setting.system.smtp.token_placeholder')}
               name='SMTPToken'
               onChange={handleInputChange}
               type='password'
-              autoComplete='new-password'
-              checked={inputs.RegisterEnabled === 'true'}
-              placeholder='Sensitive information will not be displayed in the frontend'
+              value={inputs.SMTPToken}
             />
           </Form.Group>
-          <Form.Button onClick={submitSMTP}>Save SMTP Settings</Form.Button>
+          <Form.Button onClick={submitSMTP}>
+            {t('setting.system.smtp.buttons.save')}
+          </Form.Button>
+
           <Divider />
-          <Header as='h3'>
-            Configure GitHub OAuth App
-            <Header.Subheader>
-              To support login & registration via GitHub,
-              <a href='https://github.com/settings/developers' target='_blank'>
-                Click here
-              </a>
-              Manage your GitHub OAuth App
-            </Header.Subheader>
-          </Header>
+          <Header as='h3'>{t('setting.system.github.title')}</Header>
           <Message>
-            Fill in the Homepage URL <code>{inputs.ServerAddress}</code>
-            , Fill in the Authorization callback URL{' '}
-            <code>{`${inputs.ServerAddress}/oauth/github`}</code>
+            {t('setting.system.github.subtitle')}
+            <a href='https://github.com/settings/developers' target='_blank'>
+              {t('setting.system.github.manage_link')}
+            </a>
+            {t('setting.system.github.manage_text')}
+          </Message>
+          <Message>
+            {t('setting.system.github.url_notice', {
+              server_url: originInputs.ServerAddress,
+              callback_url: `${originInputs.ServerAddress}/oauth/github`,
+            })}
           </Message>
           <Form.Group widths={3}>
             <Form.Input
-              label='GitHub Client ID'
+              label={t('setting.system.github.client_id')}
+              placeholder={t('setting.system.github.client_id_placeholder')}
               name='GitHubClientId'
               onChange={handleInputChange}
-              autoComplete='new-password'
               value={inputs.GitHubClientId}
-              placeholder='Enter your registered GitHub OAuth APP ID'
             />
             <Form.Input
-              label='GitHub Client Secret'
+              label={t('setting.system.github.client_secret')}
+              placeholder={t('setting.system.github.client_secret_placeholder')}
               name='GitHubClientSecret'
               onChange={handleInputChange}
               type='password'
-              autoComplete='new-password'
               value={inputs.GitHubClientSecret}
-              placeholder='Sensitive information will not be displayed in the frontend'
             />
           </Form.Group>
           <Form.Button onClick={submitGitHubOAuth}>
-            Save GitHub OAuth Settings
+            {t('setting.system.github.buttons.save')}
           </Form.Button>
+
           <Divider />
           <Header as='h3'>
-            Configure Lark OAuth
+            {t('setting.system.lark.title')}
             <Header.Subheader>
-              To support login & registration via Lark,
+              {t('setting.system.lark.subtitle')}
               <a href='https://open.feishu.cn/app' target='_blank'>
-                Click here
+                {t('setting.system.lark.manage_link')}
               </a>
-              Manage your Lark App
+              {t('setting.system.lark.manage_text')}
             </Header.Subheader>
           </Header>
           <Message>
-            Fill in the Homepage URL <code>{inputs.ServerAddress}</code>
-            , Fill in the Redirect URL{' '}
-            <code>{`${inputs.ServerAddress}/oauth/lark`}</code>
+            {t('setting.system.lark.url_notice', {
+              server_url: inputs.ServerAddress,
+              callback_url: `${inputs.ServerAddress}/oauth/lark`,
+            })}
           </Message>
           <Form.Group widths={3}>
             <Form.Input
-              label='App ID'
+              label={t('setting.system.lark.client_id')}
               name='LarkClientId'
               onChange={handleInputChange}
               autoComplete='new-password'
               value={inputs.LarkClientId}
-              placeholder='Enter App ID'
+              placeholder={t('setting.system.lark.client_id_placeholder')}
             />
             <Form.Input
-              label='App Secret'
+              label={t('setting.system.lark.client_secret')}
               name='LarkClientSecret'
               onChange={handleInputChange}
               type='password'
               autoComplete='new-password'
               value={inputs.LarkClientSecret}
-              placeholder='Sensitive information will not be displayed in the frontend'
+              placeholder={t('setting.system.lark.client_secret_placeholder')}
             />
           </Form.Group>
           <Form.Button onClick={submitLarkOAuth}>
-            Save Lark OAuth Settings
+            {t('setting.system.lark.buttons.save')}
           </Form.Button>
+
           <Divider />
           <Header as='h3'>
-            Configure WeChat Server
+            {t('setting.system.wechat.title')}
             <Header.Subheader>
-              To support login & registration via WeChat,
+              {t('setting.system.wechat.subtitle')}
               <a
                 href='https://github.com/songquanpeng/wechat-server'
                 target='_blank'
               >
-                Click here
+                {t('setting.system.wechat.learn_more')}
               </a>
-              Learn about WeChat Server
             </Header.Subheader>
           </Header>
           <Form.Group widths={3}>
             <Form.Input
-              label='WeChat Server Address'
+              label={t('setting.system.wechat.server_address')}
               name='WeChatServerAddress'
-              placeholder='For example: https://yourdomain.com'
               onChange={handleInputChange}
               autoComplete='new-password'
               value={inputs.WeChatServerAddress}
+              placeholder={t(
+                'setting.system.wechat.server_address_placeholder'
+              )}
             />
             <Form.Input
-              label='WeChat Server Access Credential'
+              label={t('setting.system.wechat.token')}
               name='WeChatServerToken'
-              type='password'
               onChange={handleInputChange}
+              type='password'
               autoComplete='new-password'
               value={inputs.WeChatServerToken}
-              placeholder='Sensitive information will not be displayed in the frontend'
+              placeholder={t('setting.system.wechat.token_placeholder')}
             />
             <Form.Input
-              label='WeChat Public Account QR Code Image Link'
+              label={t('setting.system.wechat.qrcode')}
               name='WeChatAccountQRCodeImageURL'
               onChange={handleInputChange}
               autoComplete='new-password'
               value={inputs.WeChatAccountQRCodeImageURL}
-              placeholder='Enter an image link'
+              placeholder={t('setting.system.wechat.qrcode_placeholder')}
             />
           </Form.Group>
           <Form.Button onClick={submitWeChat}>
-            Save WeChat Server Settings
+            {t('setting.system.wechat.buttons.save')}
           </Form.Button>
+
           <Divider />
           <Header as='h3'>
-            Configure Message Pusher
+            {t('setting.system.turnstile.title')}
             <Header.Subheader>
-              To push alert messages,
-              <a
-                href='https://github.com/songquanpeng/message-pusher'
-                target='_blank'
-              >
-                Click here
-              </a>
-              Learn about Message Pusher
-            </Header.Subheader>
-          </Header>
-          <Form.Group widths={3}>
-            <Form.Input
-              label='Message Pusher Address'
-              name='MessagePusherAddress'
-              placeholder='For example: https://msgpusher.com/push/your_username'
-              onChange={handleInputChange}
-              autoComplete='new-password'
-              value={inputs.MessagePusherAddress}
-            />
-            <Form.Input
-              label='Message Pusher Access Credential'
-              name='MessagePusherToken'
-              type='password'
-              onChange={handleInputChange}
-              autoComplete='new-password'
-              value={inputs.MessagePusherToken}
-              placeholder='Sensitive information will not be displayed in the frontend'
-            />
-          </Form.Group>
-          <Form.Button onClick={submitMessagePusher}>
-            Save Message Pusher Settings
-          </Form.Button>
-          <Divider />
-          <Header as='h3'>
-            Configure Turnstile
-            <Header.Subheader>
-              To support user verification,
+              {t('setting.system.turnstile.subtitle')}
               <a href='https://dash.cloudflare.com/' target='_blank'>
-                Click here
+                {t('setting.system.turnstile.manage_link')}
               </a>
-              Manage your Turnstile Sites, recommend selecting Invisible Widget Type
+              {t('setting.system.turnstile.manage_text')}
             </Header.Subheader>
           </Header>
           <Form.Group widths={3}>
             <Form.Input
-              label='Turnstile Site Key'
+              label={t('setting.system.turnstile.site_key')}
               name='TurnstileSiteKey'
               onChange={handleInputChange}
               autoComplete='new-password'
               value={inputs.TurnstileSiteKey}
-              placeholder='Enter your registered Turnstile Site Key'
+              placeholder={t('setting.system.turnstile.site_key_placeholder')}
             />
             <Form.Input
-              label='Turnstile Secret Key'
+              label={t('setting.system.turnstile.secret_key')}
               name='TurnstileSecretKey'
               onChange={handleInputChange}
               type='password'
               autoComplete='new-password'
               value={inputs.TurnstileSecretKey}
-              placeholder='Sensitive information will not be displayed in the frontend'
+              placeholder={t('setting.system.turnstile.secret_key_placeholder')}
             />
           </Form.Group>
           <Form.Button onClick={submitTurnstile}>
-            Save Turnstile Settings
+            {t('setting.system.turnstile.buttons.save')}
           </Form.Button>
         </Form>
       </Grid.Column>

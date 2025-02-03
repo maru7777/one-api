@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button, Form, Card } from 'semantic-ui-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { API, downloadTextAsFile, showError, showSuccess } from '../../helpers';
 import { renderQuota, renderQuotaWithPrompt } from '../../helpers/render';
 
 const EditRedemption = () => {
+  const { t } = useTranslation();
   const params = useParams();
   const navigate = useNavigate();
   const redemptionId = params.id;
@@ -61,9 +63,9 @@ const EditRedemption = () => {
     const { success, message, data } = res.data;
     if (success) {
       if (isEdit) {
-        showSuccess('Redemption code updated successfully!');
+        showSuccess(t('redemption.messages.update_success'));
       } else {
-        showSuccess('Redemption code created successfully!');
+        showSuccess(t('redemption.messages.create_success'));
         setInputs(originInputs);
       }
     } else {
@@ -83,14 +85,14 @@ const EditRedemption = () => {
       <Card fluid className='chart-card'>
         <Card.Content>
           <Card.Header className='header'>
-            {isEdit ? 'Update Redemption Code Information' : 'Create New Redemption Code'}
+            {isEdit ? t('redemption.edit.title_edit') : t('redemption.edit.title_create')}
           </Card.Header>
           <Form loading={loading} autoComplete='new-password'>
             <Form.Field>
               <Form.Input
-                label='Name'
+                label={t('redemption.edit.name')}
                 name='name'
-                placeholder={'Please enter name'}
+                placeholder={t('redemption.edit.name_placeholder')}
                 onChange={handleInputChange}
                 value={name}
                 autoComplete='new-password'
@@ -99,9 +101,9 @@ const EditRedemption = () => {
             </Form.Field>
             <Form.Field>
               <Form.Input
-                label={`Quota ${renderQuotaWithPrompt(quota)}`}
+                label={`${t('redemption.edit.quota')}${renderQuotaWithPrompt(quota, t)}`}
                 name='quota'
-                placeholder={'Please enter the quota included in each redemption code'}
+                placeholder={t('redemption.edit.quota_placeholder')}
                 onChange={handleInputChange}
                 value={quota}
                 autoComplete='new-password'
@@ -112,9 +114,9 @@ const EditRedemption = () => {
               <>
                 <Form.Field>
                   <Form.Input
-                    label='Quantity'
+                    label={t('redemption.edit.count')}
                     name='count'
-                    placeholder={'Please enter the quantity to generate'}
+                    placeholder={t('redemption.edit.count_placeholder')}
                     onChange={handleInputChange}
                     value={count}
                     autoComplete='new-password'
@@ -124,9 +126,11 @@ const EditRedemption = () => {
               </>
             )}
             <Button positive onClick={submit}>
-              Submit
+              {t('redemption.edit.buttons.submit')}
             </Button>
-            <Button onClick={handleCancel}>Cancel</Button>
+            <Button onClick={handleCancel}>
+              {t('redemption.edit.buttons.cancel')}
+            </Button>
           </Form>
         </Card.Content>
       </Card>

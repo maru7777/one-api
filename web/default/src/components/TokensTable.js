@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Button,
   Dropdown,
@@ -21,59 +22,63 @@ import {
 import { ITEMS_PER_PAGE } from '../constants';
 import { renderQuota } from '../helpers/render';
 
-const COPY_OPTIONS = [
-  { key: 'web', text: 'Web', value: 'web' },
-  { key: 'opencat', text: 'OpenCat', value: 'opencat' },
-  { key: 'lobechat', text: 'LobeChat', value: 'lobechat' },
-];
-
-const OPEN_LINK_OPTIONS = [
-  { key: 'next', text: 'ChatGPT Next Web', value: 'next' },
-  { key: 'ama', text: 'BotGem', value: 'ama' },
-  { key: 'opencat', text: 'OpenCat', value: 'opencat' },
-  { key: 'lobechat', text: 'LobeChat', value: 'lobechat' },
-];
-
 function renderTimestamp(timestamp) {
   return <>{timestamp2string(timestamp)}</>;
 }
 
-function renderStatus(status) {
+function renderStatus(status, t) {
   switch (status) {
     case 1:
       return (
         <Label basic color='green'>
-          Enabled
+          {t('token.table.status_enabled')}
         </Label>
       );
     case 2:
       return (
         <Label basic color='red'>
-          Disabled
+          {t('token.table.status_disabled')}
         </Label>
       );
     case 3:
       return (
         <Label basic color='yellow'>
-          Expired
+          {t('token.table.status_expired')}
         </Label>
       );
     case 4:
       return (
         <Label basic color='grey'>
-          Exhausted
+          {t('token.table.status_depleted')}
         </Label>
       );
     default:
       return (
         <Label basic color='black'>
-          Unknown Status
+          {t('token.table.status_unknown')}
         </Label>
       );
   }
 }
 
 const TokensTable = () => {
+  const { t } = useTranslation();
+
+  const COPY_OPTIONS = [
+    { key: 'raw', text: t('token.copy_options.raw'), value: '' },
+    { key: 'next', text: t('token.copy_options.next'), value: 'next' },
+    { key: 'ama', text: t('token.copy_options.ama'), value: 'ama' },
+    { key: 'opencat', text: t('token.copy_options.opencat'), value: 'opencat' },
+    { key: 'lobe', text: t('token.copy_options.lobe'), value: 'lobechat' },
+  ];
+
+  const OPEN_LINK_OPTIONS = [
+    { key: 'next', text: t('token.copy_options.next'), value: 'next' },
+    { key: 'ama', text: t('token.copy_options.ama'), value: 'ama' },
+    { key: 'opencat', text: t('token.copy_options.opencat'), value: 'opencat' },
+    { key: 'lobe', text: t('token.copy_options.lobe'), value: 'lobechat' },
+  ];
+
   const [tokens, setTokens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activePage, setActivePage] = useState(1);
@@ -156,9 +161,9 @@ const TokensTable = () => {
         url = `sk-${key}`;
     }
     if (await copy(url)) {
-      showSuccess('Copied to clipboard!');
+      showSuccess(t('token.messages.copy_success'));
     } else {
-      showWarning('Unable to copy to clipboard, please copy manually, the token has been entered into the search box。');
+      showWarning(t('token.messages.copy_failed'));
       setSearchKeyword(url);
     }
   };
@@ -232,7 +237,7 @@ const TokensTable = () => {
     }
     const { success, message } = res.data;
     if (success) {
-      showSuccess('Operation successfully completed!');
+      showSuccess(t('token.messages.operation_success'));
       let token = res.data.data;
       let newTokens = [...tokens];
       let realIdx = (activePage - 1) * ITEMS_PER_PAGE + idx;
@@ -303,7 +308,7 @@ const TokensTable = () => {
           icon='search'
           fluid
           iconPosition='left'
-          placeholder='Search for the name of the token...'
+          placeholder={t('token.search')}
           value={searchKeyword}
           loading={searching}
           onChange={handleKeywordChange}
@@ -319,7 +324,7 @@ const TokensTable = () => {
                 sortToken('name');
               }}
             >
-              Name
+              {t('token.table.name')}
             </Table.HeaderCell>
             <Table.HeaderCell
               style={{ cursor: 'pointer' }}
@@ -327,7 +332,7 @@ const TokensTable = () => {
                 sortToken('status');
               }}
             >
-              Status
+              {t('token.table.status')}
             </Table.HeaderCell>
             <Table.HeaderCell
               style={{ cursor: 'pointer' }}
@@ -335,7 +340,7 @@ const TokensTable = () => {
                 sortToken('used_quota');
               }}
             >
-              Used quota
+              {t('token.table.used_quota')}
             </Table.HeaderCell>
             <Table.HeaderCell
               style={{ cursor: 'pointer' }}
@@ -343,7 +348,7 @@ const TokensTable = () => {
                 sortToken('remain_quota');
               }}
             >
-              Remaining quota
+              {t('token.table.remain_quota')}
             </Table.HeaderCell>
             <Table.HeaderCell
               style={{ cursor: 'pointer' }}
@@ -351,7 +356,7 @@ const TokensTable = () => {
                 sortToken('created_time');
               }}
             >
-              Creation time
+              {t('token.table.created_time')}
             </Table.HeaderCell>
             <Table.HeaderCell
               style={{ cursor: 'pointer' }}
@@ -359,9 +364,9 @@ const TokensTable = () => {
                 sortToken('expired_time');
               }}
             >
-              Expiration time
+              {t('token.table.expired_time')}
             </Table.HeaderCell>
-            <Table.HeaderCell>Operation</Table.HeaderCell>
+            <Table.HeaderCell>{t('token.table.actions')}</Table.HeaderCell>
           </Table.Row>
         </Table.Header>
 
@@ -373,107 +378,115 @@ const TokensTable = () => {
             )
             .map((token, idx) => {
               if (token.deleted) return <></>;
-                return (
+
+              const copyOptionsWithHandlers = COPY_OPTIONS.map((option) => ({
+                ...option,
+                onClick: async () => {
+                  await onCopy(option.value, token.key);
+                },
+              }));
+
+              const openLinkOptionsWithHandlers = OPEN_LINK_OPTIONS.map(
+                (option) => ({
+                  ...option,
+                  onClick: async () => {
+                    await onOpenLink(option.value, token.key);
+                  },
+                })
+              );
+
+              return (
                 <Table.Row key={token.id}>
-                  <Table.Cell>{token.name ? token.name : 'None'}</Table.Cell>
-                  <Table.Cell>{renderStatus(token.status)}</Table.Cell>
-                  <Table.Cell>{renderQuota(token.used_quota)}</Table.Cell>
                   <Table.Cell>
-                  {token.unlimited_quota
-                    ? 'Unlimited'
-                    : renderQuota(token.remain_quota, 2)}
+                    {token.name ? token.name : t('token.table.no_name')}
+                  </Table.Cell>
+                  <Table.Cell>{renderStatus(token.status, t)}</Table.Cell>
+                  <Table.Cell>{renderQuota(token.used_quota, t)}</Table.Cell>
+                  <Table.Cell>
+                    {token.unlimited_quota
+                      ? t('token.table.unlimited')
+                      : renderQuota(token.remain_quota, t, 2)}
                   </Table.Cell>
                   <Table.Cell>{renderTimestamp(token.created_time)}</Table.Cell>
                   <Table.Cell>
-                  {token.expired_time === -1
-                    ? 'Never Expires'
-                    : renderTimestamp(token.expired_time)}
+                    {token.expired_time === -1
+                      ? t('token.table.never_expire')
+                      : renderTimestamp(token.expired_time)}
                   </Table.Cell>
                   <Table.Cell>
-                  <div>
-                    <Button.Group color='green' size={'small'}>
-                    <Button
-                      size={'small'}
-                      positive
-                      onClick={async () => {
-                      await onCopy('', token.key);
-                      }}
-                    >
-                      Copy
-                    </Button>
-                    <Dropdown
-                      className='button icon'
-                      floating
-                      options={COPY_OPTIONS.map((option) => ({
-                      ...option,
-                      onClick: async () => {
-                        await onCopy(option.value, token.key);
-                      },
-                      }))}
-                      trigger={<></>}
-                    />
-                    </Button.Group>{' '}
-                    <Button.Group color='blue' size={'small'}>
-                    <Button
-                      size={'small'}
-                      positive
-                      onClick={() => {
-                      onOpenLink('', token.key);
-                      }}
-                    >
-                      Chat
-                    </Button>
-                    <Dropdown
-                      className='button icon'
-                      floating
-                      options={OPEN_LINK_OPTIONS.map((option) => ({
-                      ...option,
-                      onClick: async () => {
-                        await onOpenLink(option.value, token.key);
-                      },
-                      }))}
-                      trigger={<></>}
-                    />
-                    </Button.Group>{' '}
-                    <Popup
-                    trigger={
-                      <Button size='small' negative>
-                      Delete
+                    <div>
+                      <Button.Group color='green' size={'tiny'}>
+                        <Button
+                          size={'tiny'}
+                          positive
+                          onClick={async () => await onCopy('', token.key)}
+                        >
+                          {t('token.buttons.copy')}
+                        </Button>
+                        <Dropdown
+                          className='button icon'
+                          floating
+                          options={copyOptionsWithHandlers}
+                          trigger={<></>}
+                        />
+                      </Button.Group>{' '}
+                      <Button.Group color='olive' size={'tiny'}>
+                        <Button
+                          size={'tiny'}
+                          positive
+                          onClick={() => onOpenLink('', token.key)}
+                        >
+                          {t('token.buttons.chat')}
+                        </Button>
+                        <Dropdown
+                          className='button icon'
+                          floating
+                          options={openLinkOptionsWithHandlers}
+                          trigger={<></>}
+                        />
+                      </Button.Group>{' '}
+                      <Popup
+                        trigger={
+                          <Button size='mini' negative>
+                            {t('token.buttons.delete')}
+                          </Button>
+                        }
+                        on='click'
+                        flowing
+                        hoverable
+                      >
+                        <Button
+                          size={'tiny'}
+                          negative
+                          onClick={() => {
+                            manageToken(token.id, 'delete', idx);
+                          }}
+                        >
+                          {t('token.buttons.confirm_delete')} {token.name}
+                        </Button>
+                      </Popup>
+                      <Button
+                        size={'tiny'}
+                        onClick={() => {
+                          manageToken(
+                            token.id,
+                            token.status === 1 ? 'disable' : 'enable',
+                            idx
+                          );
+                        }}
+                      >
+                        {token.status === 1
+                          ? t('token.buttons.disable')
+                          : t('token.buttons.enable')}
                       </Button>
-                    }
-                    on='click'
-                    flowing
-                    hoverable
-                    >
-                    <Button
-                      negative
-                      onClick={() => {
-                      manageToken(token.id, 'delete', idx);
-                      }}
-                    >
-                      Delete Token {token.name}
-                    </Button>
-                    </Popup>
-                    <Button
-                    size={'small'}
-                    onClick={() => {
-                      manageToken(
-                      token.id,
-                      token.status === 1 ? 'disable' : 'enable',
-                      idx
-                      );
-                    }}
-                    >
-                    {token.status === 1 ? 'Disable' : 'Enable'}
-                    </Button>
-                    <Button
-                    size={'small'}
-                    as={Link}
-                    to={'/token/edit/' + token.id}
-                    >
-                    Edit
-                    </Button>
-                  </div>
+                      <Button
+                        size={'tiny'}
+                        as={Link}
+                        to={'/token/edit/' + token.id}
+                      >
+                        {t('token.buttons.edit')}
+                      </Button>
+                    </div>
                   </Table.Cell>
                 </Table.Row>
                 );
@@ -484,24 +497,24 @@ const TokensTable = () => {
           <Table.Row>
             <Table.HeaderCell colSpan='7'>
               <Button size='small' as={Link} to='/token/add' loading={loading}>
-                Add New Token
+                {t('token.buttons.add')}
               </Button>
               <Button size='small' onClick={refresh} loading={loading}>
-                Refresh
+                {t('token.buttons.refresh')}
               </Button>
               <Dropdown
-                placeholder='Sort By'
+                placeholder={t('token.sort.placeholder')}
                 selection
                 options={[
-                  { key: '', text: 'Default Order', value: '' },
+                  { key: '', text: t('token.sort.default'), value: '' },
                   {
                     key: 'remain_quota',
-                    text: 'Sort by Remaining Quota',
+                    text: t('token.sort.by_remain'),
                     value: 'remain_quota',
                   },
                   {
                     key: 'used_quota',
-                    text: 'Sort by Used Quota',
+                    text: t('token.sort.by_used'),
                     value: 'used_quota',
                   },
                 ]}
