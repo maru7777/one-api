@@ -564,7 +564,7 @@ const LogsTable = () => {
                         {log.completion_tokens ? log.completion_tokens : ''}
                       </Table.Cell>
                       <Table.Cell>
-                        {log.quota ? renderQuota(log.quota, t, 6) : ''}
+                        {log.quota ? renderQuota(log.quota, t, 6) : 'free'}
                       </Table.Cell>
                     </>
                   )}
