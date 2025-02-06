@@ -160,6 +160,15 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *ChatRequest {
 		geminiRequest.Contents = append(geminiRequest.Contents, content)
 	}
 
+	// As of 2025-02-06, the newly released gemini 2.0 models do not support system_instruction,
+	// which can reasonably be considered a bug. Google may fix this issue in the future.
+	if geminiRequest.SystemInstruction != nil &&
+		strings.Contains(textRequest.Model, "-2.0") &&
+		textRequest.Model != "gemini-2.0-flash-exp" &&
+		textRequest.Model != "gemini-2.0-flash-thinking-exp-01-21" {
+		geminiRequest.SystemInstruction = nil
+	}
+
 	return &geminiRequest
 }
 
