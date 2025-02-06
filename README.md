@@ -24,6 +24,7 @@ Also welcome to register and use my deployed one-api gateway, which supports var
     - [Support gpt-4o-audio](#support-gpt-4o-audio)
     - [Support deepseek-reasoner \& gemini-2.0-flash-thinking-exp-01-21](#support-deepseek-reasoner--gemini-20-flash-thinking-exp-01-21)
     - [Support o3-mini](#support-o3-mini)
+    - [Support gemini-2.0-flash](#support-gemini-20-flash)
   - [Bug fix](#bug-fix)
     - [The token balance cannot be edited](#the-token-balance-cannot-be-edited)
     - [Whisper's transcription only charges for the length of the input audio](#whispers-transcription-only-charges-for-the-length-of-the-input-audio)
@@ -115,6 +116,10 @@ type UserRequestCost struct {
 ### Support o3-mini
 
 - [feat: extend support for o3 models and update model ratios #2048](https://github.com/songquanpeng/one-api/pull/2048)
+
+### Support gemini-2.0-flash
+
+- [feat: support gemini-2.0-flash #2055](https://github.com/songquanpeng/one-api/pull/2055)
 
 ## Bug fix
 
