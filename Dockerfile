@@ -1,4 +1,4 @@
-FROM node:18 as builder
+FROM node:18 AS builder
 
 WORKDIR /web
 COPY ./VERSION .
@@ -16,33 +16,36 @@ RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run buil
 
 FROM golang:1.23.5-bullseye AS builder2
 
-RUN apk add --no-cache \
-    gcc \
-    musl-dev \
-    sqlite-dev \
-    build-base
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    sqlite3 libsqlite3-dev && \
+    rm -rf /var/lib/apt/lists/*
 
+# TARGETARCH should be set by BuildKit when building multi-arch images.
 ENV GO111MODULE=on \
     CGO_ENABLED=1 \
     GOOS=linux \
+    CGO_CFLAGS="-I/usr/include" \
+    CGO_LDFLAGS="-L/usr/lib" \
     GOARCH=$TARGETARCH
 
 WORKDIR /build
 
-ADD go.mod go.sum ./
+COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
 COPY --from=builder /web/build ./web/build
 
-RUN go build -trimpath -ldflags "-s -w -X 'github.com/songquanpeng/one-api/common.Version=$(cat VERSION)' -linkmode external -extldflags '-static'" -o one-api
+# Use double quotes for the -ldflags parameter so that the $(cat VERSION) is expanded.
+RUN go build -trimpath -ldflags "-s -w -X github.com/songquanpeng/one-api/common.Version=$(cat VERSION)" -o one-api
 
 # Final runtime image
 FROM debian:bullseye
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates tzdata bash haveged ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+    ca-certificates tzdata bash haveged ffmpeg && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder2 /build/one-api /
 
