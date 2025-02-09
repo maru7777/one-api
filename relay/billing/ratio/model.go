@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/songquanpeng/one-api/common/logger"
 )
@@ -14,6 +15,8 @@ const (
 	MILLI_USD = 1.0 / 1000 * USD
 	RMB       = USD / USD2RMB
 )
+
+var modelRatioLock sync.RWMutex
 
 // ModelRatio
 // https://platform.openai.com/docs/models/model-endpoint-compatibility
@@ -508,11 +511,15 @@ func ModelRatio2JSONString() string {
 }
 
 func UpdateModelRatioByJSONString(jsonStr string) error {
+	modelRatioLock.Lock()
+	defer modelRatioLock.Unlock()
 	ModelRatio = make(map[string]float64)
 	return json.Unmarshal([]byte(jsonStr), &ModelRatio)
 }
 
 func GetModelRatio(name string, channelType int) float64 {
+	modelRatioLock.RLock()
+	defer modelRatioLock.RUnlock()
 	if strings.HasPrefix(name, "qwen-") && strings.HasSuffix(name, "-internet") {
 		name = strings.TrimSuffix(name, "-internet")
 	}
