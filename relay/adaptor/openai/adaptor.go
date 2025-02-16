@@ -11,7 +11,10 @@ import (
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/relay/adaptor"
+	"github.com/songquanpeng/one-api/relay/adaptor/alibailian"
+	"github.com/songquanpeng/one-api/relay/adaptor/baiduv2"
 	"github.com/songquanpeng/one-api/relay/adaptor/doubao"
+	"github.com/songquanpeng/one-api/relay/adaptor/geminiv2"
 	"github.com/songquanpeng/one-api/relay/adaptor/minimax"
 	"github.com/songquanpeng/one-api/relay/adaptor/novita"
 	"github.com/songquanpeng/one-api/relay/channeltype"
@@ -62,6 +65,12 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 		return doubao.GetRequestURL(meta)
 	case channeltype.Novita:
 		return novita.GetRequestURL(meta)
+	case channeltype.BaiduV2:
+		return baiduv2.GetRequestURL(meta)
+	case channeltype.AliBailian:
+		return alibailian.GetRequestURL(meta)
+	case channeltype.GeminiOpenAICompatible:
+		return geminiv2.GetRequestURL(meta)
 	default:
 		return GetFullRequestURL(meta.BaseURL, meta.RequestURLPath, meta.ChannelType), nil
 	}

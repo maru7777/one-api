@@ -45,7 +45,7 @@ func RelayTextHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 	textRequest.Model = meta.ActualModelName
 	meta.ActualModelName = textRequest.Model
 	// set system prompt if not empty
-	systemPromptReset := setSystemPrompt(ctx, textRequest, meta.SystemPrompt)
+	systemPromptReset := setSystemPrompt(ctx, textRequest, meta.ForcedSystemPrompt)
 	// get model ratio & group ratio
 	modelRatio := billingratio.GetModelRatio(textRequest.Model, meta.ChannelType)
 	// groupRatio := billingratio.GetGroupRatio(meta.Group)
@@ -126,7 +126,8 @@ func getRequestBody(c *gin.Context, meta *metalib.Meta, textRequest *relaymodel.
 		meta.APIType == apitype.OpenAI &&
 		meta.OriginModelName == meta.ActualModelName &&
 		meta.ChannelType != channeltype.OpenAI && // openai also need to convert request
-		meta.ChannelType != channeltype.Baichuan {
+		meta.ChannelType != channeltype.Baichuan &&
+		meta.ForcedSystemPrompt == "" {
 		return c.Request.Body, nil
 	}
 

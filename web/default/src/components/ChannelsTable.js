@@ -1,17 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import {
-  Button,
-  Dropdown,
-  Form,
-  Input,
-  Label,
-  Message,
-  Pagination,
-  Popup,
-  Table,
-} from 'semantic-ui-react';
-import { Link } from 'react-router-dom';
+import React, {useEffect, useState} from 'react';
+import {useTranslation} from 'react-i18next';
+import {Button, Dropdown, Form, Input, Label, Message, Pagination, Popup, Table,} from 'semantic-ui-react';
+import {Link} from 'react-router-dom';
 import {
   API,
   loadChannelModels,
@@ -23,8 +13,8 @@ import {
   timestamp2string,
 } from '../helpers';
 
-import { CHANNEL_OPTIONS, ITEMS_PER_PAGE } from '../constants';
-import { renderGroup, renderNumber } from '../helpers/render';
+import {CHANNEL_OPTIONS, ITEMS_PER_PAGE} from '../constants';
+import {renderGroup, renderNumber} from '../helpers/render';
 
 function renderTimestamp(timestamp) {
   return <>{timestamp2string(timestamp)}</>;
@@ -54,6 +44,9 @@ function renderType(type, t) {
 function renderBalance(type, balance, t) {
   switch (type) {
     case 1: // OpenAI
+        if (balance === 0) {
+            return <span>{t('channel.table.balance_not_supported')}</span>;
+        }
       return <span>${balance.toFixed(2)}</span>;
     case 4: // CloseAI
       return <span>¥{balance.toFixed(2)}</span>;
@@ -67,6 +60,8 @@ function renderBalance(type, balance, t) {
       return <span>¥{balance.toFixed(2)}</span>;
     case 13: // AIGC2D
       return <span>{renderNumber(balance)}</span>;
+    case 20: // OpenRouter
+      return <span>${balance.toFixed(2)}</span>;
     case 36: // DeepSeek
       return <span>¥{balance.toFixed(2)}</span>;
     case 44: // SiliconFlow
@@ -93,30 +88,32 @@ const ChannelsTable = () => {
   const [showPrompt, setShowPrompt] = useState(shouldShowPrompt(promptID));
   const [showDetail, setShowDetail] = useState(isShowDetail());
 
+  const processChannelData = (channel) => {
+    if (channel.models === '') {
+      channel.models = [];
+      channel.test_model = '';
+    } else {
+      channel.models = channel.models.split(',');
+      if (channel.models.length > 0) {
+        channel.test_model = channel.models[0];
+      }
+      channel.model_options = channel.models.map((model) => {
+        return {
+          key: model,
+          text: model,
+          value: model,
+        };
+      });
+      console.log('channel', channel);
+    }
+    return channel;
+  };
+
   const loadChannels = async (startIdx) => {
     const res = await API.get(`/api/channel/?p=${startIdx}`);
     const { success, message, data } = res.data;
     if (success) {
-      let localChannels = data.map((channel) => {
-        if (channel.models === '') {
-          channel.models = [];
-          channel.test_model = '';
-        } else {
-          channel.models = channel.models.split(',');
-          if (channel.models.length > 0) {
-            channel.test_model = channel.models[0];
-          }
-          channel.model_options = channel.models.map((model) => {
-            return {
-              key: model,
-              text: model,
-              value: model,
-            };
-          });
-          console.log('channel', channel);
-        }
-        return channel;
-      });
+      let localChannels = data.map(processChannelData);
       if (startIdx === 0) {
         setChannels(localChannels);
       } else {
@@ -301,7 +298,8 @@ const ChannelsTable = () => {
     const res = await API.get(`/api/channel/search?keyword=${searchKeyword}`);
     const { success, message, data } = res.data;
     if (success) {
-      setChannels(data);
+      let localChannels = data.map(processChannelData);
+      setChannels(localChannels);
       setActivePage(1);
     } else {
       showError(message);
@@ -495,7 +493,6 @@ const ChannelsTable = () => {
               onClick={() => {
                 sortChannel('balance');
               }}
-              hidden={!showDetail}
             >
               {t('channel.table.balance')}
             </Table.HeaderCell>
@@ -504,6 +501,7 @@ const ChannelsTable = () => {
               onClick={() => {
                 sortChannel('priority');
               }}
+              hidden={!showDetail}
             >
               {t('channel.table.priority')}
             </Table.HeaderCell>
@@ -543,7 +541,7 @@ const ChannelsTable = () => {
                       basic
                     />
                   </Table.Cell>
-                  <Table.Cell hidden={!showDetail}>
+                  <Table.Cell>
                     <Popup
                       trigger={
                         <span
@@ -559,7 +557,7 @@ const ChannelsTable = () => {
                       basic
                     />
                   </Table.Cell>
-                  <Table.Cell>
+                  <Table.Cell hidden={!showDetail}>
                     <Popup
                       trigger={
                         <Input
@@ -593,7 +591,15 @@ const ChannelsTable = () => {
                     />
                   </Table.Cell>
                   <Table.Cell>
-                    <div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: '2px',
+                        rowGap: '6px',
+                      }}
+                    >
                       <Button
                         size={'tiny'}
                         positive
