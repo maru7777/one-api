@@ -18,13 +18,14 @@ Also welcome to register and use my deployed one-api gateway, which supports var
     - [Support gemini-2.0-flash-exp](#support-gemini-20-flash-exp)
     - [Support replicate flux \& remix](#support-replicate-flux--remix)
     - [Support replicate chat models](#support-replicate-chat-models)
-    - [Support OpenAI O1/O1-mini/O1-preview](#support-openai-o1o1-minio1-preview)
+    - [Support OpenAI o1/o1-mini/o1-preview](#support-openai-o1o1-minio1-preview)
     - [Get request's cost](#get-requests-cost)
     - [Support Vertex Imagen3](#support-vertex-imagen3)
     - [Support gpt-4o-audio](#support-gpt-4o-audio)
     - [Support deepseek-reasoner \& gemini-2.0-flash-thinking-exp-01-21](#support-deepseek-reasoner--gemini-20-flash-thinking-exp-01-21)
     - [Support o3-mini](#support-o3-mini)
     - [Support gemini-2.0-flash](#support-gemini-20-flash)
+    - [Support OpenRouter's reasoning content](#support-openrouters-reasoning-content)
   - [Bug fix](#bug-fix)
 
 ## New Features
@@ -71,7 +72,7 @@ You can update the used quota using the API key of any token, allowing other con
 
 - [feat: 支持 replicate chat models #1989](https://github.com/songquanpeng/one-api/pull/1989)
 
-### Support OpenAI O1/O1-mini/O1-preview
+### Support OpenAI o1/o1-mini/o1-preview
 
 - [feat: add openai o1 #1990](https://github.com/songquanpeng/one-api/pull/1990)
 
@@ -117,6 +118,10 @@ type UserRequestCost struct {
 ### Support gemini-2.0-flash
 
 - [feat: support gemini-2.0-flash #2055](https://github.com/songquanpeng/one-api/pull/2055)
+
+### Support OpenRouter's reasoning content
+
+- [feat: support OpenRouter reasoning #2108](https://github.com/songquanpeng/one-api/pull/2108)
 
 ## Bug fix
 

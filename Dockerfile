@@ -14,7 +14,7 @@ RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run buil
     DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/air & \
     wait
 
-FROM golang:1.23.5-bullseye AS builder2
+FROM golang:1.24.0-bullseye AS builder2
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \

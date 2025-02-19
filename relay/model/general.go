@@ -70,7 +70,9 @@ type GeneralOpenAIRequest struct {
 	// Others
 	Instruction string `json:"instruction,omitempty"`
 	NumCtx      int    `json:"num_ctx,omitempty"`
+	// -------------------------------------
 	// Openrouter
+	// -------------------------------------
 	Provider         *openrouter.RequestProvider `json:"provider,omitempty"`
 	IncludeReasoning *bool                       `json:"include_reasoning,omitempty"`
 }
