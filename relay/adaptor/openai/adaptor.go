@@ -17,6 +17,7 @@ import (
 	"github.com/songquanpeng/one-api/relay/adaptor/geminiv2"
 	"github.com/songquanpeng/one-api/relay/adaptor/minimax"
 	"github.com/songquanpeng/one-api/relay/adaptor/novita"
+	"github.com/songquanpeng/one-api/relay/adaptor/openrouter"
 	"github.com/songquanpeng/one-api/relay/channeltype"
 	"github.com/songquanpeng/one-api/relay/meta"
 	"github.com/songquanpeng/one-api/relay/model"
@@ -93,6 +94,21 @@ func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Request, meta *me
 func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.GeneralOpenAIRequest) (any, error) {
 	if request == nil {
 		return nil, errors.New("request is nil")
+	}
+
+	meta := meta.GetByContext(c)
+	switch meta.ChannelType {
+	case channeltype.OpenRouter:
+		includeReasoning := true
+		request.IncludeReasoning = &includeReasoning
+		if request.Provider == nil || request.Provider.Sort == "" {
+			if request.Provider == nil {
+				request.Provider = &openrouter.RequestProvider{}
+			}
+
+			request.Provider.Sort = "throughput"
+		}
+	default:
 	}
 
 	if request.Stream && !config.EnforceIncludeUsage {

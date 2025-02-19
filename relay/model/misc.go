@@ -5,11 +5,11 @@ type Usage struct {
 	CompletionTokens int `json:"completion_tokens"`
 	TotalTokens      int `json:"total_tokens"`
 	// PromptTokensDetails may be empty for some models
-	PromptTokensDetails usagePromptTokensDetails `gorm:"-" json:"prompt_tokens_details,omitempty"`
+	PromptTokensDetails *usagePromptTokensDetails `gorm:"-" json:"prompt_tokens_details,omitempty"`
 	// CompletionTokensDetails may be empty for some models
-	CompletionTokensDetails usageCompletionTokensDetails `gorm:"-" json:"completion_tokens_details,omitempty"`
-	ServiceTier             string                       `gorm:"-" json:"service_tier,omitempty"`
-	SystemFingerprint       string                       `gorm:"-" json:"system_fingerprint,omitempty"`
+	CompletionTokensDetails *usageCompletionTokensDetails `gorm:"-" json:"completion_tokens_details,omitempty"`
+	ServiceTier             string                        `gorm:"-" json:"service_tier,omitempty"`
+	SystemFingerprint       string                        `gorm:"-" json:"system_fingerprint,omitempty"`
 }
 
 type Error struct {

@@ -27,6 +27,7 @@ const (
 
 func StreamHandler(c *gin.Context, resp *http.Response, relayMode int) (*model.ErrorWithStatusCode, string, *model.Usage) {
 	responseText := ""
+	reasoningText := ""
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Split(bufio.ScanLines)
 	var usage *model.Usage
@@ -62,6 +63,10 @@ func StreamHandler(c *gin.Context, resp *http.Response, relayMode int) (*model.E
 			}
 			render.StringData(c, data)
 			for _, choice := range streamResponse.Choices {
+				if choice.Delta.Reasoning != nil {
+					reasoningText += *choice.Delta.Reasoning
+				}
+
 				responseText += conv.AsString(choice.Delta.Content)
 			}
 			if streamResponse.Usage != nil {
@@ -94,7 +99,7 @@ func StreamHandler(c *gin.Context, resp *http.Response, relayMode int) (*model.E
 		return ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), "", nil
 	}
 
-	return nil, responseText, usage
+	return nil, reasoningText + responseText, usage
 }
 
 // Handler handles the non-stream response from OpenAI API
@@ -150,20 +155,26 @@ func Handler(c *gin.Context, resp *http.Response, promptTokens int, modelName st
 			CompletionTokens: completionTokens,
 			TotalTokens:      promptTokens + completionTokens,
 		}
-	} else if textResponse.PromptTokensDetails.AudioTokens+textResponse.CompletionTokensDetails.AudioTokens > 0 {
+	} else if (textResponse.PromptTokensDetails != nil && textResponse.PromptTokensDetails.AudioTokens > 0) ||
+		(textResponse.CompletionTokensDetails != nil && textResponse.CompletionTokensDetails.AudioTokens > 0) {
 		// Convert the more expensive audio tokens to uniformly priced text tokens.
 		// Note that when there are no audio tokens in prompt and completion,
 		// OpenAI will return empty PromptTokensDetails and CompletionTokensDetails, which can be misleading.
-		textResponse.Usage.PromptTokens = textResponse.PromptTokensDetails.TextTokens +
-			int(math.Ceil(
-				float64(textResponse.PromptTokensDetails.AudioTokens)*
-					ratio.GetAudioPromptRatio(modelName),
-			))
-		textResponse.Usage.CompletionTokens = textResponse.CompletionTokensDetails.TextTokens +
-			int(math.Ceil(
-				float64(textResponse.CompletionTokensDetails.AudioTokens)*
-					ratio.GetAudioPromptRatio(modelName)*ratio.GetAudioCompletionRatio(modelName),
-			))
+		if textResponse.PromptTokensDetails != nil {
+			textResponse.Usage.PromptTokens = textResponse.PromptTokensDetails.TextTokens +
+				int(math.Ceil(
+					float64(textResponse.PromptTokensDetails.AudioTokens)*
+						ratio.GetAudioPromptRatio(modelName),
+				))
+		}
+
+		if textResponse.CompletionTokensDetails != nil {
+			textResponse.Usage.CompletionTokens = textResponse.CompletionTokensDetails.TextTokens +
+				int(math.Ceil(
+					float64(textResponse.CompletionTokensDetails.AudioTokens)*
+						ratio.GetAudioPromptRatio(modelName)*ratio.GetAudioCompletionRatio(modelName),
+				))
+		}
 
 		textResponse.Usage.TotalTokens = textResponse.Usage.PromptTokens +
 			textResponse.Usage.CompletionTokens
