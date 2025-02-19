@@ -445,10 +445,10 @@ var ModelRatio = map[string]float64{
 	"cohere/command-r-plus-08-2024":                   4.75,
 	"cohere/command-r7b-12-2024":                      0.075,
 	"databricks/dbrx-instruct":                        0.6,
-	"deepseek/deepseek-chat":                          0.445,
+	"deepseek/deepseek-chat":                          1.25 * MILLI_USD,
 	"deepseek/deepseek-chat-v2.5":                     1.0,
 	"deepseek/deepseek-chat:free":                     0.0,
-	"deepseek/deepseek-r1":                            1.2,
+	"deepseek/deepseek-r1":                            7 * MILLI_USD,
 	"deepseek/deepseek-r1-distill-llama-70b":          0.345,
 	"deepseek/deepseek-r1-distill-llama-70b:free":     0.0,
 	"deepseek/deepseek-r1-distill-llama-8b":           0.02,
@@ -710,6 +710,9 @@ var CompletionRatio = map[string]float64{
 	// deepseek
 	"deepseek-chat":     1.1 / 0.27,
 	"deepseek-reasoner": 2.19 / 0.55,
+	// openrouter
+	"deepseek/deepseek-chat": 1,
+	"deepseek/deepseek-r1":   1,
 }
 
 var (
