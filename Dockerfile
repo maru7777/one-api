@@ -38,7 +38,17 @@ RUN go mod download
 COPY . .
 COPY --from=builder /web/build ./web/build
 
-RUN go build -trimpath -ldflags "-s -w -X github.com/songquanpeng/one-api/common.Version=$(cat VERSION)" -o one-api
+# For ARM64 builds, install and use the appropriate cross-compiler.
+RUN if [ "$GOARCH" = "arm64" ]; then \
+        apt-get update && apt-get install -y gcc-aarch64-linux-gnu; \
+    fi
+
+# Use a single RUN command to conditionally set CC for ARM64.
+RUN if [ "$GOARCH" = "arm64" ]; then \
+        CC=aarch64-linux-gnu-gcc go build -trimpath -ldflags "-s -w -X github.com/songquanpeng/one-api/common.Version=$(cat VERSION)" -o one-api; \
+    else \
+        go build -trimpath -ldflags "-s -w -X github.com/songquanpeng/one-api/common.Version=$(cat VERSION)" -o one-api; \
+    fi
 
 FROM debian:bullseye
 
