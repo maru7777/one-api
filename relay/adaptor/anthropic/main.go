@@ -65,6 +65,12 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *Request {
 		Tools:       claudeTools,
 		Thinking:    textRequest.Thinking,
 	}
+
+	if claudeRequest.Thinking != nil {
+		// top_p must be nil when using extended thinking
+		claudeRequest.TopP = nil
+	}
+
 	if len(claudeTools) > 0 {
 		claudeToolChoice := struct {
 			Type string `json:"type"`
