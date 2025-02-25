@@ -27,6 +27,8 @@ Also welcome to register and use my deployed one-api gateway, which supports var
     - [Support gemini-2.0-flash](#support-gemini-20-flash)
     - [Support OpenRouter's reasoning content](#support-openrouters-reasoning-content)
     - [Support claude-3-7-sonnet \& thinking](#support-claude-3-7-sonnet--thinking)
+      - [Stream](#stream)
+      - [Non-Stream](#non-stream)
   - [Bug fix](#bug-fix)
 
 ## New Features
@@ -129,7 +131,12 @@ type UserRequestCost struct {
 - [feat: support claude-3-7-sonnet #2143](https://github.com/songquanpeng/one-api/pull/2143/files)
 - [feat: support claude thinking #2144](https://github.com/songquanpeng/one-api/pull/2144)
 
+#### Stream
 ![](https://s3.laisky.com/uploads/2025/02/claude-thinking.png)
+
+#### Non-Stream
+
+![](https://s3.laisky.com/uploads/2025/02/claude-thinking-non-stream.png)
 
 ## Bug fix
 
