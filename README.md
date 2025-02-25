@@ -26,6 +26,7 @@ Also welcome to register and use my deployed one-api gateway, which supports var
     - [Support o3-mini](#support-o3-mini)
     - [Support gemini-2.0-flash](#support-gemini-20-flash)
     - [Support OpenRouter's reasoning content](#support-openrouters-reasoning-content)
+    - [Support claude-3-7-sonnet #2143](#support-claude-3-7-sonnet-2143)
   - [Bug fix](#bug-fix)
 
 ## New Features
@@ -123,9 +124,14 @@ type UserRequestCost struct {
 
 - [feat: support OpenRouter reasoning #2108](https://github.com/songquanpeng/one-api/pull/2108)
 
+### Support claude-3-7-sonnet #2143
+
+- [feat: support claude-3-7-sonnet #2143](https://github.com/songquanpeng/one-api/pull/2143/files)
+
 ## Bug fix
 
 - [BUGFIX: 更新令牌时的一些问题 #1933](https://github.com/songquanpeng/one-api/pull/1933)
 - [feat(audio): count whisper-1 quota by audio duration #2022](https://github.com/songquanpeng/one-api/pull/2022)
 - [fix: 修复高并发下，高额度用户使用低额度令牌没有预扣费而导致令牌大额欠费 #25](https://github.com/Laisky/one-api/pull/25)
 - [fix: channel test false negative #2065](https://github.com/songquanpeng/one-api/pull/2065)
+- [fix: resolve "bufio.Scanner: token too long" error by increasing buff… #2128](https://github.com/songquanpeng/one-api/pull/2128)
