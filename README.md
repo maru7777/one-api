@@ -10,6 +10,7 @@ Fully compatible with the upstream version, can be used directly by replacing th
 Also welcome to register and use my deployed one-api gateway, which supports various mainstream models. For usage instructions, please refer to <https://wiki.laisky.com/projects/gpt/pay/cn/#page_gpt_pay_cn>.
 
 - [One API](#one-api)
+  - [Turtorial](#turtorial)
   - [New Features](#new-features)
     - [(Merged) Support gpt-vision](#merged-support-gpt-vision)
     - [Support update user's remained quota](#support-update-users-remained-quota)
@@ -30,6 +31,32 @@ Also welcome to register and use my deployed one-api gateway, which supports var
       - [Stream](#stream)
       - [Non-Stream](#non-stream)
   - [Bug fix](#bug-fix)
+
+## Turtorial
+
+Run one-api using docker-compose:
+
+```yaml
+oneapi:
+  image: ppcelery/one-api:latest
+  restart: unless-stopped
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "10m"
+  environment:
+    - ENFORCE_INCLUDE_USAGE=true
+    - GLOBAL_API_RATE_LIMIT=1000
+    - GLOBAL_WEB_RATE_LIMIT=1000
+    - FRONTEND_BASE_URL=https://oneapi.laisky.com
+    - OPENROUTER_PROVIDER_SORT=throughput
+  volumes:
+    - /var/lib/oneapi:/data
+  ports:
+    - 3000:3000
+```
+
+The initial default account and password are `root` / `123456`.
 
 ## New Features
 
@@ -126,12 +153,19 @@ type UserRequestCost struct {
 
 - [feat: support OpenRouter reasoning #2108](https://github.com/songquanpeng/one-api/pull/2108)
 
+By default, the thinking mode is automatically enabled for the deepseek-r1 model, and the response is returned in the open-router format.
+
+![](https://s3.laisky.com/uploads/2025/02/openrouter-reasoning.png)
+
 ### Support claude-3-7-sonnet & thinking
 
 - [feat: support claude-3-7-sonnet #2143](https://github.com/songquanpeng/one-api/pull/2143/files)
 - [feat: support claude thinking #2144](https://github.com/songquanpeng/one-api/pull/2144)
 
+By default, the thinking mode is not enabled. You need to manually pass the `thinking` field in the request body to enable it.
+
 #### Stream
+
 ![](https://s3.laisky.com/uploads/2025/02/claude-thinking.png)
 
 #### Non-Stream
