@@ -26,7 +26,7 @@ Also welcome to register and use my deployed one-api gateway, which supports var
     - [Support o3-mini](#support-o3-mini)
     - [Support gemini-2.0-flash](#support-gemini-20-flash)
     - [Support OpenRouter's reasoning content](#support-openrouters-reasoning-content)
-    - [Support claude-3-7-sonnet #2143](#support-claude-3-7-sonnet-2143)
+    - [Support claude-3-7-sonnet \& thinking](#support-claude-3-7-sonnet--thinking)
   - [Bug fix](#bug-fix)
 
 ## New Features
@@ -124,9 +124,12 @@ type UserRequestCost struct {
 
 - [feat: support OpenRouter reasoning #2108](https://github.com/songquanpeng/one-api/pull/2108)
 
-### Support claude-3-7-sonnet #2143
+### Support claude-3-7-sonnet & thinking
 
 - [feat: support claude-3-7-sonnet #2143](https://github.com/songquanpeng/one-api/pull/2143/files)
+- [feat: support claude thinking #2144](https://github.com/songquanpeng/one-api/pull/2144)
+
+![](https://s3.laisky.com/uploads/2025/02/claude-thinking.png)
 
 ## Bug fix
 

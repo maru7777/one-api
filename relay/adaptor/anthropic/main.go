@@ -2,6 +2,7 @@ package anthropic
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -235,9 +236,17 @@ func ResponseClaude2OpenAI(claudeResponse *Response) *openai.TextResponse {
 
 	tools := make([]model.Tool, 0)
 	for _, v := range claudeResponse.Content {
-		reasoningText += v.Text
-		if v.Thinking != nil {
-			reasoningText += *v.Thinking
+		switch v.Type {
+		case "thinking":
+			if v.Thinking != nil {
+				reasoningText += *v.Thinking
+			} else {
+				logger.Errorf(context.Background(), "thinking is nil in response")
+			}
+		case "text":
+			responseText += v.Text
+		default:
+			logger.Warnf(context.Background(), "unknown response type %q", v.Type)
 		}
 
 		if v.Type == "tool_use" {
@@ -252,6 +261,7 @@ func ResponseClaude2OpenAI(claudeResponse *Response) *openai.TextResponse {
 			})
 		}
 	}
+
 	choice := openai.TextResponseChoice{
 		Index: 0,
 		Message: model.Message{
@@ -372,6 +382,8 @@ func Handler(c *gin.Context, resp *http.Response, promptTokens int, modelName st
 	if err != nil {
 		return openai.ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), nil
 	}
+
+	logger.Debugf(c.Request.Context(), "response <- %s\n", string(responseBody))
 
 	var claudeResponse Response
 	err = json.Unmarshal(responseBody, &claudeResponse)
