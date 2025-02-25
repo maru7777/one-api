@@ -73,6 +73,16 @@ type GeneralOpenAIRequest struct {
 	// -------------------------------------
 	Provider         *openrouter.RequestProvider `json:"provider,omitempty"`
 	IncludeReasoning *bool                       `json:"include_reasoning,omitempty"`
+	// -------------------------------------
+	// Anthropic
+	// -------------------------------------
+	Thinking *Thinking `json:"thinking,omitempty"`
+}
+
+// https://docs.anthropic.com/en/docs/build-with-claude/extended-thinking#implementing-extended-thinking
+type Thinking struct {
+	Type         string `json:"type"`
+	BudgetTokens int    `json:"budget_tokens" binding:"omitempty,min=1024"`
 }
 
 func (r GeneralOpenAIRequest) ParseInput() []string {
