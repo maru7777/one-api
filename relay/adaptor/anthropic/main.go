@@ -4,10 +4,11 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/songquanpeng/one-api/common/render"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/songquanpeng/one-api/common/render"
 
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common"
@@ -61,6 +62,7 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *Request {
 		TopK:        textRequest.TopK,
 		Stream:      textRequest.Stream,
 		Tools:       claudeTools,
+		Thinking:    textRequest.Thinking,
 	}
 	if len(claudeTools) > 0 {
 		claudeToolChoice := struct {
@@ -149,6 +151,7 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *Request {
 func StreamResponseClaude2OpenAI(claudeResponse *StreamResponse) (*openai.ChatCompletionsStreamResponse, *Response) {
 	var response *Response
 	var responseText string
+	var reasoningText string
 	var stopReason string
 	tools := make([]model.Tool, 0)
 
@@ -158,6 +161,10 @@ func StreamResponseClaude2OpenAI(claudeResponse *StreamResponse) (*openai.ChatCo
 	case "content_block_start":
 		if claudeResponse.ContentBlock != nil {
 			responseText = claudeResponse.ContentBlock.Text
+			if claudeResponse.ContentBlock.Thinking != nil {
+				reasoningText = *claudeResponse.ContentBlock.Thinking
+			}
+
 			if claudeResponse.ContentBlock.Type == "tool_use" {
 				tools = append(tools, model.Tool{
 					Id:   claudeResponse.ContentBlock.Id,
@@ -172,6 +179,10 @@ func StreamResponseClaude2OpenAI(claudeResponse *StreamResponse) (*openai.ChatCo
 	case "content_block_delta":
 		if claudeResponse.Delta != nil {
 			responseText = claudeResponse.Delta.Text
+			if claudeResponse.Delta.Thinking != nil {
+				reasoningText = *claudeResponse.Delta.Thinking
+			}
+
 			if claudeResponse.Delta.Type == "input_json_delta" {
 				tools = append(tools, model.Tool{
 					Function: model.Function{
@@ -189,9 +200,20 @@ func StreamResponseClaude2OpenAI(claudeResponse *StreamResponse) (*openai.ChatCo
 		if claudeResponse.Delta != nil && claudeResponse.Delta.StopReason != nil {
 			stopReason = *claudeResponse.Delta.StopReason
 		}
+	case "thinking_delta":
+		if claudeResponse.Delta != nil && claudeResponse.Delta.Thinking != nil {
+			reasoningText = *claudeResponse.Delta.Thinking
+		}
+	case "ping",
+		"message_stop",
+		"content_block_stop":
+	default:
+		logger.SysErrorf("unknown stream response type %q", claudeResponse.Type)
 	}
+
 	var choice openai.ChatCompletionsStreamResponseChoice
 	choice.Delta.Content = responseText
+	choice.Delta.Reasoning = &reasoningText
 	if len(tools) > 0 {
 		choice.Delta.Content = nil // compatible with other OpenAI derivative applications, like LobeOpenAICompatibleFactory ...
 		choice.Delta.ToolCalls = tools
@@ -209,11 +231,15 @@ func StreamResponseClaude2OpenAI(claudeResponse *StreamResponse) (*openai.ChatCo
 
 func ResponseClaude2OpenAI(claudeResponse *Response) *openai.TextResponse {
 	var responseText string
-	if len(claudeResponse.Content) > 0 {
-		responseText = claudeResponse.Content[0].Text
-	}
+	var reasoningText string
+
 	tools := make([]model.Tool, 0)
 	for _, v := range claudeResponse.Content {
+		reasoningText += v.Text
+		if v.Thinking != nil {
+			reasoningText += *v.Thinking
+		}
+
 		if v.Type == "tool_use" {
 			args, _ := json.Marshal(v.Input)
 			tools = append(tools, model.Tool{
@@ -231,6 +257,7 @@ func ResponseClaude2OpenAI(claudeResponse *Response) *openai.TextResponse {
 		Message: model.Message{
 			Role:      "assistant",
 			Content:   responseText,
+			Reasoning: &reasoningText,
 			Name:      nil,
 			ToolCalls: tools,
 		},
@@ -275,6 +302,8 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 		}
 		data = strings.TrimPrefix(data, "data:")
 		data = strings.TrimSpace(data)
+
+		logger.Debugf(c.Request.Context(), "stream <- %q\n", data)
 
 		var claudeResponse StreamResponse
 		err := json.Unmarshal([]byte(data), &claudeResponse)
@@ -343,6 +372,7 @@ func Handler(c *gin.Context, resp *http.Response, promptTokens int, modelName st
 	if err != nil {
 		return openai.ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), nil
 	}
+
 	var claudeResponse Response
 	err = json.Unmarshal(responseBody, &claudeResponse)
 	if err != nil {
