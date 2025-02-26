@@ -29,6 +29,11 @@ type Message struct {
 	// -------------------------------------
 	Reasoning *string `json:"reasoning,omitempty"`
 	Refusal   *bool   `json:"refusal,omitempty"`
+	// -------------------------------------
+	// Anthropic
+	// -------------------------------------
+	Thinking  *string `json:"thinking,omitempty"`
+	Signature *string `json:"signature,omitempty"`
 }
 
 type messageAudio struct {
@@ -135,6 +140,11 @@ type MessageContent struct {
 	Text       string      `json:"text"`
 	ImageURL   *ImageURL   `json:"image_url,omitempty"`
 	InputAudio *InputAudio `json:"input_audio,omitempty"`
+	// -------------------------------------
+	// Anthropic
+	// -------------------------------------
+	Thinking  *string `json:"thinking,omitempty"`
+	Signature *string `json:"signature,omitempty"`
 }
 
 type InputAudio struct {
