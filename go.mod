@@ -6,6 +6,7 @@ toolchain go1.24.0
 
 require (
 	cloud.google.com/go/iam v1.4.0
+	github.com/Laisky/gin-middlewares/v6 v6.0.0
 	github.com/Laisky/go-utils/v5 v5.0.0
 	github.com/aws/aws-sdk-go-v2 v1.36.2
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.60
@@ -46,13 +47,16 @@ require (
 	github.com/Laisky/errors/v2 v2.0.1 // indirect
 	github.com/Laisky/fast-skiplist/v2 v2.0.1 // indirect
 	github.com/Laisky/go-chaining v0.0.0-20180507092046-43dcdc5a21be // indirect
+	github.com/Laisky/go-gin-prometheus v1.0.1 // indirect
 	github.com/Laisky/golang-fifo v1.0.1-0.20240403091456-fc83d5e38c0b // indirect
 	github.com/Laisky/graphql v1.0.6 // indirect
-	github.com/Laisky/zap v1.27.1-0.20240628060440-a253d90172e3 // indirect
+	github.com/Laisky/pprof v0.0.0-20231102060718-a7a7fd2965ee // indirect
+	github.com/Laisky/zap v1.27.1-0.20241010063010-3154c45f2a1f // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.10 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.33 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.33 // indirect
 	github.com/aws/smithy-go v1.22.2 // indirect
+	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bytedance/sonic v1.12.7 // indirect
 	github.com/bytedance/sonic/loader v0.2.2 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
@@ -72,6 +76,8 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-sql-driver/mysql v1.7.0 // indirect
 	github.com/goccy/go-json v0.10.4 // indirect
+	github.com/golang-jwt/jwt/v4 v4.5.1 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cpy v0.0.0-20211218193943-a9c933c06932 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.4 // indirect
@@ -92,10 +98,16 @@ require (
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-sqlite3 v1.14.22 // indirect
+	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/prometheus/client_golang v1.13.0 // indirect
+	github.com/prometheus/client_model v0.2.0 // indirect
+	github.com/prometheus/common v0.37.0 // indirect
+	github.com/prometheus/procfs v0.8.0 // indirect
+	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/smarty/assertions v1.15.0 // indirect
 	github.com/tailscale/hujson v0.0.0-20241010212012-29efb4a0184b // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect

@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
+	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/ctxkey"
@@ -28,10 +29,7 @@ func GetRequestCost(c *gin.Context) {
 
 	docu, err := model.GetCostByRequestId(reqId)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		helper.RespondError(c, err)
 		return
 	}
 
@@ -49,10 +47,7 @@ func GetAllTokens(c *gin.Context) {
 	tokens, err := model.GetAllUserTokens(userId, p*config.ItemsPerPage, config.ItemsPerPage, order)
 
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		helper.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -68,10 +63,7 @@ func SearchTokens(c *gin.Context) {
 	keyword := c.Query("keyword")
 	tokens, err := model.SearchUserTokens(userId, keyword)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		helper.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -86,18 +78,12 @@ func GetToken(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	userId := c.GetInt(ctxkey.Id)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		helper.RespondError(c, err)
 		return
 	}
 	token, err := model.GetTokenByIds(id, userId)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		helper.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -113,10 +99,7 @@ func GetTokenStatus(c *gin.Context) {
 	userId := c.GetInt(ctxkey.Id)
 	token, err := model.GetTokenByIds(tokenId, userId)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		helper.RespondError(c, err)
 		return
 	}
 	expiredAt := token.ExpiredTime
@@ -151,10 +134,7 @@ func AddToken(c *gin.Context) {
 	token := new(model.Token)
 	err := c.ShouldBindJSON(token)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		helper.RespondError(c, err)
 		return
 	}
 
@@ -181,10 +161,7 @@ func AddToken(c *gin.Context) {
 	}
 	err = cleanToken.Insert()
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		helper.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -200,10 +177,7 @@ func DeleteToken(c *gin.Context) {
 	userId := c.GetInt(ctxkey.Id)
 	err := model.DeleteTokenById(id, userId)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		helper.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -223,71 +197,54 @@ type consumeTokenRequest struct {
 // ConsumeToken consume token from another source,
 // let one-api to gather billing from different sources.
 func ConsumeToken(c *gin.Context) {
-	tokenPatch := new(consumeTokenRequest)
-	err := c.ShouldBindJSON(tokenPatch)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
-		return
-	}
-
+	ctx := c.Request.Context()
 	userID := c.GetInt(ctxkey.Id)
 	tokenID := c.GetInt(ctxkey.TokenId)
+
+	// Parse and validate request
+	tokenPatch := new(consumeTokenRequest)
+	if err := c.ShouldBindJSON(tokenPatch); err != nil {
+		helper.RespondError(c, err)
+		return
+	}
+
+	if tokenPatch.AddUsedQuota == 0 {
+		helper.RespondError(c, errors.New("add_used_quota must be greater than 0"))
+		return
+	}
+
+	if tokenPatch.AddReason == "" {
+		helper.RespondError(c, errors.New("add_reason cannot be empty"))
+		return
+	}
+
+	// Get token
 	cleanToken, err := model.GetTokenByIds(tokenID, userID)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		helper.RespondError(c, err)
 		return
 	}
 
-	if cleanToken.Status != model.TokenStatusEnabled {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "API KeysNot enabled",
-		})
+	// Validate token status
+	if err := validateTokenForConsumption(cleanToken); err != nil {
+		helper.RespondError(c, err)
 		return
 	}
 
-	if cleanToken.Status == model.TokenStatusExpired &&
-		cleanToken.ExpiredTime <= helper.GetTimestamp() && cleanToken.ExpiredTime != -1 {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "The token has expired and cannot be enabled. Please modify the expiration time of the token, or set it to never expire.",
-		})
-		return
-	}
-	if cleanToken.Status == model.TokenStatusExhausted &&
-		cleanToken.RemainQuota <= 0 && !cleanToken.UnlimitedQuota {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "The available quota of the token has been used up and cannot be enabled. Please modify the remaining quota of the token, or set it to unlimited quota",
-		})
+	// Check quota availability
+	if !cleanToken.UnlimitedQuota && cleanToken.RemainQuota < int64(tokenPatch.AddUsedQuota) {
+		helper.RespondError(c, errors.New("Insufficient remaining quota"))
 		return
 	}
 
-	// let admin to add or subtract used quota,
-	// make it possible to aggregate billings from different sources.
-	if cleanToken.RemainQuota < int64(tokenPatch.AddUsedQuota) {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "Insufficient remaining quota",
-		})
-		return
-	}
-
+	// Transaction: decrease quota and record log
 	if err = model.DecreaseTokenQuota(cleanToken.Id, int64(tokenPatch.AddUsedQuota)); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		helper.RespondError(c, err)
 		return
 	}
 
-	model.RecordConsumeLog(c.Request.Context(), &model.Log{
+	// Record consumption log
+	model.RecordConsumeLog(ctx, &model.Log{
 		UserId:    userID,
 		ModelName: tokenPatch.AddReason,
 		TokenName: cleanToken.Name,
@@ -296,21 +253,37 @@ func ConsumeToken(c *gin.Context) {
 			tokenPatch.AddReason, common.LogQuota(int64(tokenPatch.AddUsedQuota))),
 	})
 
-	err = cleanToken.Update()
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+	// Update token data
+	cleanToken.RemainQuota -= int64(tokenPatch.AddUsedQuota)
+	if err = cleanToken.Update(); err != nil {
+		helper.RespondError(c, err)
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
 		"data":    cleanToken,
 	})
+}
 
-	return
+func validateTokenForConsumption(token *model.Token) error {
+	// Check if token is enabled
+	if token.Status != model.TokenStatusEnabled {
+		return fmt.Errorf("API Key is not enabled")
+	}
+
+	// Check if token is expired
+	if token.ExpiredTime != -1 && token.ExpiredTime <= helper.GetTimestamp() {
+		return fmt.Errorf("The token has expired and cannot be used. Please modify the expiration time of the token, or set it to never expire")
+	}
+
+	// Check if token is exhausted
+	if !token.UnlimitedQuota && token.RemainQuota <= 0 {
+		return fmt.Errorf("The available quota of the token has been used up. Please add more quota or set it to unlimited")
+	}
+
+	return nil
 }
 
 func UpdateToken(c *gin.Context) {
@@ -319,19 +292,13 @@ func UpdateToken(c *gin.Context) {
 	tokenPatch := new(model.Token)
 	err := c.ShouldBindJSON(tokenPatch)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		helper.RespondError(c, err)
 		return
 	}
 
 	token := new(model.Token)
 	if err = copier.Copy(token, tokenPatch); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		helper.RespondError(c, err)
 		return
 	}
 
@@ -346,10 +313,7 @@ func UpdateToken(c *gin.Context) {
 
 	cleanToken, err := model.GetTokenByIds(token.Id, userId)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		helper.RespondError(c, err)
 		return
 	}
 
@@ -398,10 +362,7 @@ func UpdateToken(c *gin.Context) {
 
 	err = cleanToken.Update()
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		helper.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
