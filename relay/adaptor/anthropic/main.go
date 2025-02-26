@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"strings"
 
@@ -38,7 +39,7 @@ func stopReasonClaude2OpenAI(reason *string) string {
 	}
 }
 
-func ConvertRequest(textRequest model.GeneralOpenAIRequest) *Request {
+func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Request, error) {
 	claudeTools := make([]Tool, 0, len(textRequest.Tools))
 
 	for _, tool := range textRequest.Tools {
@@ -66,7 +67,18 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *Request {
 		Thinking:    textRequest.Thinking,
 	}
 
+	if c.Request.URL.Query().Has("thinking") && claudeRequest.Thinking == nil {
+		claudeRequest.Thinking = &model.Thinking{
+			Type:         "enabled",
+			BudgetTokens: int(math.Min(1024, float64(claudeRequest.MaxTokens/2))),
+		}
+	}
+
 	if claudeRequest.Thinking != nil {
+		if claudeRequest.MaxTokens <= 1024 {
+			return nil, fmt.Errorf("max_tokens must be greater than 1024 when using extended thinking")
+		}
+
 		// top_p must be nil when using extended thinking
 		claudeRequest.TopP = nil
 	}
@@ -151,11 +163,11 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *Request {
 		claudeMessage.Content = contents
 		claudeRequest.Messages = append(claudeRequest.Messages, claudeMessage)
 	}
-	return &claudeRequest
+	return &claudeRequest, nil
 }
 
 // https://docs.anthropic.com/claude/reference/messages-streaming
-func StreamResponseClaude2OpenAI(claudeResponse *StreamResponse) (*openai.ChatCompletionsStreamResponse, *Response) {
+func StreamResponseClaude2OpenAI(c *gin.Context, claudeResponse *StreamResponse) (*openai.ChatCompletionsStreamResponse, *Response) {
 	var response *Response
 	var responseText string
 	var reasoningText string
@@ -220,7 +232,7 @@ func StreamResponseClaude2OpenAI(claudeResponse *StreamResponse) (*openai.ChatCo
 
 	var choice openai.ChatCompletionsStreamResponseChoice
 	choice.Delta.Content = responseText
-	choice.Delta.Reasoning = &reasoningText
+	choice.Delta.SetReasoningContent(c.Query("reasoning_format"), reasoningText)
 	if len(tools) > 0 {
 		choice.Delta.Content = nil // compatible with other OpenAI derivative applications, like LobeOpenAICompatibleFactory ...
 		choice.Delta.ToolCalls = tools
@@ -236,7 +248,7 @@ func StreamResponseClaude2OpenAI(claudeResponse *StreamResponse) (*openai.ChatCo
 	return &openaiResponse, response
 }
 
-func ResponseClaude2OpenAI(claudeResponse *Response) *openai.TextResponse {
+func ResponseClaude2OpenAI(c *gin.Context, claudeResponse *Response) *openai.TextResponse {
 	var responseText string
 	var reasoningText string
 
@@ -273,12 +285,12 @@ func ResponseClaude2OpenAI(claudeResponse *Response) *openai.TextResponse {
 		Message: model.Message{
 			Role:      "assistant",
 			Content:   responseText,
-			Reasoning: &reasoningText,
 			Name:      nil,
 			ToolCalls: tools,
 		},
 		FinishReason: stopReasonClaude2OpenAI(claudeResponse.StopReason),
 	}
+	choice.Message.SetReasoningContent(c.Query("reasoning_format"), reasoningText)
 	fullTextResponse := openai.TextResponse{
 		Id:      fmt.Sprintf("chatcmpl-%s", claudeResponse.Id),
 		Model:   claudeResponse.Model,
@@ -328,7 +340,7 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 			continue
 		}
 
-		response, meta := StreamResponseClaude2OpenAI(&claudeResponse)
+		response, meta := StreamResponseClaude2OpenAI(c, &claudeResponse)
 		if meta != nil {
 			usage.PromptTokens += meta.Usage.InputTokens
 			usage.CompletionTokens += meta.Usage.OutputTokens
@@ -407,7 +419,7 @@ func Handler(c *gin.Context, resp *http.Response, promptTokens int, modelName st
 			StatusCode: resp.StatusCode,
 		}, nil
 	}
-	fullTextResponse := ResponseClaude2OpenAI(&claudeResponse)
+	fullTextResponse := ResponseClaude2OpenAI(c, &claudeResponse)
 	fullTextResponse.Model = modelName
 	usage := model.Usage{
 		PromptTokens:     claudeResponse.Usage.InputTokens,

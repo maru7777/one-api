@@ -2,8 +2,30 @@ package model
 
 import (
 	"context"
+	"strings"
 
 	"github.com/songquanpeng/one-api/common/logger"
+)
+
+// ReasoningFormat is the format of reasoning content,
+// can be set by the reasoning_format parameter in the request url.
+type ReasoningFormat string
+
+const (
+	ReasoningFormatUnspecified ReasoningFormat = ""
+	// ReasoningFormatReasoningContent is the reasoning format used by deepseek official API
+	ReasoningFormatReasoningContent ReasoningFormat = "reasoning_content"
+	// ReasoningFormatReasoning is the reasoning format used by openrouter
+	ReasoningFormatReasoning ReasoningFormat = "reasoning"
+
+	// ReasoningFormatThinkTag is the reasoning format used by 3rd party deepseek-r1 providers.
+	//
+	// Deprecated: I believe <think> is a very poor format, especially in stream mode, it is difficult to extract and convert.
+	// Considering that only a few deepseek-r1 third-party providers use this format, it has been decided to no longer support it.
+	// ReasoningFormatThinkTag ReasoningFormat = "think-tag"
+
+	// ReasoningFormatThinking is the reasoning format used by anthropic
+	ReasoningFormatThinking ReasoningFormat = "thinking"
 )
 
 type Message struct {
@@ -29,6 +51,28 @@ type Message struct {
 	// -------------------------------------
 	Reasoning *string `json:"reasoning,omitempty"`
 	Refusal   *bool   `json:"refusal,omitempty"`
+	// -------------------------------------
+	// Anthropic
+	// -------------------------------------
+	Thinking  *string `json:"thinking,omitempty"`
+	Signature *string `json:"signature,omitempty"`
+}
+
+// SetReasoningContent sets the reasoning content based on the format
+func (m *Message) SetReasoningContent(format string, reasoningContent string) {
+	switch ReasoningFormat(strings.ToLower(strings.TrimSpace(format))) {
+	case ReasoningFormatReasoningContent:
+		m.ReasoningContent = &reasoningContent
+		// case ReasoningFormatThinkTag:
+		// 	m.Content = fmt.Sprintf("<think>%s</think>%s", reasoningContent, m.Content)
+	case ReasoningFormatThinking:
+		m.Thinking = &reasoningContent
+	case ReasoningFormatReasoning,
+		ReasoningFormatUnspecified:
+		m.Reasoning = &reasoningContent
+	default:
+		logger.Warnf(context.TODO(), "unknown reasoning format: %q", format)
+	}
 }
 
 type messageAudio struct {

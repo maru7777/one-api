@@ -8,6 +8,7 @@ import (
 
 	gutils "github.com/Laisky/go-utils/v5"
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/model"
@@ -31,16 +32,16 @@ func Distribute() func(c *gin.Context) {
 		if ok {
 			id, err := strconv.Atoi(channelId.(string))
 			if err != nil {
-				abortWithMessage(c, http.StatusBadRequest, "Invalid Channel Id")
+				abortWithError(c, http.StatusBadRequest, errors.New("Invalid Channel Id"))
 				return
 			}
 			channel, err = model.GetChannelById(id, true)
 			if err != nil {
-				abortWithMessage(c, http.StatusBadRequest, "Invalid Channel Id")
+				abortWithError(c, http.StatusBadRequest, errors.New("Invalid Channel Id"))
 				return
 			}
 			if channel.Status != model.ChannelStatusEnabled {
-				abortWithMessage(c, http.StatusForbidden, "The channel has been disabled")
+				abortWithError(c, http.StatusForbidden, errors.New("The channel has been disabled"))
 				return
 			}
 		} else {
@@ -53,7 +54,7 @@ func Distribute() func(c *gin.Context) {
 					logger.SysError(fmt.Sprintf("Channel does not exist: %d", channel.Id))
 					message = "Database consistency has been broken, please contact the administrator"
 				}
-				abortWithMessage(c, http.StatusServiceUnavailable, message)
+				abortWithError(c, http.StatusServiceUnavailable, errors.New(message))
 				return
 			}
 		}

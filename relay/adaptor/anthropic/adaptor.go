@@ -51,7 +51,7 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 	}
 
 	c.Set("claude_model", request.Model)
-	return ConvertRequest(*request), nil
+	return ConvertRequest(c, *request)
 }
 
 func (a *Adaptor) ConvertImageRequest(_ *gin.Context, request *model.ImageRequest) (any, error) {

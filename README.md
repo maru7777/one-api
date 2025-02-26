@@ -30,6 +30,10 @@ Also welcome to register and use my deployed one-api gateway, which supports var
     - [Support claude-3-7-sonnet \& thinking](#support-claude-3-7-sonnet--thinking)
       - [Stream](#stream)
       - [Non-Stream](#non-stream)
+    - [Automatically Enable Thinking and Customize Reasoning Format via URL Parameters](#automatically-enable-thinking-and-customize-reasoning-format-via-url-parameters)
+      - [Reasoning Format - reasoning-content](#reasoning-format---reasoning-content)
+      - [Reasoning Format - reasoning](#reasoning-format---reasoning)
+      - [Reasoning Format - thinking](#reasoning-format---thinking)
   - [Bug fix](#bug-fix)
 
 ## Turtorial
@@ -171,6 +175,28 @@ By default, the thinking mode is not enabled. You need to manually pass the `thi
 #### Non-Stream
 
 ![](https://s3.laisky.com/uploads/2025/02/claude-thinking-non-stream.png)
+
+### Automatically Enable Thinking and Customize Reasoning Format via URL Parameters
+
+Supports two URL parameters: `thinking` and `reasoning_format`.
+
+- `thinking`: Whether to enable thinking mode, disabled by default.
+- `reasoning_format`: Specifies the format of the returned reasoning.
+  - `reasoning_content`: DeepSeek official API format, returned in the `reasoning_content` field.
+  - `reasoning`: OpenRouter format, returned in the `reasoning` field.
+  - `thinking`: Claude format, returned in the `thinking` field.
+
+#### Reasoning Format - reasoning-content
+
+![](https://s3.laisky.com/uploads/2025/02/reasoning_format-reasoning_content.png)
+
+#### Reasoning Format - reasoning
+
+![](https://s3.laisky.com/uploads/2025/02/reasoning_format-reasoning.png)
+
+#### Reasoning Format - thinking
+
+![](https://s3.laisky.com/uploads/2025/02/reasoning_format-thinking.png)
 
 ## Bug fix
 

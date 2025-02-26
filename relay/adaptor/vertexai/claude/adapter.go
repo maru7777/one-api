@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/relay/adaptor/anthropic"
-
 	"github.com/songquanpeng/one-api/relay/meta"
 	"github.com/songquanpeng/one-api/relay/model"
 )
@@ -32,7 +31,11 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 		return nil, errors.New("request is nil")
 	}
 
-	claudeReq := anthropic.ConvertRequest(*request)
+	claudeReq, err := anthropic.ConvertRequest(c, *request)
+	if err != nil {
+		return nil, errors.Wrap(err, "convert request")
+	}
+
 	req := Request{
 		AnthropicVersion: anthropicVersion,
 		// Model:            claudeReq.Model,

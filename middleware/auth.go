@@ -1,12 +1,12 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common/blacklist"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/common/logger"
@@ -102,34 +102,34 @@ func TokenAuth() func(c *gin.Context) {
 		key = parts[0]
 		token, err := model.ValidateUserToken(key)
 		if err != nil {
-			abortWithMessage(c, http.StatusUnauthorized, err.Error())
+			abortWithError(c, http.StatusUnauthorized, err)
 			return
 		}
 		if token.Subnet != nil && *token.Subnet != "" {
 			if !network.IsIpInSubnets(ctx, c.ClientIP(), *token.Subnet) {
-				abortWithMessage(c, http.StatusForbidden, fmt.Sprintf("This API key can only be used in the specified subnet: %s, current IP: %s", *token.Subnet, c.ClientIP()))
+				abortWithError(c, http.StatusForbidden, errors.Errorf("This API key can only be used in the specified subnet: %s, current IP: %s", *token.Subnet, c.ClientIP()))
 				return
 			}
 		}
 		userEnabled, err := model.CacheIsUserEnabled(token.UserId)
 		if err != nil {
-			abortWithMessage(c, http.StatusInternalServerError, err.Error())
+			abortWithError(c, http.StatusInternalServerError, err)
 			return
 		}
 		if !userEnabled || blacklist.IsUserBanned(token.UserId) {
-			abortWithMessage(c, http.StatusForbidden, "User has been banned")
+			abortWithError(c, http.StatusForbidden, errors.New("User has been banned"))
 			return
 		}
 		requestModel, err := getRequestModel(c)
 		if err != nil && shouldCheckModel(c) {
-			abortWithMessage(c, http.StatusBadRequest, err.Error())
+			abortWithError(c, http.StatusBadRequest, err)
 			return
 		}
 		c.Set(ctxkey.RequestModel, requestModel)
 		if token.Models != nil && *token.Models != "" {
 			c.Set(ctxkey.AvailableModels, *token.Models)
 			if requestModel != "" && !isModelInList(requestModel, *token.Models) {
-				abortWithMessage(c, http.StatusForbidden, fmt.Sprintf("This API key does not have permission to use the model: %s", requestModel))
+				abortWithError(c, http.StatusForbidden, errors.Errorf("This API key does not have permission to use the model: %s", requestModel))
 				return
 			}
 		}
@@ -144,7 +144,7 @@ func TokenAuth() func(c *gin.Context) {
 			if model.IsAdmin(token.UserId) {
 				c.Set(ctxkey.SpecificChannelId, parts[1])
 			} else {
-				abortWithMessage(c, http.StatusForbidden, "Ordinary users do not support specifying channels")
+				abortWithError(c, http.StatusForbidden, errors.New("Ordinary users do not support specifying channels"))
 				return
 			}
 		}

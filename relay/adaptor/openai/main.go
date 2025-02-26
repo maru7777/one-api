@@ -25,103 +25,166 @@ const (
 	dataPrefixLength = len(dataPrefix)
 )
 
+// StreamHandler processes streaming responses from OpenAI API
+// It handles incremental content delivery and accumulates the final response text
+// Returns error (if any), accumulated response text, and token usage information
 func StreamHandler(c *gin.Context, resp *http.Response, relayMode int) (*model.ErrorWithStatusCode, string, *model.Usage) {
+	// Initialize accumulators for the response
 	responseText := ""
 	reasoningText := ""
-	scanner := bufio.NewScanner(resp.Body)
-	buffer := make([]byte, 256*1024)
-	scanner.Buffer(buffer, len(buffer))
-	scanner.Split(bufio.ScanLines)
 	var usage *model.Usage
 
+	// Set up scanner for reading the stream line by line
+	scanner := bufio.NewScanner(resp.Body)
+	buffer := make([]byte, 256*1024) // 256KB buffer for large messages
+	scanner.Buffer(buffer, len(buffer))
+	scanner.Split(bufio.ScanLines)
+
+	// Set response headers for SSE
 	common.SetEventStreamHeaders(c)
 
 	doneRendered := false
+
+	// Process each line from the stream
 	for scanner.Scan() {
 		data := NormalizeDataLine(scanner.Text())
-		if len(data) < dataPrefixLength { // ignore blank line or wrong format
-			continue
+
+		// Skip lines that don't match expected format
+		if len(data) < dataPrefixLength {
+			continue // Ignore blank line or wrong format
 		}
+
+		// Verify line starts with expected prefix
 		if data[:dataPrefixLength] != dataPrefix && data[:dataPrefixLength] != done {
 			continue
 		}
+
+		// Check for stream termination
 		if strings.HasPrefix(data[dataPrefixLength:], done) {
 			render.StringData(c, data)
 			doneRendered = true
 			continue
 		}
+
+		// Process based on relay mode
 		switch relayMode {
 		case relaymode.ChatCompletions:
 			var streamResponse ChatCompletionsStreamResponse
+
+			// Parse the JSON response
 			err := json.Unmarshal([]byte(data[dataPrefixLength:]), &streamResponse)
 			if err != nil {
 				logger.SysError("error unmarshalling stream response: " + err.Error())
-				render.StringData(c, data) // if error happened, pass the data to client
-				continue                   // just ignore the error
+				render.StringData(c, data) // Pass raw data to client if parsing fails
+				continue
 			}
+
+			// Skip empty choices (Azure specific behavior)
 			if len(streamResponse.Choices) == 0 && streamResponse.Usage == nil {
-				// but for empty choice and no usage, we should not pass it to client, this is for azure
-				continue // just ignore empty choice
+				continue
 			}
-			render.StringData(c, data)
+
+			// Process each choice in the response
 			for _, choice := range streamResponse.Choices {
-				if choice.Delta.Reasoning != nil {
-					reasoningText += *choice.Delta.Reasoning
-				}
-				if choice.Delta.ReasoningContent != nil {
-					reasoningText += *choice.Delta.ReasoningContent
+				// Extract reasoning content from different possible fields
+				currentReasoningChunk := extractReasoningContent(&choice.Delta)
+
+				// Update accumulated reasoning text
+				if currentReasoningChunk != "" {
+					reasoningText += currentReasoningChunk
 				}
 
+				// Set the reasoning content in the format requested by client
+				choice.Delta.SetReasoningContent(c.Query("reasoning_format"), currentReasoningChunk)
+
+				// Accumulate response content
 				responseText += conv.AsString(choice.Delta.Content)
 			}
+
+			// Send the processed data to the client
+			render.StringData(c, data)
+
+			// Update usage information if available
 			if streamResponse.Usage != nil {
 				usage = streamResponse.Usage
 			}
+
 		case relaymode.Completions:
+			// Send the data immediately for Completions mode
 			render.StringData(c, data)
+
 			var streamResponse CompletionsStreamResponse
 			err := json.Unmarshal([]byte(data[dataPrefixLength:]), &streamResponse)
 			if err != nil {
 				logger.SysError("error unmarshalling stream response: " + err.Error())
 				continue
 			}
+
+			// Accumulate text from all choices
 			for _, choice := range streamResponse.Choices {
 				responseText += choice.Text
 			}
 		}
 	}
 
+	// Check for scanner errors
 	if err := scanner.Err(); err != nil {
 		logger.SysError("error reading stream: " + err.Error())
 	}
 
+	// Ensure stream termination is sent to client
 	if !doneRendered {
 		render.Done(c)
 	}
 
-	err := resp.Body.Close()
-	if err != nil {
+	// Clean up resources
+	if err := resp.Body.Close(); err != nil {
 		return ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), "", nil
 	}
 
+	// Return the complete response text (reasoning + content) and usage
 	return nil, reasoningText + responseText, usage
 }
 
-// Handler handles the non-stream response from OpenAI API
+// Helper function to extract reasoning content from message delta
+func extractReasoningContent(delta *model.Message) string {
+	content := ""
+
+	// Extract reasoning from different possible fields
+	if delta.Reasoning != nil {
+		content += *delta.Reasoning
+		delta.Reasoning = nil
+	}
+
+	if delta.ReasoningContent != nil {
+		content += *delta.ReasoningContent
+		delta.ReasoningContent = nil
+	}
+
+	return content
+}
+
+// Handler processes non-streaming responses from OpenAI API
+// Returns error (if any) and token usage information
 func Handler(c *gin.Context, resp *http.Response, promptTokens int, modelName string) (*model.ErrorWithStatusCode, *model.Usage) {
-	var textResponse SlimTextResponse
+	// Read the entire response body
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return ErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError), nil
 	}
-	err = resp.Body.Close()
-	if err != nil {
+
+	// Close the original response body
+	if err = resp.Body.Close(); err != nil {
 		return ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), nil
 	}
-	err = json.Unmarshal(responseBody, &textResponse)
-	if err != nil {
+
+	// Parse the response JSON
+	var textResponse SlimTextResponse
+	if err = json.Unmarshal(responseBody, &textResponse); err != nil {
 		return ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError), nil
 	}
+
+	// Check for API errors
 	if textResponse.Error.Type != "" {
 		return &model.ErrorWithStatusCode{
 			Error:      textResponse.Error,
@@ -129,68 +192,131 @@ func Handler(c *gin.Context, resp *http.Response, promptTokens int, modelName st
 		}, nil
 	}
 
-	// Reset response body
+	// Process reasoning content in each choice
+	for _, msg := range textResponse.Choices {
+		reasoningContent := processReasoningContent(&msg)
+
+		// Set reasoning in requested format if content exists
+		if reasoningContent != "" {
+			msg.SetReasoningContent(c.Query("reasoning_format"), reasoningContent)
+		}
+	}
+
+	// Reset response body for forwarding to client
 	resp.Body = io.NopCloser(bytes.NewBuffer(responseBody))
 	logger.Debugf(c.Request.Context(), "handler response: %s", string(responseBody))
 
-	// We shouldn't set the header before we parse the response body, because the parse part may fail.
-	// And then we will have to send an error response, but in this case, the header has already been set.
-	// So the HTTPClient will be confused by the response.
-	// For example, Postman will report error, and we cannot check the response at all.
-	for k, v := range resp.Header {
-		c.Writer.Header().Set(k, v[0])
+	// Forward all response headers (not just first value of each)
+	for k, values := range resp.Header {
+		for _, v := range values {
+			c.Writer.Header().Add(k, v)
+		}
 	}
+
+	// Set response status and copy body to client
 	c.Writer.WriteHeader(resp.StatusCode)
-	_, err = io.Copy(c.Writer, resp.Body)
-	if err != nil {
+	if _, err = io.Copy(c.Writer, resp.Body); err != nil {
 		return ErrorWrapper(err, "copy_response_body_failed", http.StatusInternalServerError), nil
 	}
-	err = resp.Body.Close()
-	if err != nil {
+
+	// Close the reset body
+	if err = resp.Body.Close(); err != nil {
 		return ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), nil
 	}
 
-	if textResponse.Usage.TotalTokens == 0 ||
-		(textResponse.Usage.PromptTokens == 0 && textResponse.Usage.CompletionTokens == 0) {
+	// Calculate token usage if not provided by API
+	calculateTokenUsage(&textResponse, promptTokens, modelName)
+
+	return nil, &textResponse.Usage
+}
+
+// processReasoningContent is a helper function to extract and process reasoning content from the message
+func processReasoningContent(msg *TextResponseChoice) string {
+	var reasoningContent string
+
+	// Check different locations for reasoning content
+	switch {
+	case msg.Reasoning != nil:
+		reasoningContent = *msg.Reasoning
+		msg.Reasoning = nil
+	case msg.ReasoningContent != nil:
+		reasoningContent = *msg.ReasoningContent
+		msg.ReasoningContent = nil
+	case msg.Message.Reasoning != nil:
+		reasoningContent = *msg.Message.Reasoning
+		msg.Message.Reasoning = nil
+	case msg.Message.ReasoningContent != nil:
+		reasoningContent = *msg.Message.ReasoningContent
+		msg.Message.ReasoningContent = nil
+	}
+
+	return reasoningContent
+}
+
+// Helper function to calculate token usage
+func calculateTokenUsage(response *SlimTextResponse, promptTokens int, modelName string) {
+	// Calculate tokens if not provided by the API
+	if response.Usage.TotalTokens == 0 ||
+		(response.Usage.PromptTokens == 0 && response.Usage.CompletionTokens == 0) {
+
 		completionTokens := 0
-		for _, choice := range textResponse.Choices {
+		for _, choice := range response.Choices {
+			// Count content tokens
 			completionTokens += CountTokenText(choice.Message.StringContent(), modelName)
+
+			// Count reasoning tokens in all possible locations
 			if choice.Message.Reasoning != nil {
 				completionTokens += CountToken(*choice.Message.Reasoning)
+			}
+			if choice.Message.ReasoningContent != nil {
+				completionTokens += CountToken(*choice.Message.ReasoningContent)
+			}
+			if choice.Reasoning != nil {
+				completionTokens += CountToken(*choice.Reasoning)
 			}
 			if choice.ReasoningContent != nil {
 				completionTokens += CountToken(*choice.ReasoningContent)
 			}
 		}
-		textResponse.Usage = model.Usage{
+
+		// Set usage values
+		response.Usage = model.Usage{
 			PromptTokens:     promptTokens,
 			CompletionTokens: completionTokens,
 			TotalTokens:      promptTokens + completionTokens,
 		}
-	} else if (textResponse.PromptTokensDetails != nil && textResponse.PromptTokensDetails.AudioTokens > 0) ||
-		(textResponse.CompletionTokensDetails != nil && textResponse.CompletionTokensDetails.AudioTokens > 0) {
-		// Convert the more expensive audio tokens to uniformly priced text tokens.
-		// Note that when there are no audio tokens in prompt and completion,
-		// OpenAI will return empty PromptTokensDetails and CompletionTokensDetails, which can be misleading.
-		if textResponse.PromptTokensDetails != nil {
-			textResponse.Usage.PromptTokens = textResponse.PromptTokensDetails.TextTokens +
-				int(math.Ceil(
-					float64(textResponse.PromptTokensDetails.AudioTokens)*
-						ratio.GetAudioPromptRatio(modelName),
-				))
-		}
+	} else if hasAudioTokens(response) {
+		// Handle audio tokens conversion
+		calculateAudioTokens(response, modelName)
+	}
+}
 
-		if textResponse.CompletionTokensDetails != nil {
-			textResponse.Usage.CompletionTokens = textResponse.CompletionTokensDetails.TextTokens +
-				int(math.Ceil(
-					float64(textResponse.CompletionTokensDetails.AudioTokens)*
-						ratio.GetAudioPromptRatio(modelName)*ratio.GetAudioCompletionRatio(modelName),
-				))
-		}
+// Helper function to check if response has audio tokens
+func hasAudioTokens(response *SlimTextResponse) bool {
+	return (response.PromptTokensDetails != nil && response.PromptTokensDetails.AudioTokens > 0) ||
+		(response.CompletionTokensDetails != nil && response.CompletionTokensDetails.AudioTokens > 0)
+}
 
-		textResponse.Usage.TotalTokens = textResponse.Usage.PromptTokens +
-			textResponse.Usage.CompletionTokens
+// Helper function to calculate audio token usage
+func calculateAudioTokens(response *SlimTextResponse, modelName string) {
+	// Convert audio tokens for prompt
+	if response.PromptTokensDetails != nil {
+		response.Usage.PromptTokens = response.PromptTokensDetails.TextTokens +
+			int(math.Ceil(
+				float64(response.PromptTokensDetails.AudioTokens)*
+					ratio.GetAudioPromptRatio(modelName),
+			))
 	}
 
-	return nil, &textResponse.Usage
+	// Convert audio tokens for completion
+	if response.CompletionTokensDetails != nil {
+		response.Usage.CompletionTokens = response.CompletionTokensDetails.TextTokens +
+			int(math.Ceil(
+				float64(response.CompletionTokensDetails.AudioTokens)*
+					ratio.GetAudioPromptRatio(modelName)*ratio.GetAudioCompletionRatio(modelName),
+			))
+	}
+
+	// Calculate total tokens
+	response.Usage.TotalTokens = response.Usage.PromptTokens + response.Usage.CompletionTokens
 }

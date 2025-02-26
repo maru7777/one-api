@@ -88,7 +88,7 @@ func Handler(c *gin.Context, awsCli *bedrockruntime.Client, modelName string) (*
 		return utils.WrapErr(errors.Wrap(err, "unmarshal response")), nil
 	}
 
-	openaiResp := anthropic.ResponseClaude2OpenAI(claudeResponse)
+	openaiResp := anthropic.ResponseClaude2OpenAI(c, claudeResponse)
 	openaiResp.Model = modelName
 	usage := relaymodel.Usage{
 		PromptTokens:     claudeResponse.Usage.InputTokens,
@@ -159,7 +159,7 @@ func StreamHandler(c *gin.Context, awsCli *bedrockruntime.Client) (*relaymodel.E
 				return false
 			}
 
-			response, meta := anthropic.StreamResponseClaude2OpenAI(claudeResp)
+			response, meta := anthropic.StreamResponseClaude2OpenAI(c, claudeResp)
 			if meta != nil {
 				usage.PromptTokens += meta.Usage.InputTokens
 				usage.CompletionTokens += meta.Usage.OutputTokens

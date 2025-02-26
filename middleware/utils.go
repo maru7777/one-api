@@ -3,6 +3,8 @@ package middleware
 import (
 	"strings"
 
+	gmw "github.com/Laisky/gin-middlewares/v6"
+	"github.com/Laisky/zap"
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common"
@@ -19,6 +21,18 @@ func abortWithMessage(c *gin.Context, statusCode int, message string) {
 	})
 	c.Abort()
 	logger.Error(c.Request.Context(), message)
+}
+
+func abortWithError(c *gin.Context, statusCode int, err error) {
+	logger := gmw.GetLogger(c)
+	logger.Error("server abort", zap.Error(err))
+	c.JSON(statusCode, gin.H{
+		"error": gin.H{
+			"message": helper.MessageWithRequestId(err.Error(), c.GetString(helper.RequestIdKey)),
+			"type":    "one_api_error",
+		},
+	})
+	c.Abort()
 }
 
 func getRequestModel(c *gin.Context) (string, error) {
