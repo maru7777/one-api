@@ -110,6 +110,8 @@ jobs:
           push: true
           tags: ppcelery/one-api:arm64-${{ env.SHORT_SHA }}
           platforms: linux/arm64
+          build-args: |
+            TARGETARCH=arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -138,5 +140,7 @@ jobs:
           push: true
           tags: ppcelery/one-api:arm64-latest
           platforms: linux/arm64
+          build-args: |
+            TARGETARCH=arm64
           cache-from: type=gha
           # cache-to: type=gha,mode=max

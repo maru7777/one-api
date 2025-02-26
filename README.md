@@ -205,3 +205,4 @@ Supports two URL parameters: `thinking` and `reasoning_format`.
 - [fix: 修复高并发下，高额度用户使用低额度令牌没有预扣费而导致令牌大额欠费 #25](https://github.com/Laisky/one-api/pull/25)
 - [fix: channel test false negative #2065](https://github.com/songquanpeng/one-api/pull/2065)
 - [fix: resolve "bufio.Scanner: token too long" error by increasing buff… #2128](https://github.com/songquanpeng/one-api/pull/2128)
+- [feat: Enhance VolcEngine channel support with bot model #2131](https://github.com/songquanpeng/one-api/pull/2131)
