@@ -12,9 +12,8 @@ assignees: ""
 
 - [ ] I have confirmed there are no similar issues
 - [ ] I have confirmed I am using the latest version
-- [ ] I have thoroughly read the project README, especially the FAQ section
+- [ ] I have thoroughly read the project README
 - [ ] I understand and am willing to follow up on this issue, assist with testing and provide feedback
-- [ ] I understand and agree to the above, and understand that maintainers have limited time - **issues not following guidelines may be ignored or closed**
 
 ## Issue Description
 

@@ -32,16 +32,16 @@ func Distribute() func(c *gin.Context) {
 		if ok {
 			id, err := strconv.Atoi(channelId.(string))
 			if err != nil {
-				abortWithError(c, http.StatusBadRequest, errors.New("Invalid Channel Id"))
+				AbortWithError(c, http.StatusBadRequest, errors.New("Invalid Channel Id"))
 				return
 			}
 			channel, err = model.GetChannelById(id, true)
 			if err != nil {
-				abortWithError(c, http.StatusBadRequest, errors.New("Invalid Channel Id"))
+				AbortWithError(c, http.StatusBadRequest, errors.New("Invalid Channel Id"))
 				return
 			}
 			if channel.Status != model.ChannelStatusEnabled {
-				abortWithError(c, http.StatusForbidden, errors.New("The channel has been disabled"))
+				AbortWithError(c, http.StatusForbidden, errors.New("The channel has been disabled"))
 				return
 			}
 		} else {
@@ -54,7 +54,7 @@ func Distribute() func(c *gin.Context) {
 					logger.SysError(fmt.Sprintf("Channel does not exist: %d", channel.Id))
 					message = "Database consistency has been broken, please contact the administrator"
 				}
-				abortWithError(c, http.StatusServiceUnavailable, errors.New(message))
+				AbortWithError(c, http.StatusServiceUnavailable, errors.New(message))
 				return
 			}
 		}

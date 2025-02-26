@@ -4,11 +4,13 @@ import (
 	"context"
 	"sort"
 	"strings"
+	"time"
 
-	"gorm.io/gorm"
-
+	gutils "github.com/Laisky/go-utils/v5"
+	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/utils"
+	"gorm.io/gorm"
 )
 
 type Ability struct {
@@ -109,4 +111,45 @@ func GetGroupModels(ctx context.Context, group string) ([]string, error) {
 	}
 	sort.Strings(models)
 	return models, err
+}
+
+var getGroupModelsV2Cache = gutils.NewExpCache[[]EnabledAbility](context.Background(), time.Second*10)
+
+type EnabledAbility struct {
+	Model       string `json:"model" gorm:"model"`
+	ChannelType int    `json:"channel_type" gorm:"channel_type"`
+}
+
+// GetGroupModelsV2 returns all enabled models for this group with their channel names.
+func GetGroupModelsV2(ctx context.Context, group string) ([]EnabledAbility, error) {
+	// get from cache first
+	if models, ok := getGroupModelsV2Cache.Load(group); ok {
+		return models, nil
+	}
+
+	// prepare query based on database type
+	groupCol := "`group`"
+	trueVal := "1"
+	if common.UsingPostgreSQL {
+		groupCol = `"group"`
+		trueVal = "true"
+	}
+
+	// query with JOIN to get model and channel name in a single query
+	var models []EnabledAbility
+	query := DB.Model(&Ability{}).
+		Select("abilities.model AS model, channels.type AS channel_type").
+		Joins("JOIN channels ON abilities.channel_id = channels.id").
+		Where("abilities."+groupCol+" = ? AND abilities.enabled = "+trueVal, group).
+		Order("abilities.priority DESC")
+
+	err := query.Find(&models).Error
+	if err != nil {
+		return nil, errors.Wrap(err, "get group models")
+	}
+
+	// store in cache
+	getGroupModelsV2Cache.Store(group, models)
+
+	return models, nil
 }

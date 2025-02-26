@@ -102,34 +102,34 @@ func TokenAuth() func(c *gin.Context) {
 		key = parts[0]
 		token, err := model.ValidateUserToken(key)
 		if err != nil {
-			abortWithError(c, http.StatusUnauthorized, err)
+			AbortWithError(c, http.StatusUnauthorized, err)
 			return
 		}
 		if token.Subnet != nil && *token.Subnet != "" {
 			if !network.IsIpInSubnets(ctx, c.ClientIP(), *token.Subnet) {
-				abortWithError(c, http.StatusForbidden, errors.Errorf("This API key can only be used in the specified subnet: %s, current IP: %s", *token.Subnet, c.ClientIP()))
+				AbortWithError(c, http.StatusForbidden, errors.Errorf("This API key can only be used in the specified subnet: %s, current IP: %s", *token.Subnet, c.ClientIP()))
 				return
 			}
 		}
 		userEnabled, err := model.CacheIsUserEnabled(token.UserId)
 		if err != nil {
-			abortWithError(c, http.StatusInternalServerError, err)
+			AbortWithError(c, http.StatusInternalServerError, err)
 			return
 		}
 		if !userEnabled || blacklist.IsUserBanned(token.UserId) {
-			abortWithError(c, http.StatusForbidden, errors.New("User has been banned"))
+			AbortWithError(c, http.StatusForbidden, errors.New("User has been banned"))
 			return
 		}
 		requestModel, err := getRequestModel(c)
 		if err != nil && shouldCheckModel(c) {
-			abortWithError(c, http.StatusBadRequest, err)
+			AbortWithError(c, http.StatusBadRequest, err)
 			return
 		}
 		c.Set(ctxkey.RequestModel, requestModel)
 		if token.Models != nil && *token.Models != "" {
 			c.Set(ctxkey.AvailableModels, *token.Models)
 			if requestModel != "" && !isModelInList(requestModel, *token.Models) {
-				abortWithError(c, http.StatusForbidden, errors.Errorf("This API key does not have permission to use the model: %s", requestModel))
+				AbortWithError(c, http.StatusForbidden, errors.Errorf("This API key does not have permission to use the model: %s", requestModel))
 				return
 			}
 		}
@@ -144,7 +144,7 @@ func TokenAuth() func(c *gin.Context) {
 			if model.IsAdmin(token.UserId) {
 				c.Set(ctxkey.SpecificChannelId, parts[1])
 			} else {
-				abortWithError(c, http.StatusForbidden, errors.New("Ordinary users do not support specifying channels"))
+				AbortWithError(c, http.StatusForbidden, errors.New("Ordinary users do not support specifying channels"))
 				return
 			}
 		}

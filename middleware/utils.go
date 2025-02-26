@@ -23,7 +23,8 @@ func abortWithMessage(c *gin.Context, statusCode int, message string) {
 	logger.Error(c.Request.Context(), message)
 }
 
-func abortWithError(c *gin.Context, statusCode int, err error) {
+// AbortWithError aborts the request with an error message
+func AbortWithError(c *gin.Context, statusCode int, err error) {
 	logger := gmw.GetLogger(c)
 	logger.Error("server abort", zap.Error(err))
 	c.JSON(statusCode, gin.H{

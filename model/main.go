@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
@@ -118,6 +119,11 @@ func InitDB() {
 		return
 	}
 
+	if config.DebugSQLEnabled {
+		logger.Debug(context.TODO(), "debug sql enabled")
+		DB = DB.Debug()
+	}
+
 	sqlDB := setDBConns(DB)
 
 	if !config.IsMasterNode {
@@ -203,10 +209,6 @@ func migrateLOGDB() error {
 }
 
 func setDBConns(db *gorm.DB) *sql.DB {
-	if config.DebugSQLEnabled {
-		db = db.Debug()
-	}
-
 	sqlDB, err := db.DB()
 	if err != nil {
 		logger.FatalLog("failed to connect database: " + err.Error())
