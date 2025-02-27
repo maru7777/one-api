@@ -152,7 +152,7 @@ func ListModels(c *gin.Context) {
 	}
 
 	// Get available models with their channel names
-	availableAbilities, err := model.GetGroupModelsV2(c.Request.Context(), userGroup)
+	availableAbilities, err := model.CacheGetGroupModelsV2(c.Request.Context(), userGroup)
 	if err != nil {
 		middleware.AbortWithError(c, http.StatusBadRequest, err)
 		return
@@ -217,7 +217,8 @@ func GetUserAvailableModels(c *gin.Context) {
 		})
 		return
 	}
-	models, err := model.CacheGetGroupModels(ctx, userGroup)
+
+	models, err := model.CacheGetGroupModelsV2(ctx, userGroup)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -225,10 +226,20 @@ func GetUserAvailableModels(c *gin.Context) {
 		})
 		return
 	}
+
+	var modelNames []string
+	modelsMap := map[string]bool{}
+	for _, model := range models {
+		modelsMap[model.Model] = true
+	}
+	for modelName := range modelsMap {
+		modelNames = append(modelNames, modelName)
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    models,
+		"data":    modelNames,
 	})
 	return
 }

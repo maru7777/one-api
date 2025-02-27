@@ -150,7 +150,10 @@ func CacheIsUserEnabled(userId int) (bool, error) {
 	return userEnabled, err
 }
 
-func CacheGetGroupModels(ctx context.Context, group string) ([]string, error) {
+// CacheGetGroupModels returns models of a group
+//
+// Deprecated: use CacheGetGroupModelsV2 instead
+func CacheGetGroupModels(ctx context.Context, group string) (models []string, err error) {
 	if !common.RedisEnabled {
 		return GetGroupModels(ctx, group)
 	}
@@ -158,7 +161,7 @@ func CacheGetGroupModels(ctx context.Context, group string) ([]string, error) {
 	if err == nil {
 		return strings.Split(modelsStr, ","), nil
 	}
-	models, err := GetGroupModels(ctx, group)
+	models, err = GetGroupModels(ctx, group)
 	if err != nil {
 		return nil, err
 	}
@@ -166,6 +169,42 @@ func CacheGetGroupModels(ctx context.Context, group string) ([]string, error) {
 	if err != nil {
 		logger.SysError("Redis set group models error: " + err.Error())
 	}
+	return models, nil
+}
+
+// CacheGetGroupModelsV2 is a version of CacheGetGroupModels that returns EnabledAbility instead of string
+func CacheGetGroupModelsV2(ctx context.Context, group string) (models []EnabledAbility, err error) {
+	if !common.RedisEnabled {
+		return GetGroupModelsV2(ctx, group)
+	}
+	modelsStr, err := common.RedisGet(fmt.Sprintf("group_models_v2:%s", group))
+	if err != nil {
+		logger.Warnf(ctx, "Redis get group models error: %+v", err)
+	} else {
+		if err = json.Unmarshal([]byte(modelsStr), &models); err != nil {
+			logger.Warnf(ctx, "Redis get group models error: %+v", err)
+		} else {
+			return models, nil
+		}
+	}
+
+	models, err = GetGroupModelsV2(ctx, group)
+	if err != nil {
+		return nil, errors.Wrap(err, "get group models")
+	}
+
+	cachePayload, err := json.Marshal(models)
+	if err != nil {
+		logger.SysError("Redis set group models error: " + err.Error())
+		return models, nil
+	}
+
+	err = common.RedisSet(fmt.Sprintf("group_models:%s", group), string(cachePayload),
+		time.Duration(GroupModelsCacheSeconds)*time.Second)
+	if err != nil {
+		logger.SysError("Redis set group models error: " + err.Error())
+	}
+
 	return models, nil
 }
 
