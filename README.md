@@ -49,11 +49,24 @@ oneapi:
     options:
       max-size: "10m"
   environment:
-    - ENFORCE_INCLUDE_USAGE=true
-    - GLOBAL_API_RATE_LIMIT=1000
-    - GLOBAL_WEB_RATE_LIMIT=1000
-    - FRONTEND_BASE_URL=https://oneapi.laisky.com
-    - OPENROUTER_PROVIDER_SORT=throughput
+      # (optional) SESSION_SECRET set a fixed session secret so that user sessions won't be invalidated after server restart
+      SESSION_SECRET: xxxxxxx
+      # (optional) DEBUG enable debug mode
+      DEBUG: true
+      # (optional) DEBUG_SQL display SQL logs
+      DEBUG_SQL: true
+      # (optional) ENFORCE_INCLUDE_USAGE require upstream API responses to include usage field
+      ENFORCE_INCLUDE_USAGE: true
+      # (optional) GLOBAL_API_RATE_LIMIT maximum API requests per IP within three minutes, default is 1000
+      GLOBAL_API_RATE_LIMIT: 1000
+      # (optional) GLOBAL_WEB_RATE_LIMIT maximum web page requests per IP within three minutes, default is 1000
+      GLOBAL_WEB_RATE_LIMIT: 1000
+      # (optional) REDIS_CONN_STRING set REDIS cache connection
+      REDIS_CONN_STRING: redis://100.122.41.16:6379/1
+      # (optional) FRONTEND_BASE_URL redirect page requests to specified address, server-side setting only
+      FRONTEND_BASE_URL: https://oneapi.laisky.com
+      # (optional) OPENROUTER_PROVIDER_SORT set sorting method for OpenRouter Providers, default is throughput
+      OPENROUTER_PROVIDER_SORT: throughput
   volumes:
     - /var/lib/oneapi:/data
   ports:
@@ -206,3 +219,4 @@ Supports two URL parameters: `thinking` and `reasoning_format`.
 - [fix: channel test false negative #2065](https://github.com/songquanpeng/one-api/pull/2065)
 - [fix: resolve "bufio.Scanner: token too long" error by increasing buff… #2128](https://github.com/songquanpeng/one-api/pull/2128)
 - [feat: Enhance VolcEngine channel support with bot model #2131](https://github.com/songquanpeng/one-api/pull/2131)
+- [fix: models api return models in deactivate channels #2150](https://github.com/songquanpeng/one-api/pull/2150)
