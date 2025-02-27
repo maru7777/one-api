@@ -52,11 +52,11 @@ oneapi:
       # (optional) SESSION_SECRET set a fixed session secret so that user sessions won't be invalidated after server restart
       SESSION_SECRET: xxxxxxx
       # (optional) DEBUG enable debug mode
-      DEBUG: true
+      DEBUG: "true"
       # (optional) DEBUG_SQL display SQL logs
-      DEBUG_SQL: true
+      DEBUG_SQL: "true"
       # (optional) ENFORCE_INCLUDE_USAGE require upstream API responses to include usage field
-      ENFORCE_INCLUDE_USAGE: true
+      ENFORCE_INCLUDE_USAGE: "true"
       # (optional) GLOBAL_API_RATE_LIMIT maximum API requests per IP within three minutes, default is 1000
       GLOBAL_API_RATE_LIMIT: 1000
       # (optional) GLOBAL_WEB_RATE_LIMIT maximum web page requests per IP within three minutes, default is 1000
