@@ -19,7 +19,7 @@ RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run buil
     DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/air & \
     wait
 
-FROM golang:1.24.1-bullseye AS builder2
+FROM golang:1.24.0-bullseye AS builder2
 
 # Make sure to use ARG with a default value
 ARG TARGETARCH=amd64
