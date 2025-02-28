@@ -55,8 +55,8 @@ github.com/Laisky/go-chaining v0.0.0-20180507092046-43dcdc5a21be h1:7Rxhm6IjOtDA
 github.com/Laisky/go-chaining v0.0.0-20180507092046-43dcdc5a21be/go.mod h1:1mdzaETo0kjvCQICPSePsoaatJN4l7JvEA1200lyevo=
 github.com/Laisky/go-gin-prometheus v1.0.1 h1:0xxZ0SeuycO65sQyZpwVCr19blGtkbwv39pQrw+hrWo=
 github.com/Laisky/go-gin-prometheus v1.0.1/go.mod h1:3yC0gDd4f79ikEM1eGHLTWSRG0tluOV2mmx/liYLtIA=
-github.com/Laisky/go-utils/v5 v5.0.0 h1:Cn7Xy3nnWI9bOZpiZ+msRM9953AneXDTqaFAwIzXM2Y=
-github.com/Laisky/go-utils/v5 v5.0.0/go.mod h1:4v7RGRQvvECSiuND4d1N3sW09A+GcclZUHQnbAkX+T0=
+github.com/Laisky/go-utils/v5 v5.0.1-0.20250228054950-e1500acd6929 h1:xAvviiCg/4ohZi0y4N8jTmZMIIuZAnt7zxpFKt580uw=
+github.com/Laisky/go-utils/v5 v5.0.1-0.20250228054950-e1500acd6929/go.mod h1:4v7RGRQvvECSiuND4d1N3sW09A+GcclZUHQnbAkX+T0=
 github.com/Laisky/golang-fifo v1.0.1-0.20240403091456-fc83d5e38c0b h1:o2BuVyXFkDTkEiuz1Ur32jGvaErgEHqhb8AtTIkrvE0=
 github.com/Laisky/golang-fifo v1.0.1-0.20240403091456-fc83d5e38c0b/go.mod h1:j90tUqwBaEncIzpAd6ZGPZHWjclgAyMY8fdOqsewitE=
 github.com/Laisky/graphql v1.0.6 h1:NEULGxfxo+wbsW2OmqBXOMNUGgqo8uFjWNabwuNK10g=

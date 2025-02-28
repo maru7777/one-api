@@ -147,6 +147,7 @@ jobs:
 
   build_windows:
     runs-on: windows-latest
+    if: startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -177,3 +178,31 @@ jobs:
             one-api.exe
             one-api-${{ env.SHORT_SHA }}.exe
           retention-days: 90
+
+  create_release:
+    needs: [build_windows]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract version
+        id: extract_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Add SHORT_SHA env property with commit short sha
+        run: echo "SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-7`" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: one-api-windows
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ steps.extract_version.outputs.VERSION }}
+          files: |
+            one-api.exe
+            one-api-${{ env.SHORT_SHA }}.exe
+          draft: false
+          prerelease: false

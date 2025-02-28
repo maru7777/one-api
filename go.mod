@@ -7,7 +7,8 @@ toolchain go1.24.0
 require (
 	cloud.google.com/go/iam v1.4.0
 	github.com/Laisky/gin-middlewares/v6 v6.0.0
-	github.com/Laisky/go-utils/v5 v5.0.0
+	github.com/Laisky/go-utils/v5 v5.0.1-0.20250228054950-e1500acd6929
+	github.com/Laisky/zap v1.27.1-0.20241010063010-3154c45f2a1f
 	github.com/aws/aws-sdk-go-v2 v1.36.2
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.60
 	github.com/aws/aws-sdk-go-v2/service/bedrockruntime v1.24.6
@@ -51,7 +52,6 @@ require (
 	github.com/Laisky/golang-fifo v1.0.1-0.20240403091456-fc83d5e38c0b // indirect
 	github.com/Laisky/graphql v1.0.6 // indirect
 	github.com/Laisky/pprof v0.0.0-20231102060718-a7a7fd2965ee // indirect
-	github.com/Laisky/zap v1.27.1-0.20241010063010-3154c45f2a1f // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.10 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.33 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.33 // indirect
