@@ -26,25 +26,27 @@ var modelRatioLock sync.RWMutex
 // 1 === ￥0.014 / 1k tokens
 var ModelRatio = map[string]float64{
 	// https://openai.com/pricing
-	"gpt-4":                  15,
-	"gpt-4-0314":             15,
-	"gpt-4-0613":             15,
-	"gpt-4-32k":              30,
-	"gpt-4-32k-0314":         30,
-	"gpt-4-32k-0613":         30,
-	"gpt-4-1106-preview":     5,     // $0.01 / 1K tokens
-	"gpt-4-0125-preview":     5,     // $0.01 / 1K tokens
-	"gpt-4-turbo-preview":    5,     // $0.01 / 1K tokens
-	"gpt-4-turbo":            5,     // $0.01 / 1K tokens
-	"gpt-4-turbo-2024-04-09": 5,     // $0.01 / 1K tokens
-	"gpt-4o":                 2.5,   // $0.005 / 1K tokens
-	"chatgpt-4o-latest":      2.5,   // $0.005 / 1K tokens
-	"gpt-4o-2024-05-13":      2.5,   // $0.005 / 1K tokens
-	"gpt-4o-2024-08-06":      1.25,  // $0.0025 / 1K tokens
-	"gpt-4o-2024-11-20":      1.25,  // $0.0025 / 1K tokens
-	"gpt-4o-mini":            0.075, // $0.00015 / 1K tokens
-	"gpt-4o-mini-2024-07-18": 0.075, // $0.00015 / 1K tokens
-	"gpt-4-vision-preview":   5,     // $0.01 / 1K tokens
+	"gpt-4.5-preview":            75 * MILLI_USD,
+	"gpt-4.5-preview-2025-02-27": 75 * MILLI_USD,
+	"gpt-4":                      15,
+	"gpt-4-0314":                 15,
+	"gpt-4-0613":                 15,
+	"gpt-4-32k":                  30,
+	"gpt-4-32k-0314":             30,
+	"gpt-4-32k-0613":             30,
+	"gpt-4-1106-preview":         5,     // $0.01 / 1K tokens
+	"gpt-4-0125-preview":         5,     // $0.01 / 1K tokens
+	"gpt-4-turbo-preview":        5,     // $0.01 / 1K tokens
+	"gpt-4-turbo":                5,     // $0.01 / 1K tokens
+	"gpt-4-turbo-2024-04-09":     5,     // $0.01 / 1K tokens
+	"gpt-4o":                     2.5,   // $0.005 / 1K tokens
+	"chatgpt-4o-latest":          2.5,   // $0.005 / 1K tokens
+	"gpt-4o-2024-05-13":          2.5,   // $0.005 / 1K tokens
+	"gpt-4o-2024-08-06":          1.25,  // $0.0025 / 1K tokens
+	"gpt-4o-2024-11-20":          1.25,  // $0.0025 / 1K tokens
+	"gpt-4o-mini":                0.075, // $0.00015 / 1K tokens
+	"gpt-4o-mini-2024-07-18":     0.075, // $0.00015 / 1K tokens
+	"gpt-4-vision-preview":       5,     // $0.01 / 1K tokens
 	// Audio billing will mix text and audio tokens, the unit price is different.
 	// Here records the cost of text, the cost multiplier of audio
 	// relative to text is in AudioRatio
@@ -578,6 +580,7 @@ var ModelRatio = map[string]float64{
 	"openai/gpt-4o-mini":                              0.3,
 	"openai/gpt-4o-mini-2024-07-18":                   0.3,
 	"openai/gpt-4o:extended":                          9.0,
+	"openai/gpt-4.5-preview":                          75 * MILLI_USD,
 	"openai/o1":                                       30.0,
 	"openai/o1-mini":                                  2.2,
 	"openai/o1-mini-2024-09-12":                       2.2,
@@ -815,6 +818,8 @@ func GetCompletionRatio(name string, channelType int) float64 {
 	}
 	model := fmt.Sprintf("%s(%d)", name, channelType)
 
+	name = strings.TrimPrefix(name, "openai/")
+
 	for _, targetName := range []string{model, name} {
 		for _, ratioMap := range []map[string]float64{
 			CompletionRatio,
@@ -839,17 +844,18 @@ func GetCompletionRatio(name string, channelType int) float64 {
 		return 4.0 / 3.0
 	}
 	if strings.HasPrefix(name, "gpt-4") {
-		if strings.HasPrefix(name, "gpt-4o") {
+		switch {
+		case strings.HasPrefix(name, "gpt-4o"):
 			if name == "gpt-4o-2024-05-13" {
 				return 3
 			}
 			return 4
-		}
-		if strings.HasPrefix(name, "gpt-4-turbo") ||
-			strings.HasSuffix(name, "preview") {
+		case strings.HasPrefix(name, "gpt-4-turbo") ||
+			strings.HasSuffix(name, "preview"):
 			return 3
+		default:
+			return 2
 		}
-		return 2
 	}
 	// including o1/o1-preview/o1-mini
 	if strings.HasPrefix(name, "o1") ||
