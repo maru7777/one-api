@@ -799,6 +799,7 @@ func GetModelRatio(name string, channelType int) float64 {
 	return 30
 }
 
+// CompletionRatio2JSONString returns the CompletionRatio map as a JSON string.
 func CompletionRatio2JSONString() string {
 	jsonBytes, err := json.Marshal(CompletionRatio)
 	if err != nil {
@@ -807,64 +808,79 @@ func CompletionRatio2JSONString() string {
 	return string(jsonBytes)
 }
 
+// completionRatioLock is a mutex for synchronizing access to the CompletionRatio map.
+var completionRatioLock sync.RWMutex
+
+// UpdateCompletionRatioByJSONString updates the CompletionRatio map with the given JSON string.
 func UpdateCompletionRatioByJSONString(jsonStr string) error {
+	completionRatioLock.Lock()
+	defer completionRatioLock.Unlock()
 	CompletionRatio = make(map[string]float64)
 	return json.Unmarshal([]byte(jsonStr), &CompletionRatio)
 }
 
+// GetCompletionRatio returns the completion ratio for the given model name and channel type.
 func GetCompletionRatio(name string, channelType int) float64 {
+	completionRatioLock.RLock()
+	defer completionRatioLock.RUnlock()
 	if strings.HasPrefix(name, "qwen-") && strings.HasSuffix(name, "-internet") {
 		name = strings.TrimSuffix(name, "-internet")
 	}
 	model := fmt.Sprintf("%s(%d)", name, channelType)
 
 	name = strings.TrimPrefix(name, "openai/")
-
 	for _, targetName := range []string{model, name} {
 		for _, ratioMap := range []map[string]float64{
 			CompletionRatio,
 			DefaultCompletionRatio,
 			AudioCompletionRatio,
 		} {
+			// first try the model name
 			if ratio, ok := ratioMap[targetName]; ok {
+				return ratio
+			}
+
+			// then try the model name without some special prefix
+			normalizedTargetName := strings.TrimPrefix(targetName, "openai/")
+			if ratio, ok := ratioMap[normalizedTargetName]; ok {
 				return ratio
 			}
 		}
 	}
 
-	if strings.HasPrefix(name, "gpt-3.5") {
-		if name == "gpt-3.5-turbo" || strings.HasSuffix(name, "0125") {
+	// openai
+	switch {
+	case strings.HasPrefix(name, "gpt-3.5"):
+		switch {
+		case name == "gpt-3.5-turbo" || strings.HasSuffix(name, "0125"):
 			// https://openai.com/blog/new-embedding-models-and-api-updates
 			// Updated GPT-3.5 Turbo model and lower pricing
 			return 3
-		}
-		if strings.HasSuffix(name, "1106") {
+		case strings.HasSuffix(name, "1106"):
 			return 2
+		default:
+			return 4.0 / 3.0
 		}
-		return 4.0 / 3.0
-	}
-	if strings.HasPrefix(name, "gpt-4") {
+	case name == "chatgpt-4o-latest":
+		return 3
+	case strings.HasPrefix(name, "gpt-4"):
 		switch {
 		case strings.HasPrefix(name, "gpt-4o"):
 			if name == "gpt-4o-2024-05-13" {
 				return 3
 			}
 			return 4
-		case strings.HasPrefix(name, "gpt-4-turbo") ||
-			strings.HasSuffix(name, "preview"):
+		case strings.HasPrefix(name, "gpt-4-"):
 			return 3
 		default:
 			return 2
 		}
-	}
 	// including o1/o1-preview/o1-mini
-	if strings.HasPrefix(name, "o1") ||
-		strings.HasPrefix(name, "o3") {
+	case strings.HasPrefix(name, "o1") ||
+		strings.HasPrefix(name, "o3"):
 		return 4
 	}
-	if name == "chatgpt-4o-latest" {
-		return 3
-	}
+
 	if strings.HasPrefix(name, "claude-3") {
 		return 5
 	}
@@ -923,5 +939,6 @@ func GetCompletionRatio(name string, channelType int) float64 {
 		return 1.000 / 0.300 // ≈3.333333
 	}
 
+	logger.SysWarn(fmt.Sprintf("completion ratio not found for model: %s (channel type: %d), using default value 1", name, channelType))
 	return 1
 }
