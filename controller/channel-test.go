@@ -270,7 +270,7 @@ func testChannels(ctx context.Context, notify bool, scope string) error {
 		if notify {
 			err := message.Notify(message.ByAll, "Channel test completed", "", "Channel test completed, if you have not received the disable notification, it means that all channels are normal")
 			if err != nil {
-				logger.SysError(fmt.Sprintf("failed to send email: %s", err.Error()))
+				logger.SysError(fmt.Sprintf("failed to send notify: %s", err.Error()))
 			}
 		}
 	}()
