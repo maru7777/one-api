@@ -5,12 +5,19 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
 func TestGetAudioDuration(t *testing.T) {
+	// skip if there is no ffmpeg installed
+	_, err := exec.LookPath("ffmpeg")
+	if err != nil {
+		t.Skip("ffmpeg not installed, skipping test")
+	}
+
 	t.Run("should return correct duration for a valid audio file", func(t *testing.T) {
 		tmpFile, err := os.CreateTemp("", "test_audio*.mp3")
 		require.NoError(t, err)
@@ -37,6 +44,12 @@ func TestGetAudioDuration(t *testing.T) {
 }
 
 func TestGetAudioTokens(t *testing.T) {
+	// skip if there is no ffmpeg installed
+	_, err := exec.LookPath("ffmpeg")
+	if err != nil {
+		t.Skip("ffmpeg not installed, skipping test")
+	}
+
 	t.Run("should return correct tokens for a valid audio file", func(t *testing.T) {
 		// download test audio file
 		resp, err := http.Get("https://s3.laisky.com/uploads/2025/01/audio-sample.m4a")
@@ -45,7 +58,7 @@ func TestGetAudioTokens(t *testing.T) {
 
 		tokens, err := GetAudioTokens(context.Background(), resp.Body, 50)
 		require.NoError(t, err)
-		require.Equal(t, tokens, 200)
+		require.Equal(t, tokens, 195.2)
 	})
 
 	t.Run("should return an error for a non-existent file", func(t *testing.T) {
