@@ -49,6 +49,8 @@ func StreamHandler(c *gin.Context, resp *http.Response, relayMode int) (*model.E
 	for scanner.Scan() {
 		data := NormalizeDataLine(scanner.Text())
 
+		// logger.Debugf(c.Request.Context(), "stream response: %s", data)
+
 		// Skip lines that don't match expected format
 		if len(data) < dataPrefixLength {
 			continue // Ignore blank line or wrong format
@@ -74,7 +76,7 @@ func StreamHandler(c *gin.Context, resp *http.Response, relayMode int) (*model.E
 			// Parse the JSON response
 			err := json.Unmarshal([]byte(data[dataPrefixLength:]), &streamResponse)
 			if err != nil {
-				logger.SysError("error unmarshalling stream response: " + err.Error())
+				logger.Errorf(c.Request.Context(), "unmarshalling stream data %q got %+v", data, err)
 				render.StringData(c, data) // Pass raw data to client if parsing fails
 				continue
 			}
