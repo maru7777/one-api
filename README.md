@@ -34,6 +34,7 @@ Also welcome to register and use my deployed one-api gateway, which supports var
       - [Reasoning Format - reasoning-content](#reasoning-format---reasoning-content)
       - [Reasoning Format - reasoning](#reasoning-format---reasoning)
       - [Reasoning Format - thinking](#reasoning-format---thinking)
+    - [Support AWS cross-region inferences](#support-aws-cross-region-inferences)
   - [Bug fix](#bug-fix)
 
 ## Turtorial
@@ -211,6 +212,10 @@ Supports two URL parameters: `thinking` and `reasoning_format`.
 
 ![](https://s3.laisky.com/uploads/2025/02/reasoning_format-thinking.png)
 
+### Support AWS cross-region inferences
+
+- [fix: support aws cross region inferences #2182](https://github.com/songquanpeng/one-api/pull/2182)
+
 ## Bug fix
 
 - [BUGFIX: Several issues when updating tokens #1933](https://github.com/songquanpeng/one-api/pull/1933)
@@ -222,3 +227,5 @@ Supports two URL parameters: `thinking` and `reasoning_format`.
 - [fix: models API returns models in deactivated channels #2150](https://github.com/songquanpeng/one-api/pull/2150)
 - [fix: Automatically close channel when connection fails](https://github.com/Laisky/one-api/pull/34)
 - [fix: update EmailDomainWhitelist submission logic #33](https://github.com/Laisky/one-api/pull/33)
+- [fix: send ByAll](https://github.com/Laisky/one-api/pull/35)
+- [fix: oidc token endpoint request body #2106 #36](https://github.com/Laisky/one-api/pull/36)
