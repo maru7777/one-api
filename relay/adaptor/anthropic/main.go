@@ -39,6 +39,15 @@ func stopReasonClaude2OpenAI(reason *string) string {
 	}
 }
 
+// isModelSupportThinking is used to check if the model supports extended thinking
+func isModelSupportThinking(model string) bool {
+	if strings.Contains(model, "claude-3-7-sonnet") {
+		return true
+	}
+
+	return false
+}
+
 func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Request, error) {
 	claudeTools := make([]Tool, 0, len(textRequest.Tools))
 
@@ -67,14 +76,16 @@ func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Re
 		Thinking:    textRequest.Thinking,
 	}
 
-	if c.Request.URL.Query().Has("thinking") && claudeRequest.Thinking == nil {
+	if isModelSupportThinking(textRequest.Model) &&
+		c.Request.URL.Query().Has("thinking") && claudeRequest.Thinking == nil {
 		claudeRequest.Thinking = &model.Thinking{
 			Type:         "enabled",
 			BudgetTokens: int(math.Min(1024, float64(claudeRequest.MaxTokens/2))),
 		}
 	}
 
-	if claudeRequest.Thinking != nil {
+	if isModelSupportThinking(textRequest.Model) &&
+		claudeRequest.Thinking != nil {
 		if claudeRequest.MaxTokens <= 1024 {
 			return nil, fmt.Errorf("max_tokens must be greater than 1024 when using extended thinking")
 		}
