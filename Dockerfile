@@ -1,3 +1,5 @@
+# * for amd64: docker build -t ppcelery/one-api:arm64-latest .
+# * for arm64: DOCKER_BUILDKIT=1 docker build --platform linux/arm64 --build-arg TARGETARCH=arm64 -t ppcelery/one-api:arm64-latest .
 FROM node:18 AS builder
 
 WORKDIR /web
@@ -12,6 +14,8 @@ RUN npm install --prefix /web/default & \
     npm install --prefix /web/berry & \
     npm install --prefix /web/air & \
     wait
+
+RUN mkdir -p /web/build
 
 # Build the web projects
 RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/default & \
@@ -30,12 +34,21 @@ ENV GO111MODULE=on \
     GOOS=linux \
     GOARCH=${TARGETARCH}
 
+# Print architecture information for debugging
+RUN echo "Building for TARGETARCH=${TARGETARCH}" && \
+    echo "Current architecture: $(uname -m)"
+
 # For ARM64 builds
-RUN if [ "${TARGETARCH}" = "arm64" ]; then \
-        apt-get update && apt-get install -y gcc-aarch64-linux-gnu && \
-        export CC=aarch64-linux-gnu-gcc; \
+RUN apt-get update && \
+    if [ "${TARGETARCH}" = "arm64" ]; then \
+        apt-get install -y gcc-aarch64-linux-gnu && \
+        export CC=aarch64-linux-gnu-gcc && \
+        export GOARCH=arm64 && \
+        export CGO_ENABLED=1 && \
+        # This is critical for ARM64 cross-compilation
+        export CGO_CFLAGS="-g -O2 -fPIC"; \
     else \
-        apt-get update && apt-get install -y build-essential; \
+        apt-get install -y build-essential; \
     fi
 
 # Common dependencies
@@ -51,18 +64,22 @@ RUN go mod download
 COPY . .
 COPY --from=builder /web/build ./web/build
 
-# Use the appropriate compiler based on architecture
+# Simplified build command that handles both architectures
 RUN if [ "${TARGETARCH}" = "arm64" ]; then \
-        CC=aarch64-linux-gnu-gcc go build -trimpath -ldflags "-s -w -X github.com/songquanpeng/one-api/common.Version=$(cat VERSION)" -o one-api; \
+        CC=aarch64-linux-gnu-gcc \
+        CGO_ENABLED=1 \
+        GOARCH=arm64 \
+        CGO_CFLAGS="-g -O2 -fPIC" \
+        go build -trimpath -ldflags "-s -w -X github.com/songquanpeng/one-api/common.Version=$(cat VERSION)" -o one-api; \
     else \
         go build -trimpath -ldflags "-s -w -X github.com/songquanpeng/one-api/common.Version=$(cat VERSION)" -o one-api; \
     fi
 
 # Use a pre-built image that already has ffmpeg for ARM64
-FROM --platform=$TARGETPLATFORM jrottenberg/ffmpeg:4.3-ubuntu2004 AS ffmpeg
+FROM --platform=$TARGETPLATFORM jrottenberg/ffmpeg:6.1.2-ubuntu2404 AS ffmpeg
 
 # Use Ubuntu as the base image which has better ARM64 support
-FROM --platform=$TARGETPLATFORM ubuntu:20.04
+FROM --platform=$TARGETPLATFORM ubuntu:24.04
 
 ARG TARGETARCH=amd64
 ENV DEBIAN_FRONTEND=noninteractive
@@ -78,6 +95,9 @@ COPY --from=ffmpeg /usr/local/bin/ffprobe /usr/local/bin/
 
 # Copy our application binary
 COPY --from=builder2 /build/one-api /
+
+# Create web directory structure and copy web assets
+COPY --from=builder2 /build/web /web
 
 EXPOSE 3000
 WORKDIR /data
