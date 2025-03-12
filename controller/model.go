@@ -48,6 +48,7 @@ type OpenAIModels struct {
 	Parent     *string                 `json:"parent"`
 }
 
+// BUG: 更新 custom channel 时，应该同步更新所有自定义的 models 到 allModels
 var allModels []OpenAIModels
 var modelsMap map[string]OpenAIModels
 var channelId2Models map[int][]string
@@ -176,8 +177,6 @@ func ListModels(c *gin.Context) {
 
 	// Filter models that match user's abilities with EXACT model+channel matches
 	userAvailableModels := make([]OpenAIModels, 0)
-
-	fmt.Println(allModels)
 
 	// Only include models that have a matching model+channel combination
 	for _, model := range allModels {
