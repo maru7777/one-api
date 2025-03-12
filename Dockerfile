@@ -1,27 +1,26 @@
 # * for amd64: docker build -t ppcelery/one-api:arm64-latest .
 # * for arm64: DOCKER_BUILDKIT=1 docker build --platform linux/arm64 --build-arg TARGETARCH=arm64 -t ppcelery/one-api:arm64-latest .
-FROM node:18 AS builder
+FROM node:22-bullseye AS builder
 
 WORKDIR /web
 COPY ./VERSION .
 COPY ./web .
 
-# Fix the React build issues by installing dependencies globally first
-RUN npm install -g react-scripts
+RUN npm install -g npm react-scripts
 
 # Install dependencies for each project
-RUN npm install --prefix /web/default & \
-    npm install --prefix /web/berry & \
-    npm install --prefix /web/air & \
-    wait
+# do not build parallel to avoid OOM on github actions
+RUN cd /web/default && yarn install
+RUN cd /web/berry && yarn install
+RUN cd /web/air && yarn install
 
 RUN mkdir -p /web/build
 
 # Build the web projects
-RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/default & \
-    DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/berry & \
-    DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/air & \
-    wait
+# do not build parallel to avoid OOM on github actions
+RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/default
+RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/berry
+RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/air
 
 FROM golang:1.24.1-bullseye AS builder2
 
@@ -93,11 +92,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=ffmpeg /usr/local/bin/ffmpeg /usr/local/bin/
 COPY --from=ffmpeg /usr/local/bin/ffprobe /usr/local/bin/
 
-# Copy our application binary
 COPY --from=builder2 /build/one-api /
+# COPY --from=builder /web/build /web/build
 
-# Create web directory structure and copy web assets
-COPY --from=builder2 /build/web /web
+# RUN if [ "${TARGETARCH}" = "arm64" ]; then \
+#     else \
+#         rm -rf /web/build \
+#     fi
 
 EXPOSE 3000
 WORKDIR /data
