@@ -143,6 +143,7 @@ func ListAllModels(c *gin.Context) {
 	})
 }
 
+// ListModels lists all models available to the user.
 func ListModels(c *gin.Context) {
 	userId := c.GetInt(ctxkey.Id)
 	userGroup, err := model.CacheGetUserGroup(userId)
@@ -166,27 +167,37 @@ func ListModels(c *gin.Context) {
 		adaptor := relay.GetAdaptor(channeltype.ToAPIType(ability.ChannelType))
 		key := ability.Model + ":" + adaptor.GetChannelName()
 		abilityMap[key] = true
+
+		// for custom channels, store the model name only
+		if ability.ChannelType == channeltype.Custom {
+			abilityMap[ability.Model] = true
+		}
 	}
 
 	// Filter models that match user's abilities with EXACT model+channel matches
-	availableOpenAIModels := make([]OpenAIModels, 0)
+	userAvailableModels := make([]OpenAIModels, 0)
+
+	fmt.Println(allModels)
 
 	// Only include models that have a matching model+channel combination
 	for _, model := range allModels {
 		key := model.Id + ":" + model.OwnedBy
 		if abilityMap[key] {
-			availableOpenAIModels = append(availableOpenAIModels, model)
+			userAvailableModels = append(userAvailableModels, model)
+		} else if abilityMap[model.Id] {
+			// for custom channels, store the model name only
+			userAvailableModels = append(userAvailableModels, model)
 		}
 	}
 
 	// Sort models alphabetically for consistent presentation
-	sort.Slice(availableOpenAIModels, func(i, j int) bool {
-		return availableOpenAIModels[i].Id < availableOpenAIModels[j].Id
+	sort.Slice(userAvailableModels, func(i, j int) bool {
+		return userAvailableModels[i].Id < userAvailableModels[j].Id
 	})
 
 	c.JSON(200, gin.H{
 		"object": "list",
-		"data":   availableOpenAIModels,
+		"data":   userAvailableModels,
 	})
 }
 func RetrieveModel(c *gin.Context) {
