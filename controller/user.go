@@ -13,6 +13,7 @@ import (
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/common/i18n"
+	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/common/random"
 	"github.com/songquanpeng/one-api/model"
 )
@@ -72,8 +73,9 @@ func SetupLogin(user *model.User, c *gin.Context) {
 	session.Set("status", user.Status)
 	err := session.Save()
 	if err != nil {
+		logger.Errorf(c.Request.Context(), "Unable to save login session information: %+v", err)
 		c.JSON(http.StatusOK, gin.H{
-			"message": "Unable to save session information, please try again",
+			"message": "Unable to save login session information, please try again",
 			"success": false,
 		})
 		return

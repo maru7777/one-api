@@ -70,7 +70,7 @@ func TurnstileCheck() gin.HandlerFunc {
 			err = session.Save()
 			if err != nil {
 				c.JSON(http.StatusOK, gin.H{
-					"message": "Unable to save session information, please try again",
+					"message": "Unable to save turnsite session information, please try again",
 					"success": false,
 				})
 				return
