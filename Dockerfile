@@ -2,11 +2,11 @@
 # * for arm64: DOCKER_BUILDKIT=1 docker build --platform linux/arm64 --build-arg TARGETARCH=arm64 -t ppcelery/one-api:arm64-latest .
 FROM node:22-bullseye AS builder
 
+RUN npm install -g npm react-scripts
+
 WORKDIR /web
 COPY ./VERSION .
 COPY ./web .
-
-RUN npm install -g npm react-scripts
 
 # Install dependencies for each project
 # do not build parallel to avoid OOM on github actions
