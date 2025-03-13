@@ -208,44 +208,46 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 	// -------------------------------------
 	// calculate web-search tool cost
 	// -------------------------------------
-	searchContextSize := "medium"
-	var req *model.GeneralOpenAIRequest
-	if vi, ok := c.Get(ctxkey.ConvertedRequest); ok {
-		if req, ok = vi.(*model.GeneralOpenAIRequest); ok {
-			if req != nil &&
-				req.WebSearchOptions != nil &&
-				req.WebSearchOptions.SearchContextSize != nil {
-				searchContextSize = *req.WebSearchOptions.SearchContextSize
-			}
-
-			switch {
-			case strings.HasPrefix(meta.ActualModelName, "gpt-4o-search"):
-				switch searchContextSize {
-				case "low":
-					usage.ToolsCost += int64(math.Ceil(30 / 1000 * ratio.QuotaPerUsd))
-				case "medium":
-					usage.ToolsCost += int64(math.Ceil(35 / 1000 * ratio.QuotaPerUsd))
-				case "high":
-					usage.ToolsCost += int64(math.Ceil(40 / 1000 * ratio.QuotaPerUsd))
-				default:
-					return nil, ErrorWrapper(
-						errors.Errorf("invalid search context size %q", searchContextSize),
-						"invalid search context size: "+searchContextSize,
-						http.StatusBadRequest)
+	if usage != nil {
+		searchContextSize := "medium"
+		var req *model.GeneralOpenAIRequest
+		if vi, ok := c.Get(ctxkey.ConvertedRequest); ok {
+			if req, ok = vi.(*model.GeneralOpenAIRequest); ok {
+				if req != nil &&
+					req.WebSearchOptions != nil &&
+					req.WebSearchOptions.SearchContextSize != nil {
+					searchContextSize = *req.WebSearchOptions.SearchContextSize
 				}
-			case strings.HasPrefix(meta.ActualModelName, "gpt-4o-mini-search"):
-				switch searchContextSize {
-				case "low":
-					usage.ToolsCost += int64(math.Ceil(25 / 1000 * ratio.QuotaPerUsd))
-				case "medium":
-					usage.ToolsCost += int64(math.Ceil(27.5 / 1000 * ratio.QuotaPerUsd))
-				case "high":
-					usage.ToolsCost += int64(math.Ceil(30 / 1000 * ratio.QuotaPerUsd))
-				default:
-					return nil, ErrorWrapper(
-						errors.Errorf("invalid search context size %q", searchContextSize),
-						"invalid search context size: "+searchContextSize,
-						http.StatusBadRequest)
+
+				switch {
+				case strings.HasPrefix(meta.ActualModelName, "gpt-4o-search"):
+					switch searchContextSize {
+					case "low":
+						usage.ToolsCost += int64(math.Ceil(30 / 1000 * ratio.QuotaPerUsd))
+					case "medium":
+						usage.ToolsCost += int64(math.Ceil(35 / 1000 * ratio.QuotaPerUsd))
+					case "high":
+						usage.ToolsCost += int64(math.Ceil(40 / 1000 * ratio.QuotaPerUsd))
+					default:
+						return nil, ErrorWrapper(
+							errors.Errorf("invalid search context size %q", searchContextSize),
+							"invalid search context size: "+searchContextSize,
+							http.StatusBadRequest)
+					}
+				case strings.HasPrefix(meta.ActualModelName, "gpt-4o-mini-search"):
+					switch searchContextSize {
+					case "low":
+						usage.ToolsCost += int64(math.Ceil(25 / 1000 * ratio.QuotaPerUsd))
+					case "medium":
+						usage.ToolsCost += int64(math.Ceil(27.5 / 1000 * ratio.QuotaPerUsd))
+					case "high":
+						usage.ToolsCost += int64(math.Ceil(30 / 1000 * ratio.QuotaPerUsd))
+					default:
+						return nil, ErrorWrapper(
+							errors.Errorf("invalid search context size %q", searchContextSize),
+							"invalid search context size: "+searchContextSize,
+							http.StatusBadRequest)
+					}
 				}
 			}
 		}
