@@ -10,10 +10,14 @@ import (
 )
 
 const (
-	USD2RMB   = 7
-	USD       = 500 // $0.002 = 1 -> $1 = 500
-	MILLI_USD = 1.0 / 1000 * USD
-	RMB       = USD / USD2RMB
+	USD2RMB = 7
+	// QuotaPerUsd is the number of tokens per USD
+	QuotaPerUsd = 500000 // $0.002 / 1K tokens
+	// UsdPerThousand is the cost of 1K tokens in USD
+	UsdPerThousand = 500 // $0.002 = 1 -> $1 = 500
+	// UsdPerMillion is the cost of 1M tokens in USD
+	UsdPerMillion = 1.0 / 1000 * UsdPerThousand
+	RMB           = UsdPerThousand / USD2RMB
 )
 
 var modelRatioLock sync.RWMutex
@@ -26,8 +30,8 @@ var modelRatioLock sync.RWMutex
 // 1 === ￥0.014 / 1k tokens
 var ModelRatio = map[string]float64{
 	// https://openai.com/pricing
-	"gpt-4.5-preview":            75 * MILLI_USD,
-	"gpt-4.5-preview-2025-02-27": 75 * MILLI_USD,
+	"gpt-4.5-preview":            75 * UsdPerMillion,
+	"gpt-4.5-preview-2025-02-27": 75 * UsdPerMillion,
 	"gpt-4":                      15,
 	"gpt-4-0314":                 15,
 	"gpt-4-0613":                 15,
@@ -52,27 +56,27 @@ var ModelRatio = map[string]float64{
 	// Audio billing will mix text and audio tokens, the unit price is different.
 	// Here records the cost of text, the cost multiplier of audio
 	// relative to text is in AudioRatio
-	"gpt-4o-audio-preview":                 1.25,             // $0.0025 / 1K tokens
-	"gpt-4o-audio-preview-2024-12-17":      1.25,             // $0.0025 / 1K tokens
-	"gpt-4o-audio-preview-2024-10-01":      1.25,             // $0.0025 / 1K tokens
-	"gpt-4o-mini-audio-preview":            0.15 * MILLI_USD, // $0.15/1M tokens
-	"gpt-4o-mini-audio-preview-2024-12-17": 0.15 * MILLI_USD, // $0.15/1M tokens
-	"gpt-3.5-turbo":                        0.25,             // $0.0005 / 1K tokens
+	"gpt-4o-audio-preview":                 1.25,                 // $0.0025 / 1K tokens
+	"gpt-4o-audio-preview-2024-12-17":      1.25,                 // $0.0025 / 1K tokens
+	"gpt-4o-audio-preview-2024-10-01":      1.25,                 // $0.0025 / 1K tokens
+	"gpt-4o-mini-audio-preview":            0.15 * UsdPerMillion, // $0.15/1M tokens
+	"gpt-4o-mini-audio-preview-2024-12-17": 0.15 * UsdPerMillion, // $0.15/1M tokens
+	"gpt-3.5-turbo":                        0.25,                 // $0.0005 / 1K tokens
 	"gpt-3.5-turbo-0301":                   0.75,
 	"gpt-3.5-turbo-0613":                   0.75,
 	"gpt-3.5-turbo-16k":                    1.5, // $0.003 / 1K tokens
 	"gpt-3.5-turbo-16k-0613":               1.5,
-	"gpt-3.5-turbo-instruct":               0.75,           // $0.0015 / 1K tokens
-	"gpt-3.5-turbo-1106":                   0.5,            // $0.001 / 1K tokens
-	"gpt-3.5-turbo-0125":                   0.25,           // $0.0005 / 1K tokens
-	"o1":                                   15 * MILLI_USD, // $15.00 / 1M input tokens
-	"o1-2024-12-17":                        15 * MILLI_USD,
-	"o1-preview":                           15 * MILLI_USD, // $15.00 / 1M input tokens
-	"o1-preview-2024-09-12":                15 * MILLI_USD,
-	"o1-mini":                              1.1 * MILLI_USD, // $3.00 / 1M input tokens
-	"o1-mini-2024-09-12":                   1.1 * MILLI_USD,
-	"o3-mini":                              1.1 * MILLI_USD,
-	"o3-mini-2025-01-31":                   1.1 * MILLI_USD,
+	"gpt-3.5-turbo-instruct":               0.75,               // $0.0015 / 1K tokens
+	"gpt-3.5-turbo-1106":                   0.5,                // $0.001 / 1K tokens
+	"gpt-3.5-turbo-0125":                   0.25,               // $0.0005 / 1K tokens
+	"o1":                                   15 * UsdPerMillion, // $15.00 / 1M input tokens
+	"o1-2024-12-17":                        15 * UsdPerMillion,
+	"o1-preview":                           15 * UsdPerMillion, // $15.00 / 1M input tokens
+	"o1-preview-2024-09-12":                15 * UsdPerMillion,
+	"o1-mini":                              1.1 * UsdPerMillion, // $3.00 / 1M input tokens
+	"o1-mini-2024-09-12":                   1.1 * UsdPerMillion,
+	"o3-mini":                              1.1 * UsdPerMillion,
+	"o3-mini-2025-01-31":                   1.1 * UsdPerMillion,
 	"davinci-002":                          1,   // $0.002 / 1K tokens
 	"babbage-002":                          0.2, // $0.0004 / 1K tokens
 	"text-ada-001":                         0.2,
@@ -97,22 +101,22 @@ var ModelRatio = map[string]float64{
 	"text-search-ada-doc-001":              10,
 	"text-moderation-stable":               0.1,
 	"text-moderation-latest":               0.1,
-	"dall-e-2":                             0.02 * USD, // $0.016 - $0.020 / image
-	"dall-e-3":                             0.04 * USD, // $0.040 - $0.120 / image
+	"dall-e-2":                             0.02 * UsdPerThousand, // $0.016 - $0.020 / image
+	"dall-e-3":                             0.04 * UsdPerThousand, // $0.040 - $0.120 / image
 	// https://www.anthropic.com/api#pricing
-	"claude-instant-1.2":         0.8 / 1000 * USD,
-	"claude-2.0":                 8.0 / 1000 * USD,
-	"claude-2.1":                 8.0 / 1000 * USD,
-	"claude-3-haiku-20240307":    0.25 / 1000 * USD,
-	"claude-3-5-haiku-20241022":  1.0 / 1000 * USD,
-	"claude-3-5-haiku-latest":    1.0 / 1000 * USD,
-	"claude-3-sonnet-20240229":   3.0 / 1000 * USD,
-	"claude-3-5-sonnet-20240620": 3.0 / 1000 * USD,
-	"claude-3-5-sonnet-20241022": 3.0 / 1000 * USD,
-	"claude-3-5-sonnet-latest":   3.0 / 1000 * USD,
-	"claude-3-7-sonnet-20250219": 3.0 / 1000 * USD,
-	"claude-3-7-sonnet-latest":   3.0 / 1000 * USD,
-	"claude-3-opus-20240229":     15.0 / 1000 * USD,
+	"claude-instant-1.2":         0.8 / 1000 * UsdPerThousand,
+	"claude-2.0":                 8.0 / 1000 * UsdPerThousand,
+	"claude-2.1":                 8.0 / 1000 * UsdPerThousand,
+	"claude-3-haiku-20240307":    0.25 / 1000 * UsdPerThousand,
+	"claude-3-5-haiku-20241022":  1.0 / 1000 * UsdPerThousand,
+	"claude-3-5-haiku-latest":    1.0 / 1000 * UsdPerThousand,
+	"claude-3-sonnet-20240229":   3.0 / 1000 * UsdPerThousand,
+	"claude-3-5-sonnet-20240620": 3.0 / 1000 * UsdPerThousand,
+	"claude-3-5-sonnet-20241022": 3.0 / 1000 * UsdPerThousand,
+	"claude-3-5-sonnet-latest":   3.0 / 1000 * UsdPerThousand,
+	"claude-3-7-sonnet-20250219": 3.0 / 1000 * UsdPerThousand,
+	"claude-3-7-sonnet-latest":   3.0 / 1000 * UsdPerThousand,
+	"claude-3-opus-20240229":     15.0 / 1000 * UsdPerThousand,
 	// https://cloud.baidu.com/doc/WENXINWORKSHOP/s/hlrk4akp7
 	"ERNIE-4.0-8K":       0.120 * RMB,
 	"ERNIE-3.5-8K":       0.012 * RMB,
@@ -135,25 +139,25 @@ var ModelRatio = map[string]float64{
 	// "gemma-2-2b-it":                       0,
 	// "gemma-2-9b-it":                       0,
 	// "gemma-2-27b-it":                      0,
-	"gemini-pro":                          0.25 * MILLI_USD, // $0.00025 / 1k characters -> $0.001 / 1k tokens
-	"gemini-1.0-pro":                      0.125 * MILLI_USD,
-	"gemini-1.0-pro-vision":               0.125 * MILLI_USD,
-	"gemini-1.5-pro":                      1.25 * MILLI_USD,
-	"gemini-1.5-pro-001":                  1.25 * MILLI_USD,
-	"gemini-1.5-pro-002":                  1.25 * MILLI_USD,
-	"gemini-1.5-pro-experimental":         1.25 * MILLI_USD,
-	"gemini-1.5-flash":                    0.075 * MILLI_USD,
-	"gemini-1.5-flash-001":                0.075 * MILLI_USD,
-	"gemini-1.5-flash-002":                0.075 * MILLI_USD,
-	"gemini-1.5-flash-8b":                 0.0375 * MILLI_USD,
-	"gemini-2.0-flash":                    0.15 * MILLI_USD,
-	"gemini-2.0-flash-exp":                0.075 * MILLI_USD,
-	"gemini-2.0-flash-001":                0.15 * MILLI_USD,
-	"gemini-2.0-flash-lite":               0.075 * MILLI_USD,
-	"gemini-2.0-flash-lite-001":           0.075 * MILLI_USD,
-	"gemini-2.0-flash-lite-preview-02-05": 0.075 * MILLI_USD,
-	"gemini-2.0-flash-thinking-exp-01-21": 0.075 * MILLI_USD,
-	"gemini-2.0-pro-exp-02-05":            1.25 * MILLI_USD,
+	"gemini-pro":                          0.25 * UsdPerMillion, // $0.00025 / 1k characters -> $0.001 / 1k tokens
+	"gemini-1.0-pro":                      0.125 * UsdPerMillion,
+	"gemini-1.0-pro-vision":               0.125 * UsdPerMillion,
+	"gemini-1.5-pro":                      1.25 * UsdPerMillion,
+	"gemini-1.5-pro-001":                  1.25 * UsdPerMillion,
+	"gemini-1.5-pro-002":                  1.25 * UsdPerMillion,
+	"gemini-1.5-pro-experimental":         1.25 * UsdPerMillion,
+	"gemini-1.5-flash":                    0.075 * UsdPerMillion,
+	"gemini-1.5-flash-001":                0.075 * UsdPerMillion,
+	"gemini-1.5-flash-002":                0.075 * UsdPerMillion,
+	"gemini-1.5-flash-8b":                 0.0375 * UsdPerMillion,
+	"gemini-2.0-flash":                    0.15 * UsdPerMillion,
+	"gemini-2.0-flash-exp":                0.075 * UsdPerMillion,
+	"gemini-2.0-flash-001":                0.15 * UsdPerMillion,
+	"gemini-2.0-flash-lite":               0.075 * UsdPerMillion,
+	"gemini-2.0-flash-lite-001":           0.075 * UsdPerMillion,
+	"gemini-2.0-flash-lite-preview-02-05": 0.075 * UsdPerMillion,
+	"gemini-2.0-flash-thinking-exp-01-21": 0.075 * UsdPerMillion,
+	"gemini-2.0-pro-exp-02-05":            1.25 * UsdPerMillion,
 	"aqa":                                 1,
 	// https://open.bigmodel.cn/pricing
 	"glm-zero-preview": 0.01 * RMB,
@@ -307,28 +311,28 @@ var ModelRatio = map[string]float64{
 	"abab5.5-chat":  0.015 * RMB,
 	"abab5.5s-chat": 0.005 * RMB,
 	// https://docs.mistral.ai/platform/pricing/
-	"open-mistral-7b":       0.25 / 1000 * USD,
-	"open-mixtral-8x7b":     0.7 / 1000 * USD,
-	"mistral-small-latest":  2.0 / 1000 * USD,
-	"mistral-medium-latest": 2.7 / 1000 * USD,
-	"mistral-large-latest":  8.0 / 1000 * USD,
-	"mistral-embed":         0.1 / 1000 * USD,
+	"open-mistral-7b":       0.25 / 1000 * UsdPerThousand,
+	"open-mixtral-8x7b":     0.7 / 1000 * UsdPerThousand,
+	"mistral-small-latest":  2.0 / 1000 * UsdPerThousand,
+	"mistral-medium-latest": 2.7 / 1000 * UsdPerThousand,
+	"mistral-large-latest":  8.0 / 1000 * UsdPerThousand,
+	"mistral-embed":         0.1 / 1000 * UsdPerThousand,
 	// https://wow.groq.com/#:~:text=inquiries%C2%A0here.-,Model,-Current%20Speed
-	"gemma-7b-it":                           0.07 / 1000000 * USD,
-	"gemma2-9b-it":                          0.20 / 1000000 * USD,
-	"llama-3.1-70b-versatile":               0.59 / 1000000 * USD,
-	"llama-3.1-8b-instant":                  0.05 / 1000000 * USD,
-	"llama-3.2-11b-text-preview":            0.05 / 1000000 * USD,
-	"llama-3.2-11b-vision-preview":          0.05 / 1000000 * USD,
-	"llama-3.2-1b-preview":                  0.05 / 1000000 * USD,
-	"llama-3.2-3b-preview":                  0.05 / 1000000 * USD,
-	"llama-3.2-90b-text-preview":            0.59 / 1000000 * USD,
-	"llama-guard-3-8b":                      0.05 / 1000000 * USD,
-	"llama3-70b-8192":                       0.59 / 1000000 * USD,
-	"llama3-8b-8192":                        0.05 / 1000000 * USD,
-	"llama3-groq-70b-8192-tool-use-preview": 0.89 / 1000000 * USD,
-	"llama3-groq-8b-8192-tool-use-preview":  0.19 / 1000000 * USD,
-	"mixtral-8x7b-32768":                    0.24 / 1000000 * USD,
+	"gemma-7b-it":                           0.07 / 1000000 * UsdPerThousand,
+	"gemma2-9b-it":                          0.20 / 1000000 * UsdPerThousand,
+	"llama-3.1-70b-versatile":               0.59 / 1000000 * UsdPerThousand,
+	"llama-3.1-8b-instant":                  0.05 / 1000000 * UsdPerThousand,
+	"llama-3.2-11b-text-preview":            0.05 / 1000000 * UsdPerThousand,
+	"llama-3.2-11b-vision-preview":          0.05 / 1000000 * UsdPerThousand,
+	"llama-3.2-1b-preview":                  0.05 / 1000000 * UsdPerThousand,
+	"llama-3.2-3b-preview":                  0.05 / 1000000 * UsdPerThousand,
+	"llama-3.2-90b-text-preview":            0.59 / 1000000 * UsdPerThousand,
+	"llama-guard-3-8b":                      0.05 / 1000000 * UsdPerThousand,
+	"llama3-70b-8192":                       0.59 / 1000000 * UsdPerThousand,
+	"llama3-8b-8192":                        0.05 / 1000000 * UsdPerThousand,
+	"llama3-groq-70b-8192-tool-use-preview": 0.89 / 1000000 * UsdPerThousand,
+	"llama3-groq-8b-8192-tool-use-preview":  0.19 / 1000000 * UsdPerThousand,
+	"mixtral-8x7b-32768":                    0.24 / 1000000 * UsdPerThousand,
 	// https://platform.lingyiwanwu.com/docs#-计费单元
 	"yi-34b-chat-0205": 2.5 / 1000 * RMB,
 	"yi-34b-chat-200k": 12.0 / 1000 * RMB,
@@ -350,64 +354,64 @@ var ModelRatio = map[string]float64{
 	"command-nightly":       0.5,
 	"command-light":         0.5,
 	"command-light-nightly": 0.5,
-	"command-r":             0.5 / 1000 * USD,
-	"command-r-plus":        3.0 / 1000 * USD,
+	"command-r":             0.5 / 1000 * UsdPerThousand,
+	"command-r-plus":        3.0 / 1000 * UsdPerThousand,
 	// https://platform.deepseek.com/api-docs/pricing/
-	"deepseek-chat":     0.27 * MILLI_USD,
-	"deepseek-reasoner": 0.55 * MILLI_USD,
+	"deepseek-chat":     0.27 * UsdPerMillion,
+	"deepseek-reasoner": 0.55 * UsdPerMillion,
 	// https://www.deepl.com/pro?cta=header-prices
-	"deepl-zh": 25.0 / 1000 * USD,
-	"deepl-en": 25.0 / 1000 * USD,
-	"deepl-ja": 25.0 / 1000 * USD,
+	"deepl-zh": 25.0 / 1000 * UsdPerThousand,
+	"deepl-en": 25.0 / 1000 * UsdPerThousand,
+	"deepl-ja": 25.0 / 1000 * UsdPerThousand,
 	// https://console.x.ai/
-	"grok-beta": 5.0 / 1000 * USD,
+	"grok-beta": 5.0 / 1000 * UsdPerThousand,
 	// vertex imagen3
 	// https://cloud.google.com/vertex-ai/generative-ai/pricing#imagen-models
-	"imagen-3.0-generate-001": 0.02 * USD,
+	"imagen-3.0-generate-001": 0.02 * UsdPerThousand,
 	// replicate charges based on the number of generated images
 	// https://replicate.com/pricing
-	"black-forest-labs/flux-1.1-pro":                0.04 * USD,
-	"black-forest-labs/flux-1.1-pro-ultra":          0.06 * USD,
-	"black-forest-labs/flux-canny-dev":              0.025 * USD,
-	"black-forest-labs/flux-canny-pro":              0.05 * USD,
-	"black-forest-labs/flux-depth-dev":              0.025 * USD,
-	"black-forest-labs/flux-depth-pro":              0.05 * USD,
-	"black-forest-labs/flux-dev":                    0.025 * USD,
-	"black-forest-labs/flux-dev-lora":               0.032 * USD,
-	"black-forest-labs/flux-fill-dev":               0.04 * USD,
-	"black-forest-labs/flux-fill-pro":               0.05 * USD,
-	"black-forest-labs/flux-pro":                    0.055 * USD,
-	"black-forest-labs/flux-redux-dev":              0.025 * USD,
-	"black-forest-labs/flux-redux-schnell":          0.003 * USD,
-	"black-forest-labs/flux-schnell":                0.003 * USD,
-	"black-forest-labs/flux-schnell-lora":           0.02 * USD,
-	"ideogram-ai/ideogram-v2":                       0.08 * USD,
-	"ideogram-ai/ideogram-v2-turbo":                 0.05 * USD,
-	"recraft-ai/recraft-v3":                         0.04 * USD,
-	"recraft-ai/recraft-v3-svg":                     0.08 * USD,
-	"stability-ai/stable-diffusion-3":               0.035 * USD,
-	"stability-ai/stable-diffusion-3.5-large":       0.065 * USD,
-	"stability-ai/stable-diffusion-3.5-large-turbo": 0.04 * USD,
-	"stability-ai/stable-diffusion-3.5-medium":      0.035 * USD,
+	"black-forest-labs/flux-1.1-pro":                0.04 * UsdPerThousand,
+	"black-forest-labs/flux-1.1-pro-ultra":          0.06 * UsdPerThousand,
+	"black-forest-labs/flux-canny-dev":              0.025 * UsdPerThousand,
+	"black-forest-labs/flux-canny-pro":              0.05 * UsdPerThousand,
+	"black-forest-labs/flux-depth-dev":              0.025 * UsdPerThousand,
+	"black-forest-labs/flux-depth-pro":              0.05 * UsdPerThousand,
+	"black-forest-labs/flux-dev":                    0.025 * UsdPerThousand,
+	"black-forest-labs/flux-dev-lora":               0.032 * UsdPerThousand,
+	"black-forest-labs/flux-fill-dev":               0.04 * UsdPerThousand,
+	"black-forest-labs/flux-fill-pro":               0.05 * UsdPerThousand,
+	"black-forest-labs/flux-pro":                    0.055 * UsdPerThousand,
+	"black-forest-labs/flux-redux-dev":              0.025 * UsdPerThousand,
+	"black-forest-labs/flux-redux-schnell":          0.003 * UsdPerThousand,
+	"black-forest-labs/flux-schnell":                0.003 * UsdPerThousand,
+	"black-forest-labs/flux-schnell-lora":           0.02 * UsdPerThousand,
+	"ideogram-ai/ideogram-v2":                       0.08 * UsdPerThousand,
+	"ideogram-ai/ideogram-v2-turbo":                 0.05 * UsdPerThousand,
+	"recraft-ai/recraft-v3":                         0.04 * UsdPerThousand,
+	"recraft-ai/recraft-v3-svg":                     0.08 * UsdPerThousand,
+	"stability-ai/stable-diffusion-3":               0.035 * UsdPerThousand,
+	"stability-ai/stable-diffusion-3.5-large":       0.065 * UsdPerThousand,
+	"stability-ai/stable-diffusion-3.5-large-turbo": 0.04 * UsdPerThousand,
+	"stability-ai/stable-diffusion-3.5-medium":      0.035 * UsdPerThousand,
 	// replicate chat models
-	"ibm-granite/granite-20b-code-instruct-8k":  0.100 * USD,
-	"ibm-granite/granite-3.0-2b-instruct":       0.030 * USD,
-	"ibm-granite/granite-3.0-8b-instruct":       0.050 * USD,
-	"ibm-granite/granite-8b-code-instruct-128k": 0.050 * USD,
-	"meta/llama-2-13b":                          0.100 * USD,
-	"meta/llama-2-13b-chat":                     0.100 * USD,
-	"meta/llama-2-70b":                          0.650 * USD,
-	"meta/llama-2-70b-chat":                     0.650 * USD,
-	"meta/llama-2-7b":                           0.050 * USD,
-	"meta/llama-2-7b-chat":                      0.050 * USD,
-	"meta/meta-llama-3.1-405b-instruct":         9.500 * USD,
-	"meta/meta-llama-3-70b":                     0.650 * USD,
-	"meta/meta-llama-3-70b-instruct":            0.650 * USD,
-	"meta/meta-llama-3-8b":                      0.050 * USD,
-	"meta/meta-llama-3-8b-instruct":             0.050 * USD,
-	"mistralai/mistral-7b-instruct-v0.2":        0.050 * USD,
-	"mistralai/mistral-7b-v0.1":                 0.050 * USD,
-	"mistralai/mixtral-8x7b-instruct-v0.1":      0.300 * USD,
+	"ibm-granite/granite-20b-code-instruct-8k":  0.100 * UsdPerThousand,
+	"ibm-granite/granite-3.0-2b-instruct":       0.030 * UsdPerThousand,
+	"ibm-granite/granite-3.0-8b-instruct":       0.050 * UsdPerThousand,
+	"ibm-granite/granite-8b-code-instruct-128k": 0.050 * UsdPerThousand,
+	"meta/llama-2-13b":                          0.100 * UsdPerThousand,
+	"meta/llama-2-13b-chat":                     0.100 * UsdPerThousand,
+	"meta/llama-2-70b":                          0.650 * UsdPerThousand,
+	"meta/llama-2-70b-chat":                     0.650 * UsdPerThousand,
+	"meta/llama-2-7b":                           0.050 * UsdPerThousand,
+	"meta/llama-2-7b-chat":                      0.050 * UsdPerThousand,
+	"meta/meta-llama-3.1-405b-instruct":         9.500 * UsdPerThousand,
+	"meta/meta-llama-3-70b":                     0.650 * UsdPerThousand,
+	"meta/meta-llama-3-70b-instruct":            0.650 * UsdPerThousand,
+	"meta/meta-llama-3-8b":                      0.050 * UsdPerThousand,
+	"meta/meta-llama-3-8b-instruct":             0.050 * UsdPerThousand,
+	"mistralai/mistral-7b-instruct-v0.2":        0.050 * UsdPerThousand,
+	"mistralai/mistral-7b-v0.1":                 0.050 * UsdPerThousand,
+	"mistralai/mixtral-8x7b-instruct-v0.1":      0.300 * UsdPerThousand,
 	//https://openrouter.ai/models
 	"01-ai/yi-large":                                  1.5,
 	"aetherwiing/mn-starcannon-12b":                   0.6,
@@ -456,10 +460,10 @@ var ModelRatio = map[string]float64{
 	"cohere/command-r-plus-08-2024":                   4.75,
 	"cohere/command-r7b-12-2024":                      0.075,
 	"databricks/dbrx-instruct":                        0.6,
-	"deepseek/deepseek-chat":                          1.25 * MILLI_USD,
+	"deepseek/deepseek-chat":                          1.25 * UsdPerMillion,
 	"deepseek/deepseek-chat-v2.5":                     1.0,
 	"deepseek/deepseek-chat:free":                     0.0,
-	"deepseek/deepseek-r1":                            7 * MILLI_USD,
+	"deepseek/deepseek-r1":                            7 * UsdPerMillion,
 	"deepseek/deepseek-r1-distill-llama-70b":          0.345,
 	"deepseek/deepseek-r1-distill-llama-70b:free":     0.0,
 	"deepseek/deepseek-r1-distill-llama-8b":           0.02,
@@ -587,7 +591,7 @@ var ModelRatio = map[string]float64{
 	"openai/gpt-4o-mini":                              0.3,
 	"openai/gpt-4o-mini-2024-07-18":                   0.3,
 	"openai/gpt-4o:extended":                          9.0,
-	"openai/gpt-4.5-preview":                          75 * MILLI_USD,
+	"openai/gpt-4.5-preview":                          75 * UsdPerMillion,
 	"openai/o1":                                       30.0,
 	"openai/o1-mini":                                  2.2,
 	"openai/o1-mini-2024-09-12":                       2.2,

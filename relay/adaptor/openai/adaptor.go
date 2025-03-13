@@ -222,11 +222,11 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 			case strings.HasPrefix(meta.ActualModelName, "gpt-4o-search"):
 				switch searchContextSize {
 				case "low":
-					usage.ToolsCost += int64(math.Ceil(30 / 1000 * ratio.USD))
+					usage.ToolsCost += int64(math.Ceil(30 / 1000 * ratio.QuotaPerUsd))
 				case "medium":
-					usage.ToolsCost += int64(math.Ceil(35 / 1000 * ratio.USD))
+					usage.ToolsCost += int64(math.Ceil(35 / 1000 * ratio.QuotaPerUsd))
 				case "high":
-					usage.ToolsCost += int64(math.Ceil(40 / 1000 * ratio.USD))
+					usage.ToolsCost += int64(math.Ceil(40 / 1000 * ratio.QuotaPerUsd))
 				default:
 					return nil, ErrorWrapper(
 						errors.Errorf("invalid search context size %q", searchContextSize),
@@ -236,11 +236,11 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 			case strings.HasPrefix(meta.ActualModelName, "gpt-4o-mini-search"):
 				switch searchContextSize {
 				case "low":
-					usage.ToolsCost += int64(math.Ceil(25 / 1000 * ratio.USD))
+					usage.ToolsCost += int64(math.Ceil(25 / 1000 * ratio.QuotaPerUsd))
 				case "medium":
-					usage.ToolsCost += int64(math.Ceil(27.5 / 1000 * ratio.USD))
+					usage.ToolsCost += int64(math.Ceil(27.5 / 1000 * ratio.QuotaPerUsd))
 				case "high":
-					usage.ToolsCost += int64(math.Ceil(30 / 1000 * ratio.USD))
+					usage.ToolsCost += int64(math.Ceil(30 / 1000 * ratio.QuotaPerUsd))
 				default:
 					return nil, ErrorWrapper(
 						errors.Errorf("invalid search context size %q", searchContextSize),
