@@ -120,6 +120,43 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 		}
 		request.StreamOptions.IncludeUsage = true
 	}
+
+	// o1/o1-mini/o1-preview do not support system prompt/max_tokens/temperature
+	if strings.HasPrefix(meta.ActualModelName, "o1") ||
+		strings.HasPrefix(meta.ActualModelName, "o3") {
+		temperature := float64(1)
+		request.Temperature = &temperature // Only the default (1) value is supported
+
+		request.MaxTokens = 0
+		request.Messages = func(raw []model.Message) (filtered []model.Message) {
+			for i := range raw {
+				if raw[i].Role != "system" {
+					filtered = append(filtered, raw[i])
+				}
+			}
+
+			return
+		}(request.Messages)
+	}
+
+	// web search do not support system prompt/max_tokens/temperature
+	if strings.HasPrefix(meta.ActualModelName, "gpt-4o-search") ||
+		strings.HasPrefix(meta.ActualModelName, "gpt-4o-mini-search") {
+		request.Temperature = nil
+		request.TopP = nil
+		request.PresencePenalty = nil
+		request.N = nil
+		request.FrequencyPenalty = nil
+	}
+
+	if request.Stream && !config.EnforceIncludeUsage &&
+		(strings.HasPrefix(request.Model, "gpt-4o-audio") ||
+			strings.HasPrefix(request.Model, "gpt-4o-mini-audio")) {
+		// TODO: Since it is not clear how to implement billing in stream mode,
+		// it is temporarily not supported
+		return nil, errors.New("set ENFORCE_INCLUDE_USAGE=true to enable stream mode for gpt-4o-audio")
+	}
+
 	return request, nil
 }
 

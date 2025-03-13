@@ -25,24 +25,31 @@ type StreamOptions struct {
 
 type GeneralOpenAIRequest struct {
 	// https://platform.openai.com/docs/api-reference/chat/create
-	Messages            []Message `json:"messages,omitempty"`
-	Model               string    `json:"model,omitempty"`
-	Store               *bool     `json:"store,omitempty"`
-	Metadata            any       `json:"metadata,omitempty"`
-	FrequencyPenalty    *float64  `json:"frequency_penalty,omitempty"`
-	LogitBias           any       `json:"logit_bias,omitempty"`
-	Logprobs            *bool     `json:"logprobs,omitempty"`
-	TopLogprobs         *int      `json:"top_logprobs,omitempty"`
-	MaxTokens           int       `json:"max_tokens,omitempty"`
-	MaxCompletionTokens *int      `json:"max_completion_tokens,omitempty"`
-	N                   int       `json:"n,omitempty"`
+	Messages []Message `json:"messages,omitempty"`
+	Model    string    `json:"model,omitempty"`
+	Store    *bool     `json:"store,omitempty"`
+	Metadata any       `json:"metadata,omitempty"`
+	// FrequencyPenalty is a number between -2.0 and 2.0 that penalizes
+	// new tokens based on their existing frequency in the text so far,
+	// default is 0.
+	FrequencyPenalty    *float64 `json:"frequency_penalty,omitempty" binding:"omitempty,min=-2,max=2"`
+	LogitBias           any      `json:"logit_bias,omitempty"`
+	Logprobs            *bool    `json:"logprobs,omitempty"`
+	TopLogprobs         *int     `json:"top_logprobs,omitempty"`
+	MaxTokens           int      `json:"max_tokens,omitempty"`
+	MaxCompletionTokens *int     `json:"max_completion_tokens,omitempty"`
+	// N is how many chat completion choices to generate for each input message,
+	// default to 1.
+	N *int `json:"n,omitempty" binding:"omitempty,min=1"`
 	// ReasoningEffort constrains effort on reasoning for reasoning models, reasoning models only.
 	ReasoningEffort *string `json:"reasoning_effort,omitempty" binding:"omitempty,oneof=low medium high"`
 	// Modalities currently the model only programmatically allows modalities = [“text”, “audio”]
-	Modalities       []string        `json:"modalities,omitempty"`
-	Prediction       any             `json:"prediction,omitempty"`
-	Audio            *Audio          `json:"audio,omitempty"`
-	PresencePenalty  *float64        `json:"presence_penalty,omitempty"`
+	Modalities []string `json:"modalities,omitempty"`
+	Prediction any      `json:"prediction,omitempty"`
+	Audio      *Audio   `json:"audio,omitempty"`
+	// PresencePenalty is a number between -2.0 and 2.0 that penalizes
+	// new tokens based on whether they appear in the text so far, default is 0.
+	PresencePenalty  *float64        `json:"presence_penalty,omitempty" binding:"omitempty,min=-2,max=2"`
 	ResponseFormat   *ResponseFormat `json:"response_format,omitempty"`
 	Seed             float64         `json:"seed,omitempty"`
 	ServiceTier      *string         `json:"service_tier,omitempty" binding:"omitempty,oneof=default auto"`
