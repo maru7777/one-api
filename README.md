@@ -35,6 +35,7 @@ Also welcome to register and use my deployed one-api gateway, which supports var
       - [Reasoning Format - reasoning](#reasoning-format---reasoning)
       - [Reasoning Format - thinking](#reasoning-format---thinking)
     - [Support AWS cross-region inferences](#support-aws-cross-region-inferences)
+    - [Support OpenAI web search models](#support-openai-web-search-models)
   - [Bug fix](#bug-fix)
 
 ## Turtorial
@@ -215,6 +216,12 @@ Supports two URL parameters: `thinking` and `reasoning_format`.
 ### Support AWS cross-region inferences
 
 - [fix: support aws cross region inferences #2182](https://github.com/songquanpeng/one-api/pull/2182)
+
+### Support OpenAI web search models
+
+- [feature: support openai web search models #2189](https://github.com/songquanpeng/one-api/pull/2189)
+
+support `gpt-4o-search-preview` & `gpt-4o-mini-search-preview`
 
 ## Bug fix
 

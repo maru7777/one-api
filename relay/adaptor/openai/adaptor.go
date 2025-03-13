@@ -129,8 +129,8 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 	}
 
 	// o1/o1-mini/o1-preview do not support system prompt/max_tokens/temperature
-	if strings.HasPrefix(request.Model, "o1") ||
-		strings.HasPrefix(request.Model, "o3") {
+	if strings.HasPrefix(meta.ActualModelName, "o1") ||
+		strings.HasPrefix(meta.ActualModelName, "o3") {
 		temperature := float64(1)
 		request.Temperature = &temperature // Only the default (1) value is supported
 
@@ -144,6 +144,16 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 
 			return
 		}(request.Messages)
+	}
+
+	// web search do not support system prompt/max_tokens/temperature
+	if strings.HasPrefix(meta.ActualModelName, "gpt-4o-search") ||
+		strings.HasPrefix(meta.ActualModelName, "gpt-4o-mini-search") {
+		request.Temperature = nil
+		request.TopP = nil
+		request.PresencePenalty = nil
+		request.N = nil
+		request.FrequencyPenalty = nil
 	}
 
 	if request.Stream && !config.EnforceIncludeUsage &&
