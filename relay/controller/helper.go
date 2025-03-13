@@ -92,29 +92,37 @@ func preConsumeQuota(ctx context.Context, textRequest *relaymodel.GeneralOpenAIR
 	return preConsumedQuota, nil
 }
 
-func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.Meta, textRequest *relaymodel.GeneralOpenAIRequest, ratio float64, preConsumedQuota int64, modelRatio float64, groupRatio float64, systemPromptReset bool) {
+func postConsumeQuota(ctx context.Context,
+	usage *relaymodel.Usage,
+	meta *meta.Meta,
+	textRequest *relaymodel.GeneralOpenAIRequest,
+	ratio float64,
+	preConsumedQuota int64,
+	modelRatio float64,
+	groupRatio float64,
+	systemPromptReset bool) (quota int64) {
 	if usage == nil {
 		logger.Error(ctx, "usage is nil, which is unexpected")
 		return
 	}
-	var quota int64
 	completionRatio := billingratio.GetCompletionRatio(textRequest.Model, meta.ChannelType)
 	promptTokens := usage.PromptTokens
 	// It appears that DeepSeek's official service automatically merges ReasoningTokens into CompletionTokens,
 	// but the behavior of third-party providers may differ, so for now we do not add them manually.
 	// completionTokens := usage.CompletionTokens + usage.CompletionTokensDetails.ReasoningTokens
 	completionTokens := usage.CompletionTokens
-	quota = int64(math.Ceil((float64(promptTokens) + float64(completionTokens)*completionRatio) * ratio))
+	quota = int64(math.Ceil((float64(promptTokens)+float64(completionTokens)*completionRatio)*ratio)) + usage.ToolsCost
 	if ratio != 0 && quota <= 0 {
 		quota = 1
 	}
+
 	totalTokens := promptTokens + completionTokens
 	if totalTokens == 0 {
 		// in this case, must be some error happened
 		// we cannot just return, because we may have to return the pre-consumed quota
 		quota = 0
 	}
-	quotaDelta := quota - preConsumedQuota + usage.ToolsCost
+	quotaDelta := quota - preConsumedQuota
 	err := model.PostConsumeTokenQuota(meta.TokenId, quotaDelta)
 	if err != nil {
 		logger.Error(ctx, "error consuming token remain quota: "+err.Error())
@@ -145,6 +153,8 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 	})
 	model.UpdateUserUsedQuotaAndRequestCount(meta.UserId, quota)
 	model.UpdateChannelUsedQuota(meta.ChannelId, quota)
+
+	return quota
 }
 
 func getMappedModelName(modelName string, mapping map[string]string) (string, bool) {
