@@ -10,13 +10,13 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/songquanpeng/one-api/common/render"
-
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/image"
 	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/common/render"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/relay/model"
 )
@@ -87,7 +87,7 @@ func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Re
 	if isModelSupportThinking(textRequest.Model) &&
 		claudeRequest.Thinking != nil {
 		if claudeRequest.MaxTokens <= 1024 {
-			return nil, fmt.Errorf("max_tokens must be greater than 1024 when using extended thinking")
+			return nil, errors.New("max_tokens must be greater than 1024 when using extended thinking")
 		}
 
 		// top_p must be nil when using extended thinking
@@ -296,6 +296,7 @@ func ResponseClaude2OpenAI(c *gin.Context, claudeResponse *Response) *openai.Tex
 		Message: model.Message{
 			Role:      "assistant",
 			Content:   responseText,
+			Reasoning: &reasoningText,
 			Name:      nil,
 			ToolCalls: tools,
 		},
