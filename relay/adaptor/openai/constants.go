@@ -25,4 +25,6 @@ var ModelList = []string{
 	"o1-mini", "o1-mini-2024-09-12",
 	"o3-mini", "o3-mini-2025-01-31",
 	"gpt-4.5-preview", "gpt-4.5-preview-2025-02-27",
+	// https://platform.openai.com/docs/guides/tools-web-search?api-mode=chat
+	"gpt-4o-search-preview", "gpt-4o-mini-search-preview",
 }

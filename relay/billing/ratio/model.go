@@ -44,8 +44,10 @@ var ModelRatio = map[string]float64{
 	"gpt-4o-2024-05-13":          2.5,   // $0.005 / 1K tokens
 	"gpt-4o-2024-08-06":          1.25,  // $0.0025 / 1K tokens
 	"gpt-4o-2024-11-20":          1.25,  // $0.0025 / 1K tokens
+	"gpt-4o-search-preview":      2.5,   // $0.005 / 1K tokens
 	"gpt-4o-mini":                0.075, // $0.00015 / 1K tokens
 	"gpt-4o-mini-2024-07-18":     0.075, // $0.00015 / 1K tokens
+	"gpt-4o-mini-search-preview": 0.075, // $0.00015 / 1K tokens
 	"gpt-4-vision-preview":       5,     // $0.01 / 1K tokens
 	// Audio billing will mix text and audio tokens, the unit price is different.
 	// Here records the cost of text, the cost multiplier of audio

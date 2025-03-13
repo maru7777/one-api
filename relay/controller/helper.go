@@ -118,7 +118,7 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 		// we cannot just return, because we may have to return the pre-consumed quota
 		quota = 0
 	}
-	quotaDelta := quota - preConsumedQuota
+	quotaDelta := quota - preConsumedQuota + usage.ToolsCost
 	err := model.PostConsumeTokenQuota(meta.TokenId, quotaDelta)
 	if err != nil {
 		logger.Error(ctx, "error consuming token remain quota: "+err.Error())
@@ -127,7 +127,13 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 	if err != nil {
 		logger.Error(ctx, "error update user quota cache: "+err.Error())
 	}
-	logContent := fmt.Sprintf("model rate %.2f, group rate %.2f, completion rate %.2f", modelRatio, groupRatio, completionRatio)
+
+	var logContent string
+	if usage.ToolsCost == 0 {
+		logContent = fmt.Sprintf("model rate %.2f, group rate %.2f, completion rate %.2f", modelRatio, groupRatio, completionRatio)
+	} else {
+		logContent = fmt.Sprintf("model rate %.2f, group rate %.2f, completion rate %.2f, tools cost %d", modelRatio, groupRatio, completionRatio, usage.ToolsCost)
+	}
 	model.RecordConsumeLog(ctx, &model.Log{
 		UserId:            meta.UserId,
 		ChannelId:         meta.ChannelId,

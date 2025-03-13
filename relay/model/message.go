@@ -31,11 +31,13 @@ const (
 type Message struct {
 	Role string `json:"role,omitempty"`
 	// Content is a string or a list of objects
-	Content    any           `json:"content,omitempty"`
-	Name       *string       `json:"name,omitempty"`
-	ToolCalls  []Tool        `json:"tool_calls,omitempty"`
-	ToolCallId string        `json:"tool_call_id,omitempty"`
-	Audio      *messageAudio `json:"audio,omitempty"`
+	Content    any              `json:"content,omitempty"`
+	Name       *string          `json:"name,omitempty"`
+	ToolCalls  []Tool           `json:"tool_calls,omitempty"`
+	ToolCallId string           `json:"tool_call_id,omitempty"`
+	Audio      *messageAudio    `json:"audio,omitempty"`
+	Annotation []AnnotationItem `json:"annotation,omitempty"`
+
 	// -------------------------------------
 	// Deepseek 专有的一些字段
 	// https://api-docs.deepseek.com/api/create-chat-completion
@@ -46,16 +48,35 @@ type Message struct {
 	// Prefix Completion feature as the input for the CoT in the last assistant message.
 	// When using this feature, the prefix parameter must be set to true.
 	ReasoningContent *string `json:"reasoning_content,omitempty"`
+
 	// -------------------------------------
 	// Openrouter
 	// -------------------------------------
 	Reasoning *string `json:"reasoning,omitempty"`
 	Refusal   *bool   `json:"refusal,omitempty"`
+
 	// -------------------------------------
 	// Anthropic
 	// -------------------------------------
 	Thinking  *string `json:"thinking,omitempty"`
 	Signature *string `json:"signature,omitempty"`
+}
+
+type AnnotationItem struct {
+	Type        string      `json:"type" binding:"oneof=url_citation"`
+	UrlCitation UrlCitation `json:"url_citation"`
+}
+
+// UrlCitation is a URL citation when using web search.
+type UrlCitation struct {
+	// Endpoint is the index of the last character of the URL citation in the message.
+	EndIndex int `json:"end_index"`
+	// StartIndex is the index of the first character of the URL citation in the message.
+	StartIndex int `json:"start_index"`
+	// Title is the title of the web resource.
+	Title string `json:"title"`
+	// Url is the URL of the web resource.
+	Url string `json:"url"`
 }
 
 // SetReasoningContent sets the reasoning content based on the format

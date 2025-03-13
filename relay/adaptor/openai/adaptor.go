@@ -3,12 +3,14 @@ package openai
 import (
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/relay/adaptor"
 	"github.com/songquanpeng/one-api/relay/adaptor/alibailian"
@@ -18,6 +20,7 @@ import (
 	"github.com/songquanpeng/one-api/relay/adaptor/minimax"
 	"github.com/songquanpeng/one-api/relay/adaptor/novita"
 	"github.com/songquanpeng/one-api/relay/adaptor/openrouter"
+	"github.com/songquanpeng/one-api/relay/billing/ratio"
 	"github.com/songquanpeng/one-api/relay/channeltype"
 	"github.com/songquanpeng/one-api/relay/meta"
 	"github.com/songquanpeng/one-api/relay/model"
@@ -161,11 +164,16 @@ func (a *Adaptor) ConvertImageRequest(_ *gin.Context, request *model.ImageReques
 	return request, nil
 }
 
-func (a *Adaptor) DoRequest(c *gin.Context, meta *meta.Meta, requestBody io.Reader) (*http.Response, error) {
+func (a *Adaptor) DoRequest(c *gin.Context,
+	meta *meta.Meta,
+	requestBody io.Reader) (*http.Response, error) {
 	return adaptor.DoRequestHelper(a, c, meta, requestBody)
 }
 
-func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Meta) (usage *model.Usage, err *model.ErrorWithStatusCode) {
+func (a *Adaptor) DoResponse(c *gin.Context,
+	resp *http.Response,
+	meta *meta.Meta) (usage *model.Usage,
+	err *model.ErrorWithStatusCode) {
 	if meta.IsStream {
 		var responseText string
 		err, responseText, usage = StreamHandler(c, resp, meta.Mode)
@@ -184,6 +192,52 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Met
 			err, _ = ImagesEditsHandler(c, resp)
 		default:
 			err, usage = Handler(c, resp, meta.PromptTokens, meta.ActualModelName)
+		}
+	}
+
+	// -------------------------------------
+	// calculate web-search tool cost
+	// -------------------------------------
+	searchContextSize := "medium"
+	var req *model.GeneralOpenAIRequest
+	if vi, ok := c.Get(ctxkey.ConvertedRequest); ok {
+		if req, ok = vi.(*model.GeneralOpenAIRequest); ok {
+			if req != nil &&
+				req.WebSearchOptions != nil &&
+				req.WebSearchOptions.SearchContextSize != nil {
+				searchContextSize = *req.WebSearchOptions.SearchContextSize
+			}
+
+			switch {
+			case strings.HasPrefix(meta.ActualModelName, "gpt-4o-search"):
+				switch searchContextSize {
+				case "low":
+					usage.ToolsCost += int64(math.Ceil(30 / 1000 * ratio.USD))
+				case "medium":
+					usage.ToolsCost += int64(math.Ceil(35 / 1000 * ratio.USD))
+				case "high":
+					usage.ToolsCost += int64(math.Ceil(40 / 1000 * ratio.USD))
+				default:
+					return nil, ErrorWrapper(
+						errors.Errorf("invalid search context size %q", searchContextSize),
+						"invalid search context size: "+searchContextSize,
+						http.StatusBadRequest)
+				}
+			case strings.HasPrefix(meta.ActualModelName, "gpt-4o-mini-search"):
+				switch searchContextSize {
+				case "low":
+					usage.ToolsCost += int64(math.Ceil(25 / 1000 * ratio.USD))
+				case "medium":
+					usage.ToolsCost += int64(math.Ceil(27.5 / 1000 * ratio.USD))
+				case "high":
+					usage.ToolsCost += int64(math.Ceil(30 / 1000 * ratio.USD))
+				default:
+					return nil, ErrorWrapper(
+						errors.Errorf("invalid search context size %q", searchContextSize),
+						"invalid search context size: "+searchContextSize,
+						http.StatusBadRequest)
+				}
+			}
 		}
 	}
 

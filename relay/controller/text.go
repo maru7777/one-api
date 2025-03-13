@@ -138,6 +138,8 @@ func getRequestBody(c *gin.Context, meta *metalib.Meta, textRequest *relaymodel.
 		logger.Debugf(c.Request.Context(), "converted request failed: %s\n", err.Error())
 		return nil, err
 	}
+	c.Set(ctxkey.ConvertedRequest, convertedRequest)
+
 	jsonData, err := json.Marshal(convertedRequest)
 	if err != nil {
 		logger.Debugf(c.Request.Context(), "converted request json_marshal_failed: %s\n", err.Error())
