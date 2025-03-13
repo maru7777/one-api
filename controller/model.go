@@ -48,7 +48,7 @@ type OpenAIModels struct {
 	Parent     *string                 `json:"parent"`
 }
 
-// BUG: 更新 custom channel 时，应该同步更新所有自定义的 models 到 allModels
+// BUG(#39): 更新 custom channel 时，应该同步更新所有自定义的 models 到 allModels
 var allModels []OpenAIModels
 var modelsMap map[string]OpenAIModels
 var channelId2Models map[int][]string
@@ -159,6 +159,14 @@ func ListModels(c *gin.Context) {
 		middleware.AbortWithError(c, http.StatusBadRequest, err)
 		return
 	}
+
+	// fix(#39): Previously, to fix #31, I concatenated model_name with adaptor name to return models.
+	// But this caused an issue with custom channels, where the returned adaptor is "openai",
+	// resulting in adaptor name and ownedBy field mismatches when matching against allModels.
+	// For deepseek example, the adaptor is "openai" but ownedBy is "deepseek", causing mismatch.
+	// Our current solution: for models from custom channels, don't concatenate adaptor name,
+	// just match by model name only. However, this may reintroduce the duplicate models bug
+	// mentioned in #31. A complete fix would require significant changes, so I'll leave it for now.
 
 	// Create a map for quick lookup of enabled model+channel combinations
 	// Only store the exact model:channel combinations from abilities

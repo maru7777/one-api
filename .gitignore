@@ -14,3 +14,4 @@ cmd.md
 /one-api
 temp
 .DS_Store
+/__debug*
