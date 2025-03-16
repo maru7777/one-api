@@ -1,6 +1,10 @@
 package model
 
-import "github.com/songquanpeng/one-api/relay/adaptor/openrouter"
+import (
+	"mime/multipart"
+
+	"github.com/songquanpeng/one-api/relay/adaptor/openrouter"
+)
 
 type ResponseFormat struct {
 	Type       string      `json:"type,omitempty"`
@@ -141,4 +145,20 @@ func (r GeneralOpenAIRequest) ParseInput() []string {
 		}
 	}
 	return input
+}
+
+// OpenaiImageEditRequest is the request body for the OpenAI image edit API.
+type OpenaiImageEditRequest struct {
+	Image          *multipart.FileHeader `json:"image" form:"image" binding:"required"`
+	Prompt         string                `json:"prompt" form:"prompt" binding:"required"`
+	Mask           *multipart.FileHeader `json:"mask" form:"mask" binding:"required"`
+	Model          string                `json:"model" form:"model" binding:"required"`
+	N              int                   `json:"n" form:"n" binding:"min=0,max=10"`
+	Size           string                `json:"size" form:"size"`
+	ResponseFormat string                `json:"response_format" form:"response_format"`
+	// -------------------------------------
+	// Imagen-3
+	// -------------------------------------
+	EditMode *string `json:"edit_mode" form:"edit_mode"`
+	MaskMode *string `json:"mask_mode" form:"mask_mode"`
 }

@@ -73,12 +73,12 @@ func convertImageRemixRequest(c *gin.Context) (any, error) {
 	}
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody))
 
-	rawReq := new(OpenaiImageEditRequest)
+	rawReq := new(model.OpenaiImageEditRequest)
 	if err := c.ShouldBind(rawReq); err != nil {
 		return nil, errors.Wrap(err, "parse image edit form")
 	}
 
-	return rawReq.toFluxRemixRequest()
+	return Convert2FluxRemixRequest(rawReq)
 }
 
 // ConvertRequest converts the request to the format that the target API expects.
