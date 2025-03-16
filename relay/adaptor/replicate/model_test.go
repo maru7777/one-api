@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/songquanpeng/one-api/relay/model"
 	"github.com/stretchr/testify/require"
 )
 
@@ -50,7 +51,7 @@ func TestOpenaiImageEditRequest_toFluxRemixRequest(t *testing.T) {
 	maskFileHeader, err := createFileHeader("mask", "test.png", maskBuf.Bytes())
 	require.NoError(t, err)
 
-	req := &OpenaiImageEditRequest{
+	req := &model.OpenaiImageEditRequest{
 		Image:          imgFileHeader,
 		Mask:           maskFileHeader,
 		Prompt:         "Test prompt",
@@ -58,7 +59,7 @@ func TestOpenaiImageEditRequest_toFluxRemixRequest(t *testing.T) {
 		ResponseFormat: "b64_json",
 	}
 
-	fluxReq, err := req.toFluxRemixRequest()
+	fluxReq, err := Convert2FluxRemixRequest(req)
 	require.NoError(t, err)
 	require.NotNil(t, fluxReq)
 	require.Equal(t, req.Prompt, fluxReq.Input.Prompt)

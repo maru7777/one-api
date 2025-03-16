@@ -132,12 +132,14 @@ type EmbeddingResponse struct {
 	model.Usage `json:"usage"`
 }
 
+// ImageData represents an image in the response
 type ImageData struct {
 	Url           string `json:"url,omitempty"`
 	B64Json       string `json:"b64_json,omitempty"`
 	RevisedPrompt string `json:"revised_prompt,omitempty"`
 }
 
+// ImageResponse represents the response structure for image generations
 type ImageResponse struct {
 	Created int64       `json:"created"`
 	Data    []ImageData `json:"data"`

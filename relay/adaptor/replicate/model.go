@@ -6,21 +6,11 @@ import (
 	"image"
 	"image/png"
 	"io"
-	"mime/multipart"
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/songquanpeng/one-api/relay/model"
 )
-
-type OpenaiImageEditRequest struct {
-	Image          *multipart.FileHeader `json:"image" form:"image" binding:"required"`
-	Prompt         string                `json:"prompt" form:"prompt" binding:"required"`
-	Mask           *multipart.FileHeader `json:"mask" form:"mask" binding:"required"`
-	Model          string                `json:"model" form:"model" binding:"required"`
-	N              int                   `json:"n" form:"n" binding:"min=0,max=10"`
-	Size           string                `json:"size" form:"size"`
-	ResponseFormat string                `json:"response_format" form:"response_format"`
-}
 
 // toFluxRemixRequest convert OpenAI's image edit request to Flux's remix request.
 //
@@ -31,14 +21,14 @@ type OpenaiImageEditRequest struct {
 //
 // Both OpenAI's Image and Mask are browser-native ImageData,
 // which need to be converted to base64 dataURI format.
-func (r *OpenaiImageEditRequest) toFluxRemixRequest() (*InpaintingImageByFlusReplicateRequest, error) {
-	if r.ResponseFormat != "b64_json" {
+func Convert2FluxRemixRequest(req *model.OpenaiImageEditRequest) (*InpaintingImageByFlusReplicateRequest, error) {
+	if req.ResponseFormat != "b64_json" {
 		return nil, errors.New("response_format must be b64_json for replicate models")
 	}
 
 	fluxReq := &InpaintingImageByFlusReplicateRequest{
 		Input: FluxInpaintingInput{
-			Prompt:           r.Prompt,
+			Prompt:           req.Prompt,
 			Seed:             int(time.Now().UnixNano()),
 			Steps:            30,
 			Guidance:         3,
@@ -48,7 +38,7 @@ func (r *OpenaiImageEditRequest) toFluxRemixRequest() (*InpaintingImageByFlusRep
 		},
 	}
 
-	imgFile, err := r.Image.Open()
+	imgFile, err := req.Image.Open()
 	if err != nil {
 		return nil, errors.Wrap(err, "open image file")
 	}
@@ -58,7 +48,7 @@ func (r *OpenaiImageEditRequest) toFluxRemixRequest() (*InpaintingImageByFlusRep
 		return nil, errors.Wrap(err, "read image file")
 	}
 
-	maskFile, err := r.Mask.Open()
+	maskFile, err := req.Mask.Open()
 	if err != nil {
 		return nil, errors.Wrap(err, "open mask file")
 	}

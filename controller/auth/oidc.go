@@ -1,13 +1,13 @@
 package auth
 
 import (
-	"strings"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/sessions"
