@@ -341,6 +341,11 @@ var ModelRatio = map[string]float64{
 	"llama3-8b-8192":                        0.05 * MilliTokensUsd,
 	"llama3-groq-70b-8192-tool-use-preview": 0.59 * MilliTokensUsd,
 	"llama3-groq-8b-8192-tool-use-preview":  0.05 * MilliTokensUsd,
+	"llama-3.3-70b-specdec":                 0.59 * MilliTokensUsd,
+	"mistral-saba-24b":                      0.79 * MilliTokensUsd,
+	"qwen-qwq-32b":                          0.29 * MilliTokensUsd,
+	"qwen-2.5-coder-32b":                    0.79 * MilliTokensUsd,
+	"qwen-2.5-32b":                          0.79 * MilliTokensUsd,
 	"mixtral-8x7b-32768":                    0.24 * MilliTokensUsd,
 	"whisper-large-v3":                      0.111 * MilliTokensUsd,
 	"whisper-large-v3-turbo":                0.04 * MilliTokensUsd,
@@ -717,9 +722,14 @@ var CompletionRatio = map[string]float64{
 	"llama3-groq-70b-8192-tool-use-preview": 0.79 / 0.59,
 	"llama3-groq-8b-8192-tool-use-preview":  0.08 / 0.05,
 	"mixtral-8x7b-32768":                    1.0,
-	"deepseek-r1-distill-qwen-32b":          1,
+	"deepseek-r1-distill-qwen-32b":          1.0,
 	"deepseek-r1-distill-llama-70b-specdec": 0.99 / 0.75,
 	"deepseek-r1-distill-llama-70b":         0.99 / 0.75,
+	"llama-3.3-70b-specdec":                 0.99 / 0.59,
+	"mistral-saba-24b":                      1.0,
+	"qwen-qwq-32b":                          0.39 / 0.29,
+	"qwen-2.5-coder-32b":                    1.0,
+	"qwen-2.5-32b":                          1.0,
 	// -------------------------------------
 	// Replicate
 	// -------------------------------------
