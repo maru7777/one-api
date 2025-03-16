@@ -910,6 +910,7 @@ func UpdateModelRatioByJSONString(jsonStr string) error {
 			"stability-ai/stable-diffusion-3.5-large-turbo",
 			"stability-ai/stable-diffusion-3.5-medium":
 			if ratio < 1000 {
+				logger.SysWarnf("the model ratio of %s is less than 1000, please check it", name)
 				ModelRatio[name] = ratio * 1000
 			}
 		}
