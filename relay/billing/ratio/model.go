@@ -22,7 +22,7 @@ const (
 	KiloRmb float64 = KiloTokensUsd / USD2RMB
 	// MilliRmb multiply by the RMB price per 1 million tokens to get the quota cost per token
 	MilliRmb       float64 = MilliTokensUsd / USD2RMB
-	ImageUsdPerPic float64 = MilliTokensUsd / 1000
+	ImageUsdPerPic float64 = QuotaPerUsd / 1000
 )
 
 var modelRatioLock sync.RWMutex
