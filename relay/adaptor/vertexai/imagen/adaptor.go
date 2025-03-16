@@ -15,7 +15,11 @@ import (
 )
 
 var ModelList = []string{
-	"imagen-3.0-generate-001",
+	// create
+	"imagen-3.0-generate-001", "imagen-3.0-generate-002",
+	"imagen-3.0-fast-generate-001",
+	// edit
+	// "imagen-3.0-capability-001",  // not supported yet
 }
 
 type Adaptor struct {

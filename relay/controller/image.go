@@ -193,9 +193,9 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	switch meta.ChannelType {
 	case channeltype.Replicate:
 		// replicate always return 1 image
-		quota = int64(ratio * imageCostRatio * 1000)
+		quota = int64(ratio * imageCostRatio)
 	default:
-		quota = int64(ratio*imageCostRatio*1000) * int64(imageRequest.N)
+		quota = int64(ratio*imageCostRatio) * int64(imageRequest.N)
 	}
 
 	if userQuota-quota < 0 {
