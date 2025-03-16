@@ -226,7 +226,8 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 		}
 		if quota >= 0 {
 			tokenName := c.GetString(ctxkey.TokenName)
-			logContent := fmt.Sprintf("model rate %.2f, group rate %.2f", modelRatio, groupRatio)
+			logContent := fmt.Sprintf("model rate %.2f, group rate %.2f, num %d",
+				modelRatio, groupRatio, imageRequest.N)
 			model.RecordConsumeLog(ctx, &model.Log{
 				UserId:           meta.UserId,
 				ChannelId:        meta.ChannelId,

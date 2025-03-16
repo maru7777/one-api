@@ -863,11 +863,59 @@ func ModelRatio2JSONString() string {
 	return string(jsonBytes)
 }
 
+// UpdateModelRatioByJSONString updates the ModelRatio map with the given JSON string.
 func UpdateModelRatioByJSONString(jsonStr string) error {
 	modelRatioLock.Lock()
 	defer modelRatioLock.Unlock()
 	ModelRatio = make(map[string]float64)
-	return json.Unmarshal([]byte(jsonStr), &ModelRatio)
+	err := json.Unmarshal([]byte(jsonStr), &ModelRatio)
+	if err != nil {
+		logger.SysError("error unmarshalling model ratio: " + err.Error())
+		return err
+	}
+
+	// f3300f08e25e212f1b32ae1f678eb7ec2dec6a8c change the ratio of image models,
+	// so we need to multiply the ratio by 1000 for legacy settings.
+	for name, ratio := range ModelRatio {
+		switch name {
+		case "dall-e-2",
+			"dall-e-3",
+			"imagen-3.0-generate-001",
+			"imagen-3.0-generate-002",
+			"imagen-3.0-fast-generate-001",
+			"imagen-3.0-capability-001",
+			"ali-stable-diffusion-xl",
+			"ali-stable-diffusion-v1.5",
+			"black-forest-labs/flux-1.1-pro",
+			"black-forest-labs/flux-1.1-pro-ultra",
+			"black-forest-labs/flux-canny-dev",
+			"black-forest-labs/flux-canny-pro",
+			"black-forest-labs/flux-depth-dev",
+			"black-forest-labs/flux-depth-pro",
+			"black-forest-labs/flux-dev",
+			"black-forest-labs/flux-dev-lora",
+			"black-forest-labs/flux-fill-dev",
+			"black-forest-labs/flux-fill-pro",
+			"black-forest-labs/flux-pro",
+			"black-forest-labs/flux-redux-dev",
+			"black-forest-labs/flux-redux-schnell",
+			"black-forest-labs/flux-schnell",
+			"black-forest-labs/flux-schnell-lora",
+			"ideogram-ai/ideogram-v2",
+			"ideogram-ai/ideogram-v2-turbo",
+			"recraft-ai/recraft-v3",
+			"recraft-ai/recraft-v3-svg",
+			"stability-ai/stable-diffusion-3",
+			"stability-ai/stable-diffusion-3.5-large",
+			"stability-ai/stable-diffusion-3.5-large-turbo",
+			"stability-ai/stable-diffusion-3.5-medium":
+			if ratio < 1000 {
+				ModelRatio[name] = ratio * 1000
+			}
+		}
+	}
+
+	return nil
 }
 
 func GetModelRatio(name string, channelType int) float64 {
@@ -895,7 +943,7 @@ func GetModelRatio(name string, channelType int) float64 {
 	}
 
 	logger.SysError("model ratio not found: " + name)
-	return 30
+	return 0.1 * QuotaPerUsd
 }
 
 // CompletionRatio2JSONString returns the CompletionRatio map as a JSON string.
