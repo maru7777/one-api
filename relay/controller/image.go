@@ -193,12 +193,12 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	switch meta.ChannelType {
 	case channeltype.Replicate:
 		// replicate always return 1 image
-		quota = int64(ratio * imageCostRatio)
+		quota = int64(ratio*imageCostRatio) * 1000
 	default:
-		quota = int64(ratio*imageCostRatio) * int64(imageRequest.N)
+		quota = int64(ratio*imageCostRatio) * int64(imageRequest.N) * 1000
 	}
 
-	if userQuota-quota < 0 {
+	if userQuota < quota {
 		return openai.ErrorWrapper(errors.New("user quota is not enough"), "insufficient_user_quota", http.StatusForbidden)
 	}
 

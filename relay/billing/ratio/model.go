@@ -21,7 +21,8 @@ const (
 	// KiloRmb multiply by the RMB price per 1,000 tokens to get the quota cost per token
 	KiloRmb float64 = KiloTokensUsd / USD2RMB
 	// MilliRmb multiply by the RMB price per 1 million tokens to get the quota cost per token
-	MilliRmb float64 = MilliTokensUsd / USD2RMB
+	MilliRmb       float64 = MilliTokensUsd / USD2RMB
+	ImageUsdPerPic float64 = MilliTokensUsd / 1000
 )
 
 var modelRatioLock sync.RWMutex
@@ -108,8 +109,8 @@ var ModelRatio = map[string]float64{
 	"text-search-ada-doc-001":              20 * MilliTokensUsd,
 	"text-moderation-stable":               0.2 * MilliTokensUsd,
 	"text-moderation-latest":               0.2 * MilliTokensUsd,
-	"dall-e-2":                             0.02 * QuotaPerUsd,
-	"dall-e-3":                             0.04 * QuotaPerUsd,
+	"dall-e-2":                             0.02 * ImageUsdPerPic,
+	"dall-e-3":                             0.04 * ImageUsdPerPic,
 	// https://www.anthropic.com/api#pricing
 	"claude-instant-1.2":         0.8 * MilliTokensUsd,
 	"claude-2.0":                 8.0 * MilliTokensUsd,
@@ -267,9 +268,9 @@ var ModelRatio = map[string]float64{
 	"text-embedding-v2":             0.0007 * KiloRmb,
 	"text-embedding-async-v2":       0.0007 * KiloRmb,
 	"text-embedding-async-v1":       0.0007 * KiloRmb,
-	"ali-stable-diffusion-xl":       0.016 * QuotaPerUsd,
-	"ali-stable-diffusion-v1.5":     0.016 * QuotaPerUsd,
-	"wanx-v1":                       0.016 * QuotaPerUsd,
+	"ali-stable-diffusion-xl":       0.016 * ImageUsdPerPic,
+	"ali-stable-diffusion-v1.5":     0.016 * ImageUsdPerPic,
+	"wanx-v1":                       0.016 * ImageUsdPerPic,
 	"deepseek-r1":                   0.002 * KiloRmb,
 	"deepseek-v3":                   0.001 * KiloRmb,
 	"deepseek-r1-distill-qwen-1.5b": 0.001 * KiloRmb,
@@ -387,37 +388,37 @@ var ModelRatio = map[string]float64{
 	"grok-beta": 5.0 * MilliTokensUsd,
 	// vertex imagen3
 	// https://cloud.google.com/vertex-ai/generative-ai/pricing#imagen-models
-	"imagen-3.0-generate-001":      0.04 * QuotaPerUsd,
-	"imagen-3.0-generate-002":      0.04 * QuotaPerUsd,
-	"imagen-3.0-fast-generate-001": 0.02 * QuotaPerUsd,
-	"imagen-3.0-capability-001":    0.04 * QuotaPerUsd,
+	"imagen-3.0-generate-001":      0.04 * ImageUsdPerPic,
+	"imagen-3.0-generate-002":      0.04 * ImageUsdPerPic,
+	"imagen-3.0-fast-generate-001": 0.02 * ImageUsdPerPic,
+	"imagen-3.0-capability-001":    0.04 * ImageUsdPerPic,
 	// -------------------------------------
 	// replicate charges based on the number of generated images
 	// https://replicate.com/pricing
 	// -------------------------------------
-	"black-forest-labs/flux-1.1-pro":                0.04 * QuotaPerUsd,
-	"black-forest-labs/flux-1.1-pro-ultra":          0.06 * QuotaPerUsd,
-	"black-forest-labs/flux-canny-dev":              0.025 * QuotaPerUsd,
-	"black-forest-labs/flux-canny-pro":              0.05 * QuotaPerUsd,
-	"black-forest-labs/flux-depth-dev":              0.025 * QuotaPerUsd,
-	"black-forest-labs/flux-depth-pro":              0.05 * QuotaPerUsd,
-	"black-forest-labs/flux-dev":                    0.025 * QuotaPerUsd,
-	"black-forest-labs/flux-dev-lora":               0.032 * QuotaPerUsd,
-	"black-forest-labs/flux-fill-dev":               0.04 * QuotaPerUsd,
-	"black-forest-labs/flux-fill-pro":               0.05 * QuotaPerUsd,
-	"black-forest-labs/flux-pro":                    0.055 * QuotaPerUsd,
-	"black-forest-labs/flux-redux-dev":              0.025 * QuotaPerUsd,
-	"black-forest-labs/flux-redux-schnell":          0.003 * QuotaPerUsd,
-	"black-forest-labs/flux-schnell":                0.003 * QuotaPerUsd,
-	"black-forest-labs/flux-schnell-lora":           0.02 * QuotaPerUsd,
-	"ideogram-ai/ideogram-v2":                       0.08 * QuotaPerUsd,
-	"ideogram-ai/ideogram-v2-turbo":                 0.05 * QuotaPerUsd,
-	"recraft-ai/recraft-v3":                         0.04 * QuotaPerUsd,
-	"recraft-ai/recraft-v3-svg":                     0.08 * QuotaPerUsd,
-	"stability-ai/stable-diffusion-3":               0.035 * QuotaPerUsd,
-	"stability-ai/stable-diffusion-3.5-large":       0.065 * QuotaPerUsd,
-	"stability-ai/stable-diffusion-3.5-large-turbo": 0.04 * QuotaPerUsd,
-	"stability-ai/stable-diffusion-3.5-medium":      0.035 * QuotaPerUsd,
+	"black-forest-labs/flux-1.1-pro":                0.04 * ImageUsdPerPic,
+	"black-forest-labs/flux-1.1-pro-ultra":          0.06 * ImageUsdPerPic,
+	"black-forest-labs/flux-canny-dev":              0.025 * ImageUsdPerPic,
+	"black-forest-labs/flux-canny-pro":              0.05 * ImageUsdPerPic,
+	"black-forest-labs/flux-depth-dev":              0.025 * ImageUsdPerPic,
+	"black-forest-labs/flux-depth-pro":              0.05 * ImageUsdPerPic,
+	"black-forest-labs/flux-dev":                    0.025 * ImageUsdPerPic,
+	"black-forest-labs/flux-dev-lora":               0.032 * ImageUsdPerPic,
+	"black-forest-labs/flux-fill-dev":               0.04 * ImageUsdPerPic,
+	"black-forest-labs/flux-fill-pro":               0.05 * ImageUsdPerPic,
+	"black-forest-labs/flux-pro":                    0.055 * ImageUsdPerPic,
+	"black-forest-labs/flux-redux-dev":              0.025 * ImageUsdPerPic,
+	"black-forest-labs/flux-redux-schnell":          0.003 * ImageUsdPerPic,
+	"black-forest-labs/flux-schnell":                0.003 * ImageUsdPerPic,
+	"black-forest-labs/flux-schnell-lora":           0.02 * ImageUsdPerPic,
+	"ideogram-ai/ideogram-v2":                       0.08 * ImageUsdPerPic,
+	"ideogram-ai/ideogram-v2-turbo":                 0.05 * ImageUsdPerPic,
+	"recraft-ai/recraft-v3":                         0.04 * ImageUsdPerPic,
+	"recraft-ai/recraft-v3-svg":                     0.08 * ImageUsdPerPic,
+	"stability-ai/stable-diffusion-3":               0.035 * ImageUsdPerPic,
+	"stability-ai/stable-diffusion-3.5-large":       0.065 * ImageUsdPerPic,
+	"stability-ai/stable-diffusion-3.5-large-turbo": 0.04 * ImageUsdPerPic,
+	"stability-ai/stable-diffusion-3.5-medium":      0.035 * ImageUsdPerPic,
 	// replicate chat models
 	"anthropic/claude-3.5-haiku":                1.0 * MilliTokensUsd,
 	"anthropic/claude-3.5-sonnet":               3.75 * MilliTokensUsd,
@@ -886,45 +887,45 @@ func UpdateModelRatioByJSONString(jsonStr string) error {
 
 	// f3300f08e25e212f1b32ae1f678eb7ec2dec6a8c change the ratio of image models,
 	// so we need to multiply the ratio by 1000 for legacy settings.
-	for name, ratio := range ModelRatio {
-		switch name {
-		case "dall-e-2",
-			"dall-e-3",
-			"imagen-3.0-generate-001",
-			"imagen-3.0-generate-002",
-			"imagen-3.0-fast-generate-001",
-			"imagen-3.0-capability-001",
-			"ali-stable-diffusion-xl",
-			"ali-stable-diffusion-v1.5",
-			"black-forest-labs/flux-1.1-pro",
-			"black-forest-labs/flux-1.1-pro-ultra",
-			"black-forest-labs/flux-canny-dev",
-			"black-forest-labs/flux-canny-pro",
-			"black-forest-labs/flux-depth-dev",
-			"black-forest-labs/flux-depth-pro",
-			"black-forest-labs/flux-dev",
-			"black-forest-labs/flux-dev-lora",
-			"black-forest-labs/flux-fill-dev",
-			"black-forest-labs/flux-fill-pro",
-			"black-forest-labs/flux-pro",
-			"black-forest-labs/flux-redux-dev",
-			"black-forest-labs/flux-redux-schnell",
-			"black-forest-labs/flux-schnell",
-			"black-forest-labs/flux-schnell-lora",
-			"ideogram-ai/ideogram-v2",
-			"ideogram-ai/ideogram-v2-turbo",
-			"recraft-ai/recraft-v3",
-			"recraft-ai/recraft-v3-svg",
-			"stability-ai/stable-diffusion-3",
-			"stability-ai/stable-diffusion-3.5-large",
-			"stability-ai/stable-diffusion-3.5-large-turbo",
-			"stability-ai/stable-diffusion-3.5-medium":
-			if ratio < 1000 {
-				logger.SysWarnf("the model ratio of %s is less than 1000, please check it", name)
-				ModelRatio[name] = ratio * 1000
-			}
-		}
-	}
+	// for name, ratio := range ModelRatio {
+	// 	switch name {
+	// 	case "dall-e-2",
+	// 		"dall-e-3",
+	// 		"imagen-3.0-generate-001",
+	// 		"imagen-3.0-generate-002",
+	// 		"imagen-3.0-fast-generate-001",
+	// 		"imagen-3.0-capability-001",
+	// 		"ali-stable-diffusion-xl",
+	// 		"ali-stable-diffusion-v1.5",
+	// 		"black-forest-labs/flux-1.1-pro",
+	// 		"black-forest-labs/flux-1.1-pro-ultra",
+	// 		"black-forest-labs/flux-canny-dev",
+	// 		"black-forest-labs/flux-canny-pro",
+	// 		"black-forest-labs/flux-depth-dev",
+	// 		"black-forest-labs/flux-depth-pro",
+	// 		"black-forest-labs/flux-dev",
+	// 		"black-forest-labs/flux-dev-lora",
+	// 		"black-forest-labs/flux-fill-dev",
+	// 		"black-forest-labs/flux-fill-pro",
+	// 		"black-forest-labs/flux-pro",
+	// 		"black-forest-labs/flux-redux-dev",
+	// 		"black-forest-labs/flux-redux-schnell",
+	// 		"black-forest-labs/flux-schnell",
+	// 		"black-forest-labs/flux-schnell-lora",
+	// 		"ideogram-ai/ideogram-v2",
+	// 		"ideogram-ai/ideogram-v2-turbo",
+	// 		"recraft-ai/recraft-v3",
+	// 		"recraft-ai/recraft-v3-svg",
+	// 		"stability-ai/stable-diffusion-3",
+	// 		"stability-ai/stable-diffusion-3.5-large",
+	// 		"stability-ai/stable-diffusion-3.5-large-turbo",
+	// 		"stability-ai/stable-diffusion-3.5-medium":
+	// 		if ratio < 1000 {
+	// 			logger.SysWarnf("the model ratio of %s is less than 1000, please check it", name)
+	// 			ModelRatio[name] = ratio * 1000
+	// 		}
+	// 	}
+	// }
 
 	return nil
 }
