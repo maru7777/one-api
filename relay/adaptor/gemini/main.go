@@ -62,6 +62,9 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *ChatRequest {
 			Temperature:     textRequest.Temperature,
 			TopP:            textRequest.TopP,
 			MaxOutputTokens: textRequest.MaxTokens,
+			ResponseModalities: []string{
+				"TEXT", "IMAGE",
+			},
 		},
 	}
 	if textRequest.ResponseFormat != nil {
@@ -256,19 +259,52 @@ func responseGeminiChat2OpenAI(response *ChatResponse) *openai.TextResponse {
 			if candidate.Content.Parts[0].FunctionCall != nil {
 				choice.Message.ToolCalls = getToolCalls(&candidate)
 			} else {
+				// Handle text and image content
 				var builder strings.Builder
+				var contentItems []model.MessageContent
+
 				for _, part := range candidate.Content.Parts {
-					if i > 0 {
-						builder.WriteString("\n")
+					if part.Text != "" {
+						// For text parts
+						if i > 0 {
+							builder.WriteString("\n")
+						}
+						builder.WriteString(part.Text)
+
+						// Add to content items
+						contentItems = append(contentItems, model.MessageContent{
+							Type: model.ContentTypeText,
+							Text: part.Text,
+						})
 					}
-					builder.WriteString(part.Text)
+
+					if part.InlineData != nil && part.InlineData.MimeType != "" && part.InlineData.Data != "" {
+						// For inline image data
+						imageURL := &model.ImageURL{
+							// The data is already base64 encoded
+							Url: fmt.Sprintf("data:%s;base64,%s", part.InlineData.MimeType, part.InlineData.Data),
+						}
+
+						contentItems = append(contentItems, model.MessageContent{
+							Type:     model.ContentTypeImageURL,
+							ImageURL: imageURL,
+						})
+					}
 				}
-				choice.Message.Content = builder.String()
+
+				// If we have multiple content types, use structured content format
+				if len(contentItems) > 1 || (len(contentItems) == 1 && contentItems[0].Type != model.ContentTypeText) {
+					choice.Message.Content = contentItems
+				} else {
+					// Otherwise use the simple string content format
+					choice.Message.Content = builder.String()
+				}
 			}
 		} else {
 			choice.Message.Content = ""
 			choice.FinishReason = candidate.FinishReason
 		}
+
 		fullTextResponse.Choices = append(fullTextResponse.Choices, choice)
 	}
 	return &fullTextResponse
@@ -359,6 +395,7 @@ func Handler(c *gin.Context, resp *http.Response, promptTokens int, modelName st
 	if err != nil {
 		return openai.ErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError), nil
 	}
+
 	err = resp.Body.Close()
 	if err != nil {
 		return openai.ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), nil
