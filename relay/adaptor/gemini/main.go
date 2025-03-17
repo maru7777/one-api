@@ -312,14 +312,78 @@ func responseGeminiChat2OpenAI(response *ChatResponse) *openai.TextResponse {
 
 func streamResponseGeminiChat2OpenAI(geminiResponse *ChatResponse) *openai.ChatCompletionsStreamResponse {
 	var choice openai.ChatCompletionsStreamResponseChoice
-	choice.Delta.Content = geminiResponse.GetResponseText()
-	//choice.FinishReason = &constant.StopFinishReason
+	choice.Delta.Role = "assistant"
+
+	// Check if we have any candidates
+	if len(geminiResponse.Candidates) == 0 {
+		return nil
+	}
+
+	// Get the first candidate
+	candidate := geminiResponse.Candidates[0]
+
+	// Check if there are parts in the content
+	if len(candidate.Content.Parts) == 0 {
+		return nil
+	}
+
+	// Handle different content types in the parts
+	for _, part := range candidate.Content.Parts {
+		// Handle text content
+		if part.Text != "" {
+			// Store as string for simple text responses
+			textContent := part.Text
+			choice.Delta.Content = textContent
+		}
+
+		// Handle image content
+		if part.InlineData != nil && part.InlineData.MimeType != "" && part.InlineData.Data != "" {
+			// Create a structured response for image content
+			imageUrl := fmt.Sprintf("data:%s;base64,%s", part.InlineData.MimeType, part.InlineData.Data)
+
+			// If we already have text content, create a mixed content response
+			if strContent, ok := choice.Delta.Content.(string); ok && strContent != "" {
+				// Convert the existing text content and add the image
+				messageContents := []model.MessageContent{
+					{
+						Type: model.ContentTypeText,
+						Text: &strContent,
+					},
+					{
+						Type: model.ContentTypeImageURL,
+						ImageURL: &model.ImageURL{
+							Url: imageUrl,
+						},
+					},
+				}
+				choice.Delta.Content = messageContents
+			} else {
+				// Only have image content
+				choice.Delta.Content = []model.MessageContent{
+					{
+						Type: model.ContentTypeImageURL,
+						ImageURL: &model.ImageURL{
+							Url: imageUrl,
+						},
+					},
+				}
+			}
+		}
+
+		// Handle function calls (if present)
+		if part.FunctionCall != nil {
+			choice.Delta.ToolCalls = getToolCalls(&candidate)
+		}
+	}
+
+	// Create response
 	var response openai.ChatCompletionsStreamResponse
 	response.Id = fmt.Sprintf("chatcmpl-%s", random.GetUUID())
 	response.Created = helper.GetTimestamp()
 	response.Object = "chat.completion.chunk"
 	response.Model = "gemini"
 	response.Choices = []openai.ChatCompletionsStreamResponseChoice{choice}
+
 	return &response
 }
 
@@ -345,16 +409,22 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Split(bufio.ScanLines)
 
+	buffer := make([]byte, 1024*1024) // 1MB buffer
+	scanner.Buffer(buffer, len(buffer))
+
 	common.SetEventStreamHeaders(c)
 
 	for scanner.Scan() {
 		data := scanner.Text()
 		data = strings.TrimSpace(data)
+
 		if !strings.HasPrefix(data, "data: ") {
 			continue
 		}
 		data = strings.TrimPrefix(data, "data: ")
 		data = strings.TrimSuffix(data, "\"")
+
+		fmt.Printf(">> gemini response: %s\n", data)
 
 		var geminiResponse ChatResponse
 		err := json.Unmarshal([]byte(data), &geminiResponse)
