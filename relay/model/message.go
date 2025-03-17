@@ -140,7 +140,7 @@ func (m Message) ParseContent() []MessageContent {
 	if ok {
 		contentList = append(contentList, MessageContent{
 			Type: ContentTypeText,
-			Text: content,
+			Text: &content,
 		})
 		return contentList
 	}
@@ -157,7 +157,7 @@ func (m Message) ParseContent() []MessageContent {
 				if subStr, ok := contentMap["text"].(string); ok {
 					contentList = append(contentList, MessageContent{
 						Type: ContentTypeText,
-						Text: subStr,
+						Text: &subStr,
 					})
 				}
 			case ContentTypeImageURL:
@@ -197,7 +197,7 @@ type ImageURL struct {
 type MessageContent struct {
 	// Type should be one of the following: text/input_audio
 	Type       string      `json:"type,omitempty"`
-	Text       string      `json:"text"`
+	Text       *string     `json:"text,omitempty"`
 	ImageURL   *ImageURL   `json:"image_url,omitempty"`
 	InputAudio *InputAudio `json:"input_audio,omitempty"`
 	// -------------------------------------

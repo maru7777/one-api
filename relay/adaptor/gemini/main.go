@@ -107,9 +107,9 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *ChatRequest {
 		var parts []Part
 		imageNum := 0
 		for _, part := range openaiContent {
-			if part.Type == model.ContentTypeText {
+			if part.Type == model.ContentTypeText && part.Text != nil && *part.Text != "" {
 				parts = append(parts, Part{
-					Text: part.Text,
+					Text: *part.Text,
 				})
 			} else if part.Type == model.ContentTypeImageURL {
 				imageNum += 1
@@ -274,7 +274,7 @@ func responseGeminiChat2OpenAI(response *ChatResponse) *openai.TextResponse {
 						// Add to content items
 						contentItems = append(contentItems, model.MessageContent{
 							Type: model.ContentTypeText,
-							Text: part.Text,
+							Text: &part.Text,
 						})
 					}
 
