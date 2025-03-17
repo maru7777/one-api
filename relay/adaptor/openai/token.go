@@ -103,7 +103,9 @@ func CountTokenMessages(ctx context.Context,
 		for _, content := range contents {
 			switch content.Type {
 			case model.ContentTypeText:
-				tokenNum += getTokenNum(tokenEncoder, content.Text)
+				if content.Text != nil {
+					tokenNum += getTokenNum(tokenEncoder, *content.Text)
+				}
 			case model.ContentTypeImageURL:
 				imageTokens, err := countImageTokens(
 					content.ImageURL.Url,

@@ -36,6 +36,7 @@ Also welcome to register and use my deployed one-api gateway, which supports var
       - [Reasoning Format - thinking](#reasoning-format---thinking)
     - [Support AWS cross-region inferences](#support-aws-cross-region-inferences)
     - [Support OpenAI web search models](#support-openai-web-search-models)
+    - [Support gemini multimodal output #2197](#support-gemini-multimodal-output-2197)
   - [Bug fix](#bug-fix)
 
 ## Turtorial
@@ -222,6 +223,16 @@ Supports two URL parameters: `thinking` and `reasoning_format`.
 - [feature: support openai web search models #2189](https://github.com/songquanpeng/one-api/pull/2189)
 
 support `gpt-4o-search-preview` & `gpt-4o-mini-search-preview`
+
+![](https://s3.laisky.com/uploads/2025/03/openai-websearch-models-1.png)
+
+![](https://s3.laisky.com/uploads/2025/03/openai-websearch-models-2.png)
+
+### Support gemini multimodal output #2197
+
+- [feature: support gemini multimodal output #2197](https://github.com/songquanpeng/one-api/pull/2197)
+
+![](https://s3.laisky.com/uploads/2025/03/gemini-multimodal.png)
 
 ## Bug fix
 
