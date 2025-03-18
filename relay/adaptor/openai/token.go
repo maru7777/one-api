@@ -77,6 +77,7 @@ func getTokenNum(tokenEncoder *tiktoken.Tiktoken, text string) int {
 	return len(tokenEncoder.Encode(text, nil, nil))
 }
 
+// CountTokenMessages counts the number of tokens in a list of messages.
 func CountTokenMessages(ctx context.Context,
 	messages []model.Message, actualModel string) int {
 	tokenEncoder := getTokenEncoder(actualModel)
