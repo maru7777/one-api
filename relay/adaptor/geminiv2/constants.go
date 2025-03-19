@@ -1,5 +1,7 @@
 package geminiv2
 
+import "strings"
+
 // https://ai.google.dev/models/gemini
 
 var ModelList = []string{
@@ -13,4 +15,18 @@ var ModelList = []string{
 	"gemini-2.0-flash-thinking-exp-01-21",
 	"gemini-2.0-pro-exp-02-05",
 	"gemini-2.0-flash-exp-image-generation",
+}
+
+const (
+	ModalityText  = "TEXT"
+	ModalityImage = "IMAGE"
+)
+
+// GetModelModalities returns the modalities of the model.
+func GetModelModalities(model string) []string {
+	if strings.Contains(model, "-image-generation") {
+		return []string{ModalityText, ModalityImage}
+	}
+
+	return []string{ModalityText}
 }

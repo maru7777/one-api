@@ -16,6 +16,7 @@ import (
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/common/random"
 	"github.com/songquanpeng/one-api/common/render"
+	"github.com/songquanpeng/one-api/relay/adaptor/geminiv2"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/relay/constant"
 	"github.com/songquanpeng/one-api/relay/model"
@@ -59,12 +60,10 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *ChatRequest {
 			},
 		},
 		GenerationConfig: ChatGenerationConfig{
-			Temperature:     textRequest.Temperature,
-			TopP:            textRequest.TopP,
-			MaxOutputTokens: textRequest.MaxTokens,
-			ResponseModalities: []string{
-				"TEXT", "IMAGE",
-			},
+			Temperature:        textRequest.Temperature,
+			TopP:               textRequest.TopP,
+			MaxOutputTokens:    textRequest.MaxTokens,
+			ResponseModalities: geminiv2.GetModelModalities(textRequest.Model),
 		},
 	}
 	if textRequest.ResponseFormat != nil {
