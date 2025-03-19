@@ -44,7 +44,7 @@ type GeneralOpenAIRequest struct {
 	MaxCompletionTokens *int     `json:"max_completion_tokens,omitempty"`
 	// N is how many chat completion choices to generate for each input message,
 	// default to 1.
-	N *int `json:"n,omitempty" binding:"omitempty,min=1"`
+	N *int `json:"n,omitempty" binding:"omitempty,min=0"`
 	// ReasoningEffort constrains effort on reasoning for reasoning models, reasoning models only.
 	ReasoningEffort *string `json:"reasoning_effort,omitempty" binding:"omitempty,oneof=low medium high"`
 	// Modalities currently the model only programmatically allows modalities = [“text”, “audio”]
