@@ -408,7 +408,7 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Split(bufio.ScanLines)
 
-	buffer := make([]byte, 1024*1024) // 1MB buffer
+	buffer := make([]byte, 10*1024*1024) // 10MB buffer
 	scanner.Buffer(buffer, len(buffer))
 
 	common.SetEventStreamHeaders(c)

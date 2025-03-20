@@ -36,7 +36,7 @@ func StreamHandler(c *gin.Context, resp *http.Response, relayMode int) (*model.E
 
 	// Set up scanner for reading the stream line by line
 	scanner := bufio.NewScanner(resp.Body)
-	buffer := make([]byte, 256*1024) // 256KB buffer for large messages
+	buffer := make([]byte, 1024*1024) // 1MB buffer for large messages
 	scanner.Buffer(buffer, len(buffer))
 	scanner.Split(bufio.ScanLines)
 
