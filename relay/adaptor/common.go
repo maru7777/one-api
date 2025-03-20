@@ -3,16 +3,17 @@ package adaptor
 import (
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/songquanpeng/one-api/common/client"
-	"github.com/songquanpeng/one-api/relay/meta"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/gin-gonic/gin"
+	"github.com/songquanpeng/one-api/common/client"
+	"github.com/songquanpeng/one-api/relay/meta"
 )
 
 const (
-	extraRequestHeaderPrefix = "X-Oneapi-"
+	extraRequestHeaderPrefix = "X-"
 )
 
 func SetupCommonRequestHeader(c *gin.Context, req *http.Request, meta *meta.Meta) {
@@ -20,9 +21,8 @@ func SetupCommonRequestHeader(c *gin.Context, req *http.Request, meta *meta.Meta
 	req.Header.Set("Accept", c.Request.Header.Get("Accept"))
 	for key, values := range c.Request.Header {
 		if strings.HasPrefix(key, extraRequestHeaderPrefix) {
-			headerKey := strings.TrimPrefix(key, extraRequestHeaderPrefix)
 			for _, value := range values {
-				req.Header.Add(headerKey, value)
+				req.Header.Add(key, value)
 			}
 		}
 	}

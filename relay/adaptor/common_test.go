@@ -17,7 +17,7 @@ func TestSetupCommonRequestHeader(t *testing.T) {
 	}
 	c.Request.Header.Set("Content-Type", "application/json")
 	c.Request.Header.Set("Accept", "application/json")
-	c.Request.Header.Set("x-oneapi-test-header", "test-value")
+	c.Request.Header.Set("x-test-header", "test-value")
 
 	// 创建测试用的http请求
 	req, _ := http.NewRequest("GET", "http://example.com", nil)
@@ -33,5 +33,5 @@ func TestSetupCommonRequestHeader(t *testing.T) {
 	// 验证结果
 	assert.Equal(t, "application/json", req.Header.Get("Content-Type"))
 	assert.Equal(t, "application/json", req.Header.Get("Accept"))
-	assert.Equal(t, "test-value", req.Header.Get("test-header"))
+	assert.Equal(t, "test-value", req.Header.Get("x-test-header"))
 }
