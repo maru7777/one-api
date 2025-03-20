@@ -1,6 +1,9 @@
 package config
 
 import (
+	"crypto/rand"
+	"encoding/base64"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -8,9 +11,19 @@ import (
 	"time"
 
 	"github.com/songquanpeng/one-api/common/env"
-
-	"github.com/google/uuid"
 )
+
+func init() {
+	if SessionSecret == "" {
+		fmt.Println("SESSION_SECRET not set, using random secret")
+		key := make([]byte, 32)
+		if _, err := rand.Read(key); err != nil {
+			panic(fmt.Sprintf("failed to generate random secret: %v", err))
+		}
+
+		SessionSecret = base64.StdEncoding.EncodeToString(key)
+	}
+}
 
 var SystemName = "One API"
 var ServerAddress = "http://localhost:3000"
@@ -24,7 +37,7 @@ var DisplayTokenStatEnabled = true
 
 // Any options with "Secret", "Token" in its key won't be return by GetOptions
 
-var SessionSecret = uuid.New().String()
+var SessionSecret = os.Getenv("SESSION_SECRET")
 
 var OptionMap map[string]string
 var OptionMapRWMutex sync.RWMutex
@@ -113,6 +126,7 @@ var BatchUpdateEnabled = false
 var BatchUpdateInterval = env.Int("BATCH_UPDATE_INTERVAL", 5)
 
 var RelayTimeout = env.Int("RELAY_TIMEOUT", 0) // unit is second
+var IdleTimeout = env.Int("IDLE_TIMEOUT", 30)  // unit is second
 
 var GeminiSafetySetting = env.String("GEMINI_SAFETY_SETTING", "BLOCK_NONE")
 
@@ -162,5 +176,9 @@ var RelayProxy = env.String("RELAY_PROXY", "")
 var UserContentRequestProxy = env.String("USER_CONTENT_REQUEST_PROXY", "")
 var UserContentRequestTimeout = env.Int("USER_CONTENT_REQUEST_TIMEOUT", 30)
 
+// EnforceIncludeUsage is used to determine whether to include usage in the response
 var EnforceIncludeUsage = env.Bool("ENFORCE_INCLUDE_USAGE", false)
-var TestPrompt = env.String("TEST_PROMPT", "Output only your specific model name with no additional text.")
+var TestPrompt = env.String("TEST_PROMPT", "2 + 2 = ?")
+
+// OpenrouterProviderSort is used to determine the order of the providers in the openrouter
+var OpenrouterProviderSort = env.String("OPENROUTER_PROVIDER_SORT", "")

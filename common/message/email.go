@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/logger"
 )
@@ -20,7 +21,7 @@ func shouldAuth() bool {
 
 func SendEmail(subject string, receiver string, content string) error {
 	if receiver == "" {
-		return fmt.Errorf("receiver is empty")
+		return errors.Errorf("receiver is empty")
 	}
 	if config.SMTPFrom == "" { // for compatibility
 		config.SMTPFrom = config.SMTPAccount
@@ -59,7 +60,7 @@ func SendEmail(subject string, receiver string, content string) error {
 		var err error
 		if config.SMTPPort == 465 {
 			tlsConfig := &tls.Config{
-				InsecureSkipVerify: true,
+				InsecureSkipVerify: false,
 				ServerName:         config.SMTPServer,
 			}
 			conn, err = tls.Dial("tcp", fmt.Sprintf("%s:%d", config.SMTPServer, config.SMTPPort), tlsConfig)

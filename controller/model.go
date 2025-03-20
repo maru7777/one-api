@@ -2,8 +2,12 @@ package controller
 
 import (
 	"fmt"
+	"net/http"
+	"sort"
+
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common/ctxkey"
+	"github.com/songquanpeng/one-api/middleware"
 	"github.com/songquanpeng/one-api/model"
 	relay "github.com/songquanpeng/one-api/relay"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
@@ -11,8 +15,6 @@ import (
 	"github.com/songquanpeng/one-api/relay/channeltype"
 	"github.com/songquanpeng/one-api/relay/meta"
 	relaymodel "github.com/songquanpeng/one-api/relay/model"
-	"net/http"
-	"strings"
 )
 
 // https://platform.openai.com/docs/api-reference/models/list
@@ -33,16 +35,21 @@ type OpenAIModelPermission struct {
 }
 
 type OpenAIModels struct {
-	Id         string                  `json:"id"`
-	Object     string                  `json:"object"`
-	Created    int                     `json:"created"`
+	// Id model's name
+	//
+	// BUG: Different channels may have the same model name
+	Id      string `json:"id"`
+	Object  string `json:"object"`
+	Created int    `json:"created"`
+	// OwnedBy is the channel's adaptor name
 	OwnedBy    string                  `json:"owned_by"`
 	Permission []OpenAIModelPermission `json:"permission"`
 	Root       string                  `json:"root"`
 	Parent     *string                 `json:"parent"`
 }
 
-var models []OpenAIModels
+// BUG(#39): 更新 custom channel 时，应该同步更新所有自定义的 models 到 allModels
+var allModels []OpenAIModels
 var modelsMap map[string]OpenAIModels
 var channelId2Models map[int][]string
 
@@ -68,10 +75,14 @@ func init() {
 			continue
 		}
 		adaptor := relay.GetAdaptor(i)
+		if adaptor == nil {
+			continue
+		}
+
 		channelName := adaptor.GetChannelName()
 		modelNames := adaptor.GetModelList()
 		for _, modelName := range modelNames {
-			models = append(models, OpenAIModels{
+			allModels = append(allModels, OpenAIModels{
 				Id:         modelName,
 				Object:     "model",
 				Created:    1626777600,
@@ -88,7 +99,7 @@ func init() {
 		}
 		channelName, channelModelList := openai.GetCompatibleChannelMeta(channelType)
 		for _, modelName := range channelModelList {
-			models = append(models, OpenAIModels{
+			allModels = append(allModels, OpenAIModels{
 				Id:         modelName,
 				Object:     "model",
 				Created:    1626777600,
@@ -100,12 +111,16 @@ func init() {
 		}
 	}
 	modelsMap = make(map[string]OpenAIModels)
-	for _, model := range models {
+	for _, model := range allModels {
 		modelsMap[model.Id] = model
 	}
 	channelId2Models = make(map[int][]string)
 	for i := 1; i < channeltype.Dummy; i++ {
 		adaptor := relay.GetAdaptor(channeltype.ToAPIType(i))
+		if adaptor == nil {
+			continue
+		}
+
 		meta := &meta.Meta{
 			ChannelType: i,
 		}
@@ -125,49 +140,73 @@ func DashboardListModels(c *gin.Context) {
 func ListAllModels(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"object": "list",
-		"data":   models,
+		"data":   allModels,
 	})
 }
 
+// ListModels lists all models available to the user.
 func ListModels(c *gin.Context) {
-	ctx := c.Request.Context()
-	var availableModels []string
-	if c.GetString(ctxkey.AvailableModels) != "" {
-		availableModels = strings.Split(c.GetString(ctxkey.AvailableModels), ",")
-	} else {
-		userId := c.GetInt(ctxkey.Id)
-		userGroup, _ := model.CacheGetUserGroup(userId)
-		availableModels, _ = model.CacheGetGroupModels(ctx, userGroup)
+	userId := c.GetInt(ctxkey.Id)
+	userGroup, err := model.CacheGetUserGroup(userId)
+	if err != nil {
+		middleware.AbortWithError(c, http.StatusBadRequest, err)
+		return
 	}
-	modelSet := make(map[string]bool)
-	for _, availableModel := range availableModels {
-		modelSet[availableModel] = true
+
+	// Get available models with their channel names
+	availableAbilities, err := model.CacheGetGroupModelsV2(c.Request.Context(), userGroup)
+	if err != nil {
+		middleware.AbortWithError(c, http.StatusBadRequest, err)
+		return
 	}
-	availableOpenAIModels := make([]OpenAIModels, 0)
-	for _, model := range models {
-		if _, ok := modelSet[model.Id]; ok {
-			modelSet[model.Id] = false
-			availableOpenAIModels = append(availableOpenAIModels, model)
+
+	// fix(#39): Previously, to fix #31, I concatenated model_name with adaptor name to return models.
+	// But this caused an issue with custom channels, where the returned adaptor is "openai",
+	// resulting in adaptor name and ownedBy field mismatches when matching against allModels.
+	// For deepseek example, the adaptor is "openai" but ownedBy is "deepseek", causing mismatch.
+	// Our current solution: for models from custom channels, don't concatenate adaptor name,
+	// just match by model name only. However, this may reintroduce the duplicate models bug
+	// mentioned in #31. A complete fix would require significant changes, so I'll leave it for now.
+
+	// Create a map for quick lookup of enabled model+channel combinations
+	// Only store the exact model:channel combinations from abilities
+	abilityMap := make(map[string]bool)
+	for _, ability := range availableAbilities {
+		// Store as "modelName:channelName" for exact matching
+		adaptor := relay.GetAdaptor(channeltype.ToAPIType(ability.ChannelType))
+		key := ability.Model + ":" + adaptor.GetChannelName()
+		abilityMap[key] = true
+
+		// for custom channels, store the model name only
+		if ability.ChannelType == channeltype.Custom {
+			abilityMap[ability.Model] = true
 		}
 	}
-	for modelName, ok := range modelSet {
-		if ok {
-			availableOpenAIModels = append(availableOpenAIModels, OpenAIModels{
-				Id:      modelName,
-				Object:  "model",
-				Created: 1626777600,
-				OwnedBy: "custom",
-				Root:    modelName,
-				Parent:  nil,
-			})
+
+	// Filter models that match user's abilities with EXACT model+channel matches
+	userAvailableModels := make([]OpenAIModels, 0)
+
+	// Only include models that have a matching model+channel combination
+	for _, model := range allModels {
+		key := model.Id + ":" + model.OwnedBy
+		if abilityMap[key] {
+			userAvailableModels = append(userAvailableModels, model)
+		} else if abilityMap[model.Id] {
+			// for custom channels, store the model name only
+			userAvailableModels = append(userAvailableModels, model)
 		}
 	}
+
+	// Sort models alphabetically for consistent presentation
+	sort.Slice(userAvailableModels, func(i, j int) bool {
+		return userAvailableModels[i].Id < userAvailableModels[j].Id
+	})
+
 	c.JSON(200, gin.H{
 		"object": "list",
-		"data":   availableOpenAIModels,
+		"data":   userAvailableModels,
 	})
 }
-
 func RetrieveModel(c *gin.Context) {
 	modelId := c.Param("model")
 	if model, ok := modelsMap[modelId]; ok {
@@ -196,7 +235,8 @@ func GetUserAvailableModels(c *gin.Context) {
 		})
 		return
 	}
-	models, err := model.CacheGetGroupModels(ctx, userGroup)
+
+	models, err := model.CacheGetGroupModelsV2(ctx, userGroup)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -204,10 +244,20 @@ func GetUserAvailableModels(c *gin.Context) {
 		})
 		return
 	}
+
+	var modelNames []string
+	modelsMap := map[string]bool{}
+	for _, model := range models {
+		modelsMap[model.Model] = true
+	}
+	for modelName := range modelsMap {
+		modelNames = append(modelNames, modelName)
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    models,
+		"data":    modelNames,
 	})
 	return
 }

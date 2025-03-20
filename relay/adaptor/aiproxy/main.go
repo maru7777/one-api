@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/songquanpeng/one-api/common/render"
 	"io"
 	"net/http"
 	"strconv"
@@ -15,6 +14,7 @@ import (
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/common/random"
+	"github.com/songquanpeng/one-api/common/render"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/relay/constant"
 	"github.com/songquanpeng/one-api/relay/model"
@@ -38,7 +38,7 @@ func aiProxyDocuments2Markdown(documents []LibraryDocument) string {
 	if len(documents) == 0 {
 		return ""
 	}
-	content := "\n\n参考文档：\n"
+	content := "\n\nReference Documents:\n"
 	for i, document := range documents {
 		content += fmt.Sprintf("%d. [%s](%s)\n", i+1, document.Title, document.URL)
 	}

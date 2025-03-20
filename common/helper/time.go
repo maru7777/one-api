@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// GetTimestamp get current timestamp in seconds
 func GetTimestamp() int64 {
 	return time.Now().Unix()
 }

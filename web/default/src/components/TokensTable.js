@@ -149,8 +149,8 @@ const TokensTable = () => {
       case 'opencat':
         url = `opencat://team/join?domain=${encodedServerAddress}&token=sk-${key}`;
         break;
-      case 'next':
-        url = nextUrl;
+      case 'web':
+        url = `https://chat.laisky.com?apikey=sk-${key}`;
         break;
       case 'lobechat':
         url =
@@ -489,7 +489,7 @@ const TokensTable = () => {
                     </div>
                   </Table.Cell>
                 </Table.Row>
-              );
+                );
             })}
         </Table.Body>
 

@@ -8,7 +8,9 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common/client"
+	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/relay/meta"
 )
 
@@ -34,19 +36,24 @@ func SetupCommonRequestHeader(c *gin.Context, req *http.Request, meta *meta.Meta
 func DoRequestHelper(a Adaptor, c *gin.Context, meta *meta.Meta, requestBody io.Reader) (*http.Response, error) {
 	fullRequestURL, err := a.GetRequestURL(meta)
 	if err != nil {
-		return nil, fmt.Errorf("get request url failed: %w", err)
+		return nil, errors.Wrap(err, "get request url failed")
 	}
-	req, err := http.NewRequest(c.Request.Method, fullRequestURL, requestBody)
+
+	req, err := http.NewRequestWithContext(c.Request.Context(),
+		c.Request.Method, fullRequestURL, requestBody)
 	if err != nil {
-		return nil, fmt.Errorf("new request failed: %w", err)
+		return nil, errors.Wrap(err, "new request failed")
 	}
+
+	req.Header.Set("Content-Type", c.GetString(ctxkey.ContentType))
+
 	err = a.SetupRequestHeader(c, req, meta)
 	if err != nil {
-		return nil, fmt.Errorf("setup request header failed: %w", err)
+		return nil, errors.Wrap(err, "setup request header failed")
 	}
 	resp, err := DoRequest(c, req)
 	if err != nil {
-		return nil, fmt.Errorf("do request failed: %w", err)
+		return nil, errors.Wrap(err, "do request failed")
 	}
 	return resp, nil
 }
@@ -61,5 +68,6 @@ func DoRequest(c *gin.Context, req *http.Request) (*http.Response, error) {
 	}
 	_ = req.Body.Close()
 	_ = c.Request.Body.Close()
+
 	return resp, nil
 }

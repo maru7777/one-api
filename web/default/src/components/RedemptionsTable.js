@@ -259,7 +259,7 @@ const RedemptionsTable = () => {
             )
             .map((redemption, idx) => {
               if (redemption.deleted) return <></>;
-              return (
+                return (
                 <Table.Row key={redemption.id}>
                   <Table.Cell>{redemption.id}</Table.Cell>
                   <Table.Cell>
@@ -268,7 +268,7 @@ const RedemptionsTable = () => {
                   <Table.Cell>{renderStatus(redemption.status, t)}</Table.Cell>
                   <Table.Cell>{renderQuota(redemption.quota, t)}</Table.Cell>
                   <Table.Cell>
-                    {renderTimestamp(redemption.created_time)}
+                  {renderTimestamp(redemption.created_time)}
                   </Table.Cell>
                   <Table.Cell>
                     {redemption.redeemed_time
@@ -335,7 +335,7 @@ const RedemptionsTable = () => {
                     </div>
                   </Table.Cell>
                 </Table.Row>
-              );
+                );
             })}
         </Table.Body>
 

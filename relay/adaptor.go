@@ -65,5 +65,6 @@ func GetAdaptor(apiType int) adaptor.Adaptor {
 	case apitype.Replicate:
 		return &replicate.Adaptor{}
 	}
+
 	return nil
 }

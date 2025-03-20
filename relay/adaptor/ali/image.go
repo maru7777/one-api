@@ -5,15 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/relay/model"
-	"io"
-	"net/http"
-	"strings"
-	"time"
 )
 
 func ImageHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusCode, *model.Usage) {
@@ -147,18 +148,18 @@ func responseAli2OpenAIImage(response *TaskResponse, responseFormat string) *ope
 	for _, data := range response.Output.Results {
 		var b64Json string
 		if responseFormat == "b64_json" {
-			// 读取 data.Url 的图片数据并转存到 b64Json
+			// Read the image data from data.Url and store it in b64Json
 			imageData, err := getImageData(data.Url)
 			if err != nil {
-				// 处理获取图片数据失败的情况
+				// Handle the case where getting image data fails
 				logger.SysError("getImageData Error getting image data: " + err.Error())
 				continue
 			}
 
-			// 将图片数据转为 Base64 编码的字符串
+			// Convert the image data to a Base64 encoded string
 			b64Json = Base64Encode(imageData)
 		} else {
-			// 如果 responseFormat 不是 "b64_json"，则直接使用 data.B64Image
+			// If responseFormat is not "b64_json", use data.B64Image directly
 			b64Json = data.B64Image
 		}
 

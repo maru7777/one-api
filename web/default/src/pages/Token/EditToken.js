@@ -290,5 +290,4 @@ const EditToken = () => {
     </div>
   );
 };
-
 export default EditToken;

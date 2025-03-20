@@ -2,18 +2,21 @@ package anthropic
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/songquanpeng/one-api/common/render"
 	"io"
+	"math"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/image"
 	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/common/render"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/relay/model"
 )
@@ -36,7 +39,16 @@ func stopReasonClaude2OpenAI(reason *string) string {
 	}
 }
 
-func ConvertRequest(textRequest model.GeneralOpenAIRequest) *Request {
+// isModelSupportThinking is used to check if the model supports extended thinking
+func isModelSupportThinking(model string) bool {
+	if strings.Contains(model, "claude-3-7-sonnet") {
+		return true
+	}
+
+	return false
+}
+
+func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Request, error) {
 	claudeTools := make([]Tool, 0, len(textRequest.Tools))
 
 	for _, tool := range textRequest.Tools {
@@ -61,7 +73,27 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *Request {
 		TopK:        textRequest.TopK,
 		Stream:      textRequest.Stream,
 		Tools:       claudeTools,
+		Thinking:    textRequest.Thinking,
 	}
+
+	if isModelSupportThinking(textRequest.Model) &&
+		c.Request.URL.Query().Has("thinking") && claudeRequest.Thinking == nil {
+		claudeRequest.Thinking = &model.Thinking{
+			Type:         "enabled",
+			BudgetTokens: int(math.Min(1024, float64(claudeRequest.MaxTokens/2))),
+		}
+	}
+
+	if isModelSupportThinking(textRequest.Model) &&
+		claudeRequest.Thinking != nil {
+		if claudeRequest.MaxTokens <= 1024 {
+			return nil, errors.New("max_tokens must be greater than 1024 when using extended thinking")
+		}
+
+		// top_p must be nil when using extended thinking
+		claudeRequest.TopP = nil
+	}
+
 	if len(claudeTools) > 0 {
 		claudeToolChoice := struct {
 			Type string `json:"type"`
@@ -127,7 +159,9 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *Request {
 			var content Content
 			if part.Type == model.ContentTypeText {
 				content.Type = "text"
-				content.Text = part.Text
+				if part.Text != nil {
+					content.Text = *part.Text
+				}
 			} else if part.Type == model.ContentTypeImageURL {
 				content.Type = "image"
 				content.Source = &ImageSource{
@@ -142,13 +176,14 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *Request {
 		claudeMessage.Content = contents
 		claudeRequest.Messages = append(claudeRequest.Messages, claudeMessage)
 	}
-	return &claudeRequest
+	return &claudeRequest, nil
 }
 
 // https://docs.anthropic.com/claude/reference/messages-streaming
-func StreamResponseClaude2OpenAI(claudeResponse *StreamResponse) (*openai.ChatCompletionsStreamResponse, *Response) {
+func StreamResponseClaude2OpenAI(c *gin.Context, claudeResponse *StreamResponse) (*openai.ChatCompletionsStreamResponse, *Response) {
 	var response *Response
 	var responseText string
+	var reasoningText string
 	var stopReason string
 	tools := make([]model.Tool, 0)
 
@@ -158,6 +193,10 @@ func StreamResponseClaude2OpenAI(claudeResponse *StreamResponse) (*openai.ChatCo
 	case "content_block_start":
 		if claudeResponse.ContentBlock != nil {
 			responseText = claudeResponse.ContentBlock.Text
+			if claudeResponse.ContentBlock.Thinking != nil {
+				reasoningText = *claudeResponse.ContentBlock.Thinking
+			}
+
 			if claudeResponse.ContentBlock.Type == "tool_use" {
 				tools = append(tools, model.Tool{
 					Id:   claudeResponse.ContentBlock.Id,
@@ -172,6 +211,10 @@ func StreamResponseClaude2OpenAI(claudeResponse *StreamResponse) (*openai.ChatCo
 	case "content_block_delta":
 		if claudeResponse.Delta != nil {
 			responseText = claudeResponse.Delta.Text
+			if claudeResponse.Delta.Thinking != nil {
+				reasoningText = *claudeResponse.Delta.Thinking
+			}
+
 			if claudeResponse.Delta.Type == "input_json_delta" {
 				tools = append(tools, model.Tool{
 					Function: model.Function{
@@ -189,9 +232,20 @@ func StreamResponseClaude2OpenAI(claudeResponse *StreamResponse) (*openai.ChatCo
 		if claudeResponse.Delta != nil && claudeResponse.Delta.StopReason != nil {
 			stopReason = *claudeResponse.Delta.StopReason
 		}
+	case "thinking_delta":
+		if claudeResponse.Delta != nil && claudeResponse.Delta.Thinking != nil {
+			reasoningText = *claudeResponse.Delta.Thinking
+		}
+	case "ping",
+		"message_stop",
+		"content_block_stop":
+	default:
+		logger.SysErrorf("unknown stream response type %q", claudeResponse.Type)
 	}
+
 	var choice openai.ChatCompletionsStreamResponseChoice
 	choice.Delta.Content = responseText
+	choice.Delta.SetReasoningContent(c.Query("reasoning_format"), reasoningText)
 	if len(tools) > 0 {
 		choice.Delta.Content = nil // compatible with other OpenAI derivative applications, like LobeOpenAICompatibleFactory ...
 		choice.Delta.ToolCalls = tools
@@ -207,13 +261,25 @@ func StreamResponseClaude2OpenAI(claudeResponse *StreamResponse) (*openai.ChatCo
 	return &openaiResponse, response
 }
 
-func ResponseClaude2OpenAI(claudeResponse *Response) *openai.TextResponse {
+func ResponseClaude2OpenAI(c *gin.Context, claudeResponse *Response) *openai.TextResponse {
 	var responseText string
-	if len(claudeResponse.Content) > 0 {
-		responseText = claudeResponse.Content[0].Text
-	}
+	var reasoningText string
+
 	tools := make([]model.Tool, 0)
 	for _, v := range claudeResponse.Content {
+		switch v.Type {
+		case "thinking":
+			if v.Thinking != nil {
+				reasoningText += *v.Thinking
+			} else {
+				logger.Errorf(context.Background(), "thinking is nil in response")
+			}
+		case "text":
+			responseText += v.Text
+		default:
+			logger.Warnf(context.Background(), "unknown response type %q", v.Type)
+		}
+
 		if v.Type == "tool_use" {
 			args, _ := json.Marshal(v.Input)
 			tools = append(tools, model.Tool{
@@ -226,16 +292,19 @@ func ResponseClaude2OpenAI(claudeResponse *Response) *openai.TextResponse {
 			})
 		}
 	}
+
 	choice := openai.TextResponseChoice{
 		Index: 0,
 		Message: model.Message{
 			Role:      "assistant",
 			Content:   responseText,
+			Reasoning: &reasoningText,
 			Name:      nil,
 			ToolCalls: tools,
 		},
 		FinishReason: stopReasonClaude2OpenAI(claudeResponse.StopReason),
 	}
+	choice.Message.SetReasoningContent(c.Query("reasoning_format"), reasoningText)
 	fullTextResponse := openai.TextResponse{
 		Id:      fmt.Sprintf("chatcmpl-%s", claudeResponse.Id),
 		Model:   claudeResponse.Model,
@@ -261,7 +330,6 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 		}
 		return 0, nil, nil
 	})
-
 	common.SetEventStreamHeaders(c)
 
 	var usage model.Usage
@@ -277,6 +345,8 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 		data = strings.TrimPrefix(data, "data:")
 		data = strings.TrimSpace(data)
 
+		logger.Debugf(c.Request.Context(), "stream <- %q\n", data)
+
 		var claudeResponse StreamResponse
 		err := json.Unmarshal([]byte(data), &claudeResponse)
 		if err != nil {
@@ -284,7 +354,7 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 			continue
 		}
 
-		response, meta := StreamResponseClaude2OpenAI(&claudeResponse)
+		response, meta := StreamResponseClaude2OpenAI(c, &claudeResponse)
 		if meta != nil {
 			usage.PromptTokens += meta.Usage.InputTokens
 			usage.CompletionTokens += meta.Usage.OutputTokens
@@ -344,6 +414,9 @@ func Handler(c *gin.Context, resp *http.Response, promptTokens int, modelName st
 	if err != nil {
 		return openai.ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), nil
 	}
+
+	logger.Debugf(c.Request.Context(), "response <- %s\n", string(responseBody))
+
 	var claudeResponse Response
 	err = json.Unmarshal(responseBody, &claudeResponse)
 	if err != nil {
@@ -360,7 +433,7 @@ func Handler(c *gin.Context, resp *http.Response, promptTokens int, modelName st
 			StatusCode: resp.StatusCode,
 		}, nil
 	}
-	fullTextResponse := ResponseClaude2OpenAI(&claudeResponse)
+	fullTextResponse := ResponseClaude2OpenAI(c, &claudeResponse)
 	fullTextResponse.Model = modelName
 	usage := model.Usage{
 		PromptTokens:     claudeResponse.Usage.InputTokens,

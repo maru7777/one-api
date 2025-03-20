@@ -5,18 +5,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/songquanpeng/one-api/common/render"
 	"io"
 	"net/http"
 	"strings"
 
-	"github.com/songquanpeng/one-api/common/helper"
-	"github.com/songquanpeng/one-api/common/random"
-
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/image"
 	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/common/random"
+	"github.com/songquanpeng/one-api/common/render"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/relay/constant"
 	"github.com/songquanpeng/one-api/relay/model"
@@ -43,7 +42,9 @@ func ConvertRequest(request model.GeneralOpenAIRequest) *ChatRequest {
 		for _, part := range openaiContent {
 			switch part.Type {
 			case model.ContentTypeText:
-				contentText = part.Text
+				if part.Text != nil {
+					contentText = *part.Text
+				}
 			case model.ContentTypeImageURL:
 				_, data, _ := image.GetImageFromUrl(part.ImageURL.Url)
 				imageUrls = append(imageUrls, data)

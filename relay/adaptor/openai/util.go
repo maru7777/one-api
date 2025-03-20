@@ -3,6 +3,7 @@ package openai
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/relay/model"
@@ -20,4 +21,12 @@ func ErrorWrapper(err error, code string, statusCode int) *model.ErrorWithStatus
 		Error:      Error,
 		StatusCode: statusCode,
 	}
+}
+
+func NormalizeDataLine(data string) string {
+	if strings.HasPrefix(data, "data:") {
+		content := strings.TrimLeft(data[len("data:"):], " ")
+		return "data: " + content
+	}
+	return data
 }
