@@ -8,11 +8,24 @@ import (
 	"github.com/songquanpeng/one-api/relay/meta"
 	"io"
 	"net/http"
+	"strings"
+)
+
+const (
+	extraRequestHeaderPrefix = "X-Oneapi-"
 )
 
 func SetupCommonRequestHeader(c *gin.Context, req *http.Request, meta *meta.Meta) {
 	req.Header.Set("Content-Type", c.Request.Header.Get("Content-Type"))
 	req.Header.Set("Accept", c.Request.Header.Get("Accept"))
+	for key, values := range c.Request.Header {
+		if strings.HasPrefix(key, extraRequestHeaderPrefix) {
+			headerKey := strings.TrimPrefix(key, extraRequestHeaderPrefix)
+			for _, value := range values {
+				req.Header.Add(headerKey, value)
+			}
+		}
+	}
 	if meta.IsStream && c.Request.Header.Get("Accept") == "" {
 		req.Header.Set("Accept", "text/event-stream")
 	}
