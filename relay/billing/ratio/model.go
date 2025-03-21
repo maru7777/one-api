@@ -95,6 +95,9 @@ var ModelRatio = map[string]float64{
 	"text-davinci-edit-001":                20 * MilliTokensUsd,
 	"code-davinci-edit-001":                20 * MilliTokensUsd,
 	"whisper-1":                            30 * MilliTokensUsd,
+	"gpt-4o-transcribe":                    2.5 * MilliTokensUsd,
+	"gpt-4o-mini-transcribe":               1.25 * MilliTokensUsd,
+	"gpt-4o-mini-tts":                      0.6 * MilliTokensUsd,
 	"tts-1":                                15 * MilliTokensUsd,
 	"tts-1-1106":                           15 * MilliTokensUsd,
 	"tts-1-hd":                             30 * MilliTokensUsd,
@@ -768,6 +771,8 @@ var AudioRatio = map[string]float64{
 	"gpt-4o-audio-preview-2024-10-01":      40,
 	"gpt-4o-mini-audio-preview":            10 / 0.15,
 	"gpt-4o-mini-audio-preview-2024-12-17": 10 / 0.15,
+	"gpt-4o-transcribe":                    6 / 2.5,
+	"gpt-4o-mini-transcribe":               3 / 1.25,
 }
 
 // GetAudioPromptRatio returns the audio prompt ratio for the given model.
@@ -816,6 +821,9 @@ var AudioPromptTokensPerSecond = map[string]float64{
 	"gpt-4o-audio-preview-2024-10-01":      10,
 	"gpt-4o-mini-audio-preview":            10,
 	"gpt-4o-mini-audio-preview-2024-12-17": 10,
+	"gpt-4o-transcribe":                    10,
+	"gpt-4o-mini-transcribe":               10,
+	"gpt-4o-mini-tts":                      10,
 }
 
 // GetAudioPromptTokensPerSecond returns the number of audio tokens per second
