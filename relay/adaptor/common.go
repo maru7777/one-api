@@ -1,17 +1,14 @@
 package adaptor
 
 import (
-	"errors"
-	"fmt"
+	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
+	"github.com/songquanpeng/one-api/common/ctxkey"
+	"github.com/songquanpeng/one-api/relay/client"
+	"github.com/songquanpeng/one-api/relay/meta"
 	"io"
 	"net/http"
 	"strings"
-
-	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
-	"github.com/songquanpeng/one-api/common/client"
-	"github.com/songquanpeng/one-api/common/ctxkey"
-	"github.com/songquanpeng/one-api/relay/meta"
 )
 
 const (
