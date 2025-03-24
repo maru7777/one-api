@@ -964,7 +964,7 @@ func GetModelRatio(name string, channelType int) float64 {
 	}
 
 	logger.SysError("model ratio not found: " + name)
-	return 0.1 * QuotaPerUsd
+	return 2.5 * MilliTokensUsd
 }
 
 // CompletionRatio2JSONString returns the CompletionRatio map as a JSON string.
