@@ -31,7 +31,10 @@ func GetModelModalities(model string) []string {
 	}
 
 	// Until 2025-03-26, the following models do not accept the responseModalities field
-	if model == "gemini-2.5-pro-exp-03-25" {
+	if model == "gemini-2.5-pro-exp-03-25" ||
+		model == "aqa" ||
+		strings.HasPrefix(model, "gemma") ||
+		strings.HasPrefix(model, "text-embed") {
 		return nil
 	}
 
