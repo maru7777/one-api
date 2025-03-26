@@ -147,9 +147,10 @@ var ModelRatio = map[string]float64{
 	"tao-8k":             0.002 * KiloRmb,
 	// https://ai.google.dev/pricing
 	// https://cloud.google.com/vertex-ai/generative-ai/pricing
-	// "gemma-2-2b-it":                       0,
-	// "gemma-2-9b-it":                       0,
-	// "gemma-2-27b-it":                      0,
+	"gemma-2-2b-it":                         0,
+	"gemma-2-9b-it":                         0,
+	"gemma-2-27b-it":                        0,
+	"gemma-3-27b-it":                        0,
 	"gemini-pro":                            0.25 * MilliTokensUsd, // $0.00025 / 1k characters -> $0.001 / 1k tokens
 	"gemini-1.0-pro":                        0.125 * MilliTokensUsd,
 	"gemini-1.0-pro-vision":                 0.125 * MilliTokensUsd,
@@ -168,8 +169,9 @@ var ModelRatio = map[string]float64{
 	"gemini-2.0-flash-lite-001":             0.075 * MilliTokensUsd,
 	"gemini-2.0-flash-lite-preview-02-05":   0.075 * MilliTokensUsd,
 	"gemini-2.0-flash-thinking-exp-01-21":   0.075 * MilliTokensUsd,
-	"gemini-2.0-pro-exp-02-05":              1.25 * MilliTokensUsd,
 	"gemini-2.0-flash-exp-image-generation": 0.075 * MilliTokensUsd,
+	"gemini-2.0-pro-exp-02-05":              1.25 * MilliTokensUsd,
+	"gemini-2.5-pro-exp-03-25":              1.25 * MilliTokensUsd,
 	"aqa":                                   1,
 	// https://open.bigmodel.cn/pricing
 	"glm-zero-preview": 0.01 * KiloRmb,
