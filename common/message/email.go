@@ -28,17 +28,17 @@ func SendEmail(subject string, receiver string, content string) error {
 	}
 	encodedSubject := fmt.Sprintf("=?UTF-8?B?%s?=", base64.StdEncoding.EncodeToString([]byte(subject)))
 
-	// Extract domain from SMTPFrom
+	// Extract domain from SMTPFrom with fallback
+	domain := "localhost"
 	parts := strings.Split(config.SMTPFrom, "@")
-	var domain string
-	if len(parts) > 1 {
+	if len(parts) > 1 && parts[1] != "" {
 		domain = parts[1]
 	}
+
 	// Generate a unique Message-ID
 	buf := make([]byte, 16)
-	_, err := rand.Read(buf)
-	if err != nil {
-		return err
+	if _, err := rand.Read(buf); err != nil {
+		return errors.Wrap(err, "failed to generate random bytes for Message-ID")
 	}
 	messageId := fmt.Sprintf("<%x@%s>", buf, domain)
 
@@ -51,59 +51,85 @@ func SendEmail(subject string, receiver string, content string) error {
 		receiver, config.SystemName, config.SMTPFrom, encodedSubject, messageId, time.Now().Format(time.RFC1123Z), content))
 
 	auth := smtp.PlainAuth("", config.SMTPAccount, config.SMTPToken, config.SMTPServer)
-	addr := fmt.Sprintf("%s:%d", config.SMTPServer, config.SMTPPort)
-	to := strings.Split(receiver, ";")
+	addr := net.JoinHostPort(config.SMTPServer, fmt.Sprintf("%d", config.SMTPPort))
+
+	// Clean up recipient addresses
+	receiverEmails := []string{}
+	for _, email := range strings.Split(receiver, ";") {
+		email = strings.TrimSpace(email)
+		if email != "" {
+			receiverEmails = append(receiverEmails, email)
+		}
+	}
+
+	if len(receiverEmails) == 0 {
+		return errors.New("no valid recipient email addresses")
+	}
 
 	if config.SMTPPort == 465 || !shouldAuth() {
 		// need advanced client
 		var conn net.Conn
 		var err error
+
+		// Add connection timeout
+		dialer := &net.Dialer{
+			Timeout: 30 * time.Second,
+		}
+
 		if config.SMTPPort == 465 {
 			tlsConfig := &tls.Config{
-				InsecureSkipVerify: false,
+				InsecureSkipVerify: !config.ForceEmailTLSVerify,
 				ServerName:         config.SMTPServer,
 			}
-			conn, err = tls.Dial("tcp", fmt.Sprintf("%s:%d", config.SMTPServer, config.SMTPPort), tlsConfig)
+			conn, err = tls.DialWithDialer(dialer, "tcp", addr, tlsConfig)
 		} else {
-			conn, err = net.Dial("tcp", fmt.Sprintf("%s:%d", config.SMTPServer, config.SMTPPort))
+			conn, err = dialer.Dial("tcp", addr)
 		}
+
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to connect to SMTP server")
 		}
+
 		client, err := smtp.NewClient(conn, config.SMTPServer)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to create SMTP client")
 		}
 		defer client.Close()
+
 		if shouldAuth() {
 			if err = client.Auth(auth); err != nil {
-				return err
+				return errors.Wrap(err, "SMTP authentication failed")
 			}
 		}
+
 		if err = client.Mail(config.SMTPFrom); err != nil {
-			return err
+			return errors.Wrap(err, "failed to set MAIL FROM")
 		}
-		receiverEmails := strings.Split(receiver, ";")
+
 		for _, receiver := range receiverEmails {
 			if err = client.Rcpt(receiver); err != nil {
-				return err
+				return errors.Wrapf(err, "failed to add recipient: %s", receiver)
 			}
 		}
+
 		w, err := client.Data()
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to create message data writer")
 		}
-		_, err = w.Write(mail)
-		if err != nil {
-			return err
+
+		if _, err = w.Write(mail); err != nil {
+			return errors.Wrap(err, "failed to write email content")
 		}
-		err = w.Close()
-		if err != nil {
-			return err
+
+		if err = w.Close(); err != nil {
+			return errors.Wrap(err, "failed to close message data writer")
 		}
+
 		return nil
 	}
-	err = smtp.SendMail(addr, auth, config.SMTPAccount, to, mail)
+
+	// Use the same sender address in the SMTP protocol as in the From header
+	err := smtp.SendMail(addr, auth, config.SMTPFrom, receiverEmails, mail)
 	if err != nil && strings.Contains(err.Error(), "short response") { // 部分提供商返回该错误，但实际上邮件已经发送成功
 		logger.SysWarnf("short response from SMTP server, return nil instead of error: %s", err.Error())
 		return nil

@@ -122,6 +122,9 @@ var RequestInterval = time.Duration(requestInterval) * time.Second
 
 var SyncFrequency = env.Int("SYNC_FREQUENCY", 10*60) // unit is second
 
+// ForceEmailTLSVerify is used to determine whether to force TLS verification for email
+var ForceEmailTLSVerify = env.Bool("FORCE_EMAIL_TLS_VERIFY", false)
+
 var BatchUpdateEnabled = false
 var BatchUpdateInterval = env.Int("BATCH_UPDATE_INTERVAL", 5)
 
