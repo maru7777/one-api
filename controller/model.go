@@ -1,10 +1,15 @@
 package controller
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
+	"strings"
+	"time"
 
+	gutils "github.com/Laisky/go-utils/v5"
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/middleware"
@@ -147,6 +152,7 @@ func ListAllModels(c *gin.Context) {
 // ListModels lists all models available to the user.
 func ListModels(c *gin.Context) {
 	userId := c.GetInt(ctxkey.Id)
+
 	userGroup, err := model.CacheGetUserGroup(userId)
 	if err != nil {
 		middleware.AbortWithError(c, http.StatusBadRequest, err)
@@ -168,32 +174,45 @@ func ListModels(c *gin.Context) {
 	// just match by model name only. However, this may reintroduce the duplicate models bug
 	// mentioned in #31. A complete fix would require significant changes, so I'll leave it for now.
 
-	// Create a map for quick lookup of enabled model+channel combinations
-	// Only store the exact model:channel combinations from abilities
-	abilityMap := make(map[string]bool)
-	for _, ability := range availableAbilities {
-		// Store as "modelName:channelName" for exact matching
-		adaptor := relay.GetAdaptor(channeltype.ToAPIType(ability.ChannelType))
-		key := ability.Model + ":" + adaptor.GetChannelName()
-		abilityMap[key] = true
+	// Create ability maps for both exact matches and model-only matches
+	exactMatches := make(map[string]bool)
+	modelMatches := make(map[string]bool)
 
-		// for custom channels, store the model name only
-		if ability.ChannelType == channeltype.Custom {
-			abilityMap[ability.Model] = true
-		}
+	for _, ability := range availableAbilities {
+		adaptor := relay.GetAdaptor(channeltype.ToAPIType(ability.ChannelType))
+		// Store exact match
+		key := ability.Model + ":" + adaptor.GetChannelName()
+		exactMatches[key] = true
+
+		// Store model name for fallback matching
+		modelMatches[ability.Model] = true
 	}
 
-	// Filter models that match user's abilities with EXACT model+channel matches
 	userAvailableModels := make([]OpenAIModels, 0)
-
-	// Only include models that have a matching model+channel combination
 	for _, model := range allModels {
 		key := model.Id + ":" + model.OwnedBy
-		if abilityMap[key] {
+
+		// Check for exact match first
+		if exactMatches[key] {
 			userAvailableModels = append(userAvailableModels, model)
-		} else if abilityMap[model.Id] {
-			// for custom channels, store the model name only
-			userAvailableModels = append(userAvailableModels, model)
+			continue
+		}
+
+		// Fall back to model-only match if:
+		// 1. Model name matches
+		// 2. No exact match exists for this model name
+		if modelMatches[model.Id] {
+			hasExactMatch := false
+			for exactKey := range exactMatches {
+				if strings.HasPrefix(exactKey, model.Id+":") {
+					hasExactMatch = true
+					break
+				}
+			}
+
+			if !hasExactMatch {
+				userAvailableModels = append(userAvailableModels, model)
+			}
 		}
 	}
 
@@ -207,6 +226,7 @@ func ListModels(c *gin.Context) {
 		"data":   userAvailableModels,
 	})
 }
+
 func RetrieveModel(c *gin.Context) {
 	modelId := c.Param("model")
 	if model, ok := modelsMap[modelId]; ok {
