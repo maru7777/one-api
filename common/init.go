@@ -3,11 +3,12 @@ package common
 import (
 	"flag"
 	"fmt"
-	"github.com/songquanpeng/one-api/common/config"
-	"github.com/songquanpeng/one-api/common/logger"
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/logger"
 )
 
 var (
@@ -19,23 +20,23 @@ var (
 
 func printHelp() {
 	fmt.Println("One API " + Version + " - All in one API service for OpenAI API.")
-	fmt.Println("Copyright (C) 2023 JustSong. All rights reserved.")
-	fmt.Println("GitHub: https://github.com/songquanpeng/one-api")
+	fmt.Println("Copyright (C) 2025 JustSong. All rights reserved.")
+	fmt.Println("GitHub: https://github.com/Laisky/one-api")
 	fmt.Println("Usage: one-api [--port <port>] [--log-dir <log directory>] [--version] [--help]")
 }
 
 func Init() {
 	flag.Parse()
 
-	if *PrintVersion {
-		fmt.Println(Version)
-		os.Exit(0)
-	}
+	// if *PrintVersion {
+	// 	fmt.Println(Version)
+	// 	os.Exit(0)
+	// }
 
-	if *PrintHelp {
-		printHelp()
-		os.Exit(0)
-	}
+	// if *PrintHelp {
+	// 	printHelp()
+	// 	os.Exit(0)
+	// }
 
 	if os.Getenv("SESSION_SECRET") != "" {
 		if os.Getenv("SESSION_SECRET") == "random_string" {

@@ -1,6 +1,10 @@
 package openai
 
-import "github.com/songquanpeng/one-api/relay/model"
+import (
+	"mime/multipart"
+
+	"github.com/songquanpeng/one-api/relay/model"
+)
 
 type TextContent struct {
 	Type string `json:"type,omitempty"`
@@ -71,6 +75,24 @@ type TextToSpeechRequest struct {
 	ResponseFormat string  `json:"response_format"`
 }
 
+type AudioTranscriptionRequest struct {
+	File                 *multipart.FileHeader `form:"file" binding:"required"`
+	Model                string                `form:"model" binding:"required"`
+	Language             string                `form:"language"`
+	Prompt               string                `form:"prompt"`
+	ReponseFormat        string                `form:"response_format" binding:"oneof=json text srt verbose_json vtt"`
+	Temperature          float64               `form:"temperature"`
+	TimestampGranularity []string              `form:"timestamp_granularity"`
+}
+
+type AudioTranslationRequest struct {
+	File           *multipart.FileHeader `form:"file" binding:"required"`
+	Model          string                `form:"model" binding:"required"`
+	Prompt         string                `form:"prompt"`
+	ResponseFormat string                `form:"response_format" binding:"oneof=json text srt verbose_json vtt"`
+	Temperature    float64               `form:"temperature"`
+}
+
 type UsageOrResponseText struct {
 	*model.Usage
 	ResponseText string
@@ -110,12 +132,14 @@ type EmbeddingResponse struct {
 	model.Usage `json:"usage"`
 }
 
+// ImageData represents an image in the response
 type ImageData struct {
 	Url           string `json:"url,omitempty"`
 	B64Json       string `json:"b64_json,omitempty"`
 	RevisedPrompt string `json:"revised_prompt,omitempty"`
 }
 
+// ImageResponse represents the response structure for image generations
 type ImageResponse struct {
 	Created int64       `json:"created"`
 	Data    []ImageData `json:"data"`

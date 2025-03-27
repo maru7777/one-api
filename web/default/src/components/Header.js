@@ -93,7 +93,7 @@ const Header = () => {
   async function logout() {
     setShowSidebar(false);
     await API.get('/api/user/logout');
-    showSuccess('注销成功!');
+    showSuccess('Logout successful!');
     userDispatch({ type: 'logout' });
     localStorage.removeItem('user');
     navigate('/login');

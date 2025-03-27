@@ -1,13 +1,13 @@
 package anthropic
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/relay/adaptor"
 	"github.com/songquanpeng/one-api/relay/meta"
 	"github.com/songquanpeng/one-api/relay/model"
@@ -20,6 +20,8 @@ func (a *Adaptor) Init(meta *meta.Meta) {
 
 }
 
+// https://docs.anthropic.com/claude/reference/messages_post
+// anthopic migrate to Message API
 func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	return fmt.Sprintf("%s/v1/messages", meta.BaseURL), nil
 }
@@ -36,8 +38,8 @@ func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Request, meta *me
 
 	// https://x.com/alexalbert__/status/1812921642143900036
 	// claude-3-5-sonnet can support 8k context
-	if strings.HasPrefix(meta.ActualModelName, "claude-3-5-sonnet") {
-		req.Header.Set("anthropic-beta", "max-tokens-3-5-sonnet-2024-07-15")
+	if strings.HasPrefix(meta.ActualModelName, "claude-3-7-sonnet") {
+		req.Header.Set("anthropic-beta", "output-128k-2025-02-19")
 	}
 
 	return nil
@@ -47,10 +49,12 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 	if request == nil {
 		return nil, errors.New("request is nil")
 	}
-	return ConvertRequest(*request), nil
+
+	c.Set("claude_model", request.Model)
+	return ConvertRequest(c, *request)
 }
 
-func (a *Adaptor) ConvertImageRequest(request *model.ImageRequest) (any, error) {
+func (a *Adaptor) ConvertImageRequest(_ *gin.Context, request *model.ImageRequest) (any, error) {
 	if request == nil {
 		return nil, errors.New("request is nil")
 	}

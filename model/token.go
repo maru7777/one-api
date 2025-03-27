@@ -1,16 +1,15 @@
 package model
 
 import (
-	"errors"
 	"fmt"
 
-	"gorm.io/gorm"
-
+	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/common/message"
+	"gorm.io/gorm"
 )
 
 const (
@@ -61,23 +60,24 @@ func SearchUserTokens(userId int, keyword string) (tokens []*Token, err error) {
 
 func ValidateUserToken(key string) (token *Token, err error) {
 	if key == "" {
-		return nil, errors.New("未提供令牌")
+		return nil, errors.New("No token provided")
 	}
 	token, err = CacheGetTokenByKey(key)
 	if err != nil {
 		logger.SysError("CacheGetTokenByKey failed: " + err.Error())
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("无效的令牌")
+			return nil, errors.Wrap(err, "token not found")
 		}
-		return nil, errors.New("令牌验证失败")
+
+		return nil, errors.Wrap(err, "failed to get token by key")
 	}
 	if token.Status == TokenStatusExhausted {
-		return nil, fmt.Errorf("令牌 %s（#%d）额度已用尽", token.Name, token.Id)
+		return nil, fmt.Errorf("API Key %s (#%d) quota has been exhausted", token.Name, token.Id)
 	} else if token.Status == TokenStatusExpired {
-		return nil, errors.New("该令牌已过期")
+		return nil, errors.New("The token has expired")
 	}
 	if token.Status != TokenStatusEnabled {
-		return nil, errors.New("该令牌状态不可用")
+		return nil, errors.New("The token status is not available")
 	}
 	if token.ExpiredTime != -1 && token.ExpiredTime < helper.GetTimestamp() {
 		if !common.RedisEnabled {
@@ -87,7 +87,7 @@ func ValidateUserToken(key string) (token *Token, err error) {
 				logger.SysError("failed to update token status" + err.Error())
 			}
 		}
-		return nil, errors.New("该令牌已过期")
+		return nil, errors.New("The token has expired")
 	}
 	if !token.UnlimitedQuota && token.RemainQuota <= 0 {
 		if !common.RedisEnabled {
@@ -98,14 +98,14 @@ func ValidateUserToken(key string) (token *Token, err error) {
 				logger.SysError("failed to update token status" + err.Error())
 			}
 		}
-		return nil, errors.New("该令牌额度已用尽")
+		return nil, errors.New("The token quota has been used up")
 	}
 	return token, nil
 }
 
 func GetTokenByIds(id int, userId int) (*Token, error) {
 	if id == 0 || userId == 0 {
-		return nil, errors.New("id 或 userId 为空！")
+		return nil, errors.New("id or userId is empty!")
 	}
 	token := Token{Id: id, UserId: userId}
 	var err error = nil
@@ -115,7 +115,7 @@ func GetTokenByIds(id int, userId int) (*Token, error) {
 
 func GetTokenById(id int) (*Token, error) {
 	if id == 0 {
-		return nil, errors.New("id 为空！")
+		return nil, errors.New("id is empty!")
 	}
 	token := Token{Id: id}
 	var err error = nil
@@ -160,7 +160,7 @@ func (t *Token) GetModels() string {
 func DeleteTokenById(id int, userId int) (err error) {
 	// Why we need userId here? In case user want to delete other's token.
 	if id == 0 || userId == 0 {
-		return errors.New("id 或 userId 为空！")
+		return errors.New("id or userId is empty!")
 	}
 	token := Token{Id: id, UserId: userId}
 	err = DB.Where(token).First(&token).Error
@@ -172,7 +172,7 @@ func DeleteTokenById(id int, userId int) (err error) {
 
 func IncreaseTokenQuota(id int, quota int64) (err error) {
 	if quota < 0 {
-		return errors.New("quota 不能为负数！")
+		return errors.New("quota cannot be negative!")
 	}
 	if config.BatchUpdateEnabled {
 		addNewRecord(BatchUpdateTypeTokenQuota, id, quota)
@@ -194,7 +194,7 @@ func increaseTokenQuota(id int, quota int64) (err error) {
 
 func DecreaseTokenQuota(id int, quota int64) (err error) {
 	if quota < 0 {
-		return errors.New("quota 不能为负数！")
+		return errors.New("quota cannot be negative!")
 	}
 	if config.BatchUpdateEnabled {
 		addNewRecord(BatchUpdateTypeTokenQuota, id, -quota)
@@ -216,21 +216,21 @@ func decreaseTokenQuota(id int, quota int64) (err error) {
 
 func PreConsumeTokenQuota(tokenId int, quota int64) (err error) {
 	if quota < 0 {
-		return errors.New("quota 不能为负数！")
+		return errors.New("quota cannot be negative!")
 	}
 	token, err := GetTokenById(tokenId)
 	if err != nil {
 		return err
 	}
 	if !token.UnlimitedQuota && token.RemainQuota < quota {
-		return errors.New("令牌额度不足")
+		return errors.New("Insufficient token quota")
 	}
 	userQuota, err := GetUserQuota(token.UserId)
 	if err != nil {
 		return err
 	}
 	if userQuota < quota {
-		return errors.New("用户额度不足")
+		return errors.New("Insufficient user quota")
 	}
 	quotaTooLow := userQuota >= config.QuotaRemindThreshold && userQuota-quota < config.QuotaRemindThreshold
 	noMoreQuota := userQuota-quota <= 0
@@ -240,27 +240,27 @@ func PreConsumeTokenQuota(tokenId int, quota int64) (err error) {
 			if err != nil {
 				logger.SysError("failed to fetch user email: " + err.Error())
 			}
-			prompt := "额度提醒"
+			prompt := "Quota Reminder"
 			var contentText string
 			if noMoreQuota {
-				contentText = "您的额度已用尽"
+				contentText = "Your quota has been exhausted"
 			} else {
-				contentText = "您的额度即将用尽"
+				contentText = "Your quota is about to be exhausted"
 			}
 			if email != "" {
 				topUpLink := fmt.Sprintf("%s/topup", config.ServerAddress)
 				content := message.EmailTemplate(
 					prompt,
 					fmt.Sprintf(`
-						<p>您好！</p>
-						<p>%s，当前剩余额度为 <strong>%d</strong>。</p>
-						<p>为了不影响您的使用，请及时充值。</p>
-						<p style="text-align: center; margin: 30px 0;">
-							<a href="%s" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">立即充值</a>
-						</p>
-						<p style="color: #666;">如果按钮无法点击，请复制以下链接到浏览器中打开：</p>
-						<p style="background-color: #f8f8f8; padding: 10px; border-radius: 4px; word-break: break-all;">%s</p>
-					`, contentText, userQuota, topUpLink, topUpLink),
+								<p>Hello!</p>
+								<p>%s, your current remaining quota is <strong>%d</strong>.</p>
+								<p>To avoid any disruption to your service, please top up in a timely manner.</p>
+								<p style="text-align: center; margin: 30px 0;">
+									<a href="%s" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">Top Up Now</a>
+								</p>
+								<p style="color: #666;">If the button does not work, please copy the following link and paste it into your browser:</p>
+								<p style="background-color: #f8f8f8; padding: 10px; border-radius: 4px; word-break: break-all;">%s</p>
+							`, contentText, userQuota, topUpLink, topUpLink),
 				)
 				err = message.SendEmail(prompt, email, content)
 				if err != nil {

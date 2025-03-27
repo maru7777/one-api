@@ -185,7 +185,7 @@ export const CHANNEL_OPTIONS = {
     value: 45,
     color: 'primary'
   },
-  45: {
+  46: {
     key: 46,
     text: 'Replicate',
     value: 46,

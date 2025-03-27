@@ -60,7 +60,6 @@ func (a *Adaptor) GetChannelName() string {
 func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	prefix := fmt.Sprintf("/v1/oneapi/proxy/%d", meta.ChannelId)
 	return meta.BaseURL + strings.TrimPrefix(meta.RequestURLPath, prefix), nil
-
 }
 
 func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Request, meta *meta.Meta) error {
@@ -80,7 +79,7 @@ func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Request, meta *me
 	return nil
 }
 
-func (a *Adaptor) ConvertImageRequest(request *model.ImageRequest) (any, error) {
+func (a *Adaptor) ConvertImageRequest(_ *gin.Context, request *model.ImageRequest) (any, error) {
 	return nil, errors.Errorf("not implement")
 }
 

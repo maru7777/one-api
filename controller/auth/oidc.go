@@ -1,12 +1,13 @@
 package auth
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/sessions"
@@ -37,24 +38,20 @@ type OidcUser struct {
 
 func getOidcUserInfoByCode(code string) (*OidcUser, error) {
 	if code == "" {
-		return nil, errors.New("无效的参数")
+		return nil, errors.New("Invalid parameter")
 	}
-	values := map[string]string{
-		"client_id":     config.OidcClientId,
-		"client_secret": config.OidcClientSecret,
-		"code":          code,
-		"grant_type":    "authorization_code",
-		"redirect_uri":  fmt.Sprintf("%s/oauth/oidc", config.ServerAddress),
-	}
-	jsonData, err := json.Marshal(values)
+	values := url.Values{}
+	values.Set("client_id", config.OidcClientId)
+	values.Set("client_secret", config.OidcClientSecret)
+	values.Set("code", code)
+	values.Set("grant_type", "authorization_code")
+	values.Set("redirect_uri", fmt.Sprintf("%s/oauth/oidc", config.ServerAddress))
+	formData := values.Encode()
+	req, err := http.NewRequest("POST", config.OidcTokenEndpoint, strings.NewReader(formData))
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest("POST", config.OidcTokenEndpoint, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json")
 	client := http.Client{
 		Timeout: 5 * time.Second,
@@ -62,7 +59,7 @@ func getOidcUserInfoByCode(code string) (*OidcUser, error) {
 	res, err := client.Do(req)
 	if err != nil {
 		logger.SysLog(err.Error())
-		return nil, errors.New("无法连接至 OIDC 服务器，请稍后重试！")
+		return nil, errors.New("Unable to connect to the OIDC server, please try again later!")
 	}
 	defer res.Body.Close()
 	var oidcResponse OidcResponse
@@ -78,7 +75,7 @@ func getOidcUserInfoByCode(code string) (*OidcUser, error) {
 	res2, err := client.Do(req)
 	if err != nil {
 		logger.SysLog(err.Error())
-		return nil, errors.New("无法连接至 OIDC 服务器，请稍后重试！")
+		return nil, errors.New("Unable to connect to the OIDC server, please try again later!")
 	}
 	var oidcUser OidcUser
 	err = json.NewDecoder(res2.Body).Decode(&oidcUser)
@@ -107,7 +104,7 @@ func OidcAuth(c *gin.Context) {
 	if !config.OidcEnabled {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "管理员未开启通过 OIDC 登录以及注册",
+			"message": "Administrator has not enabled OIDC Log in and Sign up",
 		})
 		return
 	}
@@ -156,7 +153,7 @@ func OidcAuth(c *gin.Context) {
 		} else {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "管理员关闭了新用户注册",
+				"message": "The administrator has turned off new user registration",
 			})
 			return
 		}
@@ -164,7 +161,7 @@ func OidcAuth(c *gin.Context) {
 
 	if user.Status != model.UserStatusEnabled {
 		c.JSON(http.StatusOK, gin.H{
-			"message": "用户已被封禁",
+			"message": "User has been banned",
 			"success": false,
 		})
 		return
@@ -176,7 +173,7 @@ func OidcBind(c *gin.Context) {
 	if !config.OidcEnabled {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "管理员未开启通过 OIDC 登录以及注册",
+			"message": "The administrator has turned off new user registration",
 		})
 		return
 	}
@@ -195,7 +192,7 @@ func OidcBind(c *gin.Context) {
 	if model.IsOidcIdAlreadyTaken(user.OidcId) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "该 OIDC 账户已被绑定",
+			"message": "This OIDC account has already been bound",
 		})
 		return
 	}
