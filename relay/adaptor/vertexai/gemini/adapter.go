@@ -8,20 +8,25 @@ import (
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/relay/adaptor/gemini"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
-	"github.com/songquanpeng/one-api/relay/relaymode"
-
 	"github.com/songquanpeng/one-api/relay/meta"
 	"github.com/songquanpeng/one-api/relay/model"
+	"github.com/songquanpeng/one-api/relay/relaymode"
 )
 
+// ModelList is the list of models supported by Vertex AI.
+//
+// https://cloud.google.com/vertex-ai/generative-ai/docs/learn/models
 var ModelList = []string{
 	"gemini-pro", "gemini-pro-vision",
 	"gemini-exp-1206",
-	"gemini-1.5-pro-001", "gemini-1.5-pro-002",
-	"gemini-1.5-flash-001", "gemini-1.5-flash-002",
-	"gemini-2.0-flash-exp", "gemini-2.0-flash-001",
-	"gemini-2.0-flash-lite-preview-02-05",
+	"gemini-1.0-pro",
+	"gemini-1.0-pro-vision",
+	"gemini-1.5-pro", "gemini-1.5-pro-001", "gemini-1.5-pro-002",
+	"gemini-1.5-flash", "gemini-1.5-flash-001", "gemini-1.5-flash-002",
+	"gemini-2.0-flash", "gemini-2.0-flash-exp", "gemini-2.0-flash-001",
+	"gemini-2.0-flash-lite", "gemini-2.0-flash-lite-001",
 	"gemini-2.0-flash-thinking-exp-01-21",
+	"gemini-2.0-pro-exp-02-05",
 }
 
 type Adaptor struct {
@@ -36,6 +41,10 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 	c.Set(ctxkey.RequestModel, request.Model)
 	c.Set(ctxkey.ConvertedRequest, geminiRequest)
 	return geminiRequest, nil
+}
+
+func (a *Adaptor) ConvertImageRequest(c *gin.Context, request *model.ImageRequest) (any, error) {
+	return nil, errors.New("not support image request")
 }
 
 func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Meta) (usage *model.Usage, err *model.ErrorWithStatusCode) {

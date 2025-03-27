@@ -10,6 +10,12 @@ func GetByPath(path string) int {
 		relayMode = Completions
 	} else if strings.HasPrefix(path, "/v1/embeddings") {
 		relayMode = Embeddings
+	} else if strings.HasPrefix(path, "/v1/rerank") {
+		relayMode = Rerank
+	} else if strings.HasSuffix(path, "/rerank") {
+		relayMode = Rerank
+	} else if strings.HasSuffix(path, "/rerankers") {
+		relayMode = Rerank
 	} else if strings.HasSuffix(path, "embeddings") {
 		relayMode = Embeddings
 	} else if strings.HasPrefix(path, "/v1/moderations") {
@@ -24,8 +30,11 @@ func GetByPath(path string) int {
 		relayMode = AudioTranscription
 	} else if strings.HasPrefix(path, "/v1/audio/translations") {
 		relayMode = AudioTranslation
+	} else if strings.HasPrefix(path, "/v1/images/edits") {
+		relayMode = ImagesEdits
 	} else if strings.HasPrefix(path, "/v1/oneapi/proxy") {
 		relayMode = Proxy
 	}
+
 	return relayMode
 }

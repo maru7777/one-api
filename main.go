@@ -2,10 +2,13 @@ package main
 
 import (
 	"embed"
+	"encoding/base64"
 	"fmt"
 	"os"
 	"strconv"
 
+	gmw "github.com/Laisky/gin-middlewares/v6"
+	glog "github.com/Laisky/go-utils/v5/log"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
@@ -100,16 +103,35 @@ func main() {
 	}
 
 	// Initialize HTTP server
+	logLevel := glog.LevelInfo
+	if config.DebugEnabled {
+		logLevel = glog.LevelDebug
+	}
 	server := gin.New()
-	server.Use(gin.Recovery())
+	server.RedirectTrailingSlash = false
+	server.Use(
+		gin.Recovery(),
+		gmw.NewLoggerMiddleware(
+			gmw.WithLoggerMwColored(),
+			gmw.WithLevel(logLevel.String()),
+			gmw.WithLogger(glog.Shared.Named("one-api")),
+		),
+	)
 	// This will cause SSE not to work!!!
 	//server.Use(gzip.Gzip(gzip.DefaultCompression))
 	server.Use(middleware.RequestId())
 	server.Use(middleware.Language())
 	middleware.SetUpLogger(server)
 	// Initialize session store
-	store := cookie.NewStore([]byte(config.SessionSecret))
-	server.Use(sessions.Sessions("session", store))
+	sessionSecret, err := base64.StdEncoding.DecodeString(config.SessionSecret)
+	if err != nil {
+		logger.SysLog("session secret is not base64 encoded, using raw value instead")
+		store := cookie.NewStore([]byte(config.SessionSecret))
+		server.Use(sessions.Sessions("session", store))
+	} else {
+		store := cookie.NewStore(sessionSecret, sessionSecret)
+		server.Use(sessions.Sessions("session", store))
+	}
 
 	router.SetRouter(server, buildFS)
 	var port = os.Getenv("PORT")

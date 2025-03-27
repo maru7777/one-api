@@ -339,41 +339,40 @@ const EditChannel = () => {
 
             {/* Azure OpenAI specific fields */}
             {inputs.type === 3 && (
-              <>
-                <Message>
-                  注意，<strong>模型部署名称必须和模型名称保持一致</strong>
-                  ，因为 One API 会把请求体中的 model
-                  参数替换为你的部署名称（模型名称中的点会被剔除），
-                  <a
-                    target='_blank'
-                    href='https://github.com/songquanpeng/one-api/issues/133?notification_referrer_id=NT_kwDOAmJSYrM2NjIwMzI3NDgyOjM5OTk4MDUw#issuecomment-1571602271'
-                  >
-                    图片演示
-                  </a>
-                  。
-                </Message>
-                <Form.Field>
-                  <Form.Input
-                    label='AZURE_OPENAI_ENDPOINT'
-                    name='base_url'
-                    placeholder='请输入 AZURE_OPENAI_ENDPOINT，例如：https://docs-test-001.openai.azure.com'
-                    onChange={handleInputChange}
-                    value={inputs.base_url}
-                    autoComplete='new-password'
-                  />
-                </Form.Field>
-                <Form.Field>
-                  <Form.Input
-                    label='默认 API 版本'
-                    name='other'
-                    placeholder='请输入默认 API 版本，例如：2024-03-01-preview，该配置可以被实际的请求查询参数所覆盖'
-                    onChange={handleInputChange}
-                    value={inputs.other}
-                    autoComplete='new-password'
-                  />
-                </Form.Field>
-              </>
-            )}
+            <>
+              <Message>
+                Note: <strong>The model deployment name must match the model name</strong>
+                , because One API will replace the model parameter in the request body
+                with your deployment name (dots in the model name will be removed).
+                <a
+                  target='_blank'
+                  href='https://github.com/songquanpeng/one-api/issues/133?notification_referrer_id=NT_kwDOAmJSYrM2NjIwMzI3NDgyOjM5OTk4MDUw#issuecomment-1571602271'
+                >
+                  Image Demo
+                </a>
+              </Message>
+              <Form.Field>
+                <Form.Input
+                  label='AZURE_OPENAI_ENDPOINT'
+                  name='base_url'
+                  placeholder='Please enter AZURE_OPENAI_ENDPOINT, for example: https://docs-test-001.openai.azure.com'
+                  onChange={handleInputChange}
+                  value={inputs.base_url}
+                  autoComplete='new-password'
+                />
+              </Form.Field>
+              <Form.Field>
+                <Form.Input
+                  label='Default API Version'
+                  name='other'
+                  placeholder='Please enter default API version, for example: 2024-03-01-preview. This configuration can be overridden by actual request query parameters'
+                  onChange={handleInputChange}
+                  value={inputs.other}
+                  autoComplete='new-password'
+                />
+              </Form.Field>
+            </>
+          )}
 
             {/* Custom base URL field */}
             {inputs.type === 8 && (
@@ -757,10 +756,10 @@ const EditChannel = () => {
             {inputs.type === 22 && (
               <Form.Field>
                 <Form.Input
-                  label='私有部署地址'
+                  label='Private Deployment URL'
                   name='base_url'
                   placeholder={
-                    '请输入私有部署地址，格式为：https://fastgpt.run/api/openapi'
+                    'Please enter the private deployment URL, format: https://fastgpt.run/api/openapi'
                   }
                   onChange={handleInputChange}
                   value={inputs.base_url}

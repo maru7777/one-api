@@ -179,6 +179,7 @@ var ModelList = []string{
 	"openai/gpt-4o-mini",
 	"openai/gpt-4o-mini-2024-07-18",
 	"openai/gpt-4o:extended",
+	"openai/gpt-4.5-preview",
 	"openai/o1",
 	"openai/o1-mini",
 	"openai/o1-mini-2024-09-12",

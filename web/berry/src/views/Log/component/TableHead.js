@@ -13,7 +13,7 @@ const LogTableHead = ({ userIsAdmin }) => {
         <TableCell>模型</TableCell>
         <TableCell>提示</TableCell>
         <TableCell>补全</TableCell>
-        <TableCell>额度</TableCell>
+        <TableCell>费用</TableCell>
         <TableCell>详情</TableCell>
       </TableRow>
     </TableHead>

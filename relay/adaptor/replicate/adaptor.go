@@ -1,6 +1,7 @@
 package replicate
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
+	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/relay/adaptor"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
@@ -23,7 +25,31 @@ type Adaptor struct {
 }
 
 // ConvertImageRequest implements adaptor.Adaptor.
-func (*Adaptor) ConvertImageRequest(request *model.ImageRequest) (any, error) {
+func (a *Adaptor) ConvertImageRequest(_ *gin.Context, request *model.ImageRequest) (any, error) {
+	return nil, errors.New("should call replicate.ConvertImageRequest instead")
+}
+
+func ConvertImageRequest(c *gin.Context, request *model.ImageRequest) (any, error) {
+	meta := meta.GetByContext(c)
+
+	if request.ResponseFormat != "b64_json" {
+		return nil, errors.New("only support b64_json response format")
+	}
+	if request.N != 1 && request.N != 0 {
+		return nil, errors.New("only support N=1")
+	}
+
+	switch meta.Mode {
+	case relaymode.ImagesGenerations:
+		return convertImageCreateRequest(request)
+	case relaymode.ImagesEdits:
+		return convertImageRemixRequest(c)
+	default:
+		return nil, errors.New("not implemented")
+	}
+}
+
+func convertImageCreateRequest(request *model.ImageRequest) (any, error) {
 	return DrawImageRequest{
 		Input: ImageInput{
 			Steps:           25,
@@ -39,6 +65,23 @@ func (*Adaptor) ConvertImageRequest(request *model.ImageRequest) (any, error) {
 	}, nil
 }
 
+func convertImageRemixRequest(c *gin.Context) (any, error) {
+	// recover request body
+	requestBody, err := common.GetRequestBody(c)
+	if err != nil {
+		return nil, errors.Wrap(err, "get request body")
+	}
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody))
+
+	rawReq := new(model.OpenaiImageEditRequest)
+	if err := c.ShouldBind(rawReq); err != nil {
+		return nil, errors.Wrap(err, "parse image edit form")
+	}
+
+	return Convert2FluxRemixRequest(rawReq)
+}
+
+// ConvertRequest converts the request to the format that the target API expects.
 func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.GeneralOpenAIRequest) (any, error) {
 	if !request.Stream {
 		// TODO: support non-stream mode
@@ -116,7 +159,8 @@ func (a *Adaptor) DoRequest(c *gin.Context, meta *meta.Meta, requestBody io.Read
 
 func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Meta) (usage *model.Usage, err *model.ErrorWithStatusCode) {
 	switch meta.Mode {
-	case relaymode.ImagesGenerations:
+	case relaymode.ImagesGenerations,
+		relaymode.ImagesEdits:
 		err, usage = ImageHandler(c, resp)
 	case relaymode.ChatCompletions:
 		err, usage = ChatHandler(c, resp)

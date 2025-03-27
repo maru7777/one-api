@@ -3,13 +3,14 @@ package env
 import (
 	"os"
 	"strconv"
+	"strings"
 )
 
 func Bool(env string, defaultValue bool) bool {
 	if env == "" || os.Getenv(env) == "" {
 		return defaultValue
 	}
-	return os.Getenv(env) == "true"
+	return strings.ToLower(os.Getenv(env)) == "true"
 }
 
 func Int(env string, defaultValue int) int {
