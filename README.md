@@ -37,6 +37,8 @@ Also welcome to register and use my deployed one-api gateway, which supports var
     - [Support AWS cross-region inferences](#support-aws-cross-region-inferences)
     - [Support OpenAI web search models](#support-openai-web-search-models)
     - [Support gemini multimodal output #2197](#support-gemini-multimodal-output-2197)
+    - [Support coze oauth authentication](#support-coze-oauth-authentication)
+    - [Support gemini-2.5-pro](#support-gemini-25-pro)
   - [Bug fix](#bug-fix)
 
 ## Turtorial
@@ -233,6 +235,12 @@ support `gpt-4o-search-preview` & `gpt-4o-mini-search-preview`
 - [feature: support gemini multimodal output #2197](https://github.com/songquanpeng/one-api/pull/2197)
 
 ![](https://s3.laisky.com/uploads/2025/03/gemini-multimodal.png)
+
+### Support coze oauth authentication
+
+- [feat: support coze oauth authentication](https://github.com/Laisky/one-api/pull/52)
+
+### Support gemini-2.5-pro
 
 ## Bug fix
 
