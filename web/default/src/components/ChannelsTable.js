@@ -165,7 +165,7 @@ const ChannelsTable = () => {
     let res;
     switch (action) {
       case 'delete':
-        res = await API.delete(`/api/channel/${id}/`);
+        res = await API.delete(`/api/channel/${id}`);
         break;
       case 'enable':
         data.status = 1;
@@ -360,7 +360,7 @@ const ChannelsTable = () => {
   };
 
   const updateChannelBalance = async (id, name, idx) => {
-    const res = await API.get(`/api/channel/update_balance/${id}/`);
+    const res = await API.get(`/api/channel/update_balance/${id}`);
     const { success, message, balance } = res.data;
     if (success) {
       let newChannels = [...channels];
