@@ -103,7 +103,7 @@ const RedemptionsTable = () => {
     let res;
     switch (action) {
       case 'delete':
-        res = await API.delete(`/api/redemption/${id}/`);
+        res = await API.delete(`/api/redemption/${id}`);
         break;
       case 'enable':
         data.status = 1;

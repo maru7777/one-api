@@ -327,7 +327,7 @@ const ChannelsTable = () => {
     let res;
     switch (action) {
       case 'delete':
-        res = await API.delete(`/api/channel/${id}/`);
+        res = await API.delete(`/api/channel/${id}`);
         break;
       case 'enable':
         data.status = 1;
