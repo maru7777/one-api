@@ -77,6 +77,8 @@ var ModelRatio = map[string]float64{
 	"gpt-3.5-turbo-instruct":               1.5 * MilliTokensUsd,
 	"gpt-3.5-turbo-1106":                   1 * MilliTokensUsd,
 	"gpt-3.5-turbo-0125":                   0.5 * MilliTokensUsd,
+	"o1-pro":                               150 * MilliTokensUsd,
+	"o1-pro-2025-03-19":                    150 * MilliTokensUsd,
 	"o1":                                   15 * MilliTokensUsd,
 	"o1-2024-12-17":                        15 * MilliTokensUsd,
 	"o1-preview":                           15 * MilliTokensUsd,
