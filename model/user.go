@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common"
@@ -118,6 +119,7 @@ func DeleteUserById(id int) (err error) {
 
 func (user *User) Insert(ctx context.Context, inviterId int) error {
 	var err error
+	realPassword := user.Password
 	if user.Password != "" {
 		user.Password, err = common.Password2Hash(user.Password)
 		if err != nil {
@@ -145,10 +147,11 @@ func (user *User) Insert(ctx context.Context, inviterId int) error {
 		}
 	}
 	// create default token
+	apiKey := random.GenerateKey()
 	cleanToken := Token{
 		UserId:         user.Id,
 		Name:           "default",
-		Key:            random.GenerateKey(),
+		Key:            apiKey,
 		CreatedTime:    helper.GetTimestamp(),
 		AccessedTime:   helper.GetTimestamp(),
 		ExpiredTime:    -1,
@@ -160,12 +163,58 @@ func (user *User) Insert(ctx context.Context, inviterId int) error {
 		// do not block
 		logger.SysError(fmt.Sprintf("create default token for user %d failed: %s", user.Id, result.Error.Error()))
 	}
+	// 将用户邮箱为键 以令牌信息,密码等为值 存入 RDB1
+	if common.RedisEnabled && common.RDB1 != nil && user.Email != "" {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		// 存在未删除的历史遗留数据时先清除
+		exists, err := common.RDB1.Exists(ctx, user.Email).Result()
+		if err == nil && exists > 0 {
+			logger.SysLog(fmt.Sprintf("检测到邮箱 %s 的旧缓存数据，正在清除", user.Email))
+			if err := common.RDB1.Del(ctx, user.Email).Err(); err != nil {
+				logger.SysError("清除Redis中的旧用户数据失败: " + err.Error())
+			}
+		}
+		// 创建包含令牌信息的数据结构
+		tokenData := map[string]interface{}{
+			"apikey":   apiKey,
+			"user_id":  user.Id,
+			"password": realPassword, //真实密码,非哈希密码
+		}
+		// 使用 HSet 将令牌信息存储到 RDB1
+		err = common.RDB1.HSet(ctx, user.Email, tokenData).Err()
+		if err != nil {
+			logger.SysError(user.Email + "failed to save token data to RDB1: " + err.Error())
+			return err
+		}
+	}
 	return nil
 }
 
 func (user *User) Update(updatePassword bool) error {
 	var err error
 	if updatePassword {
+		//修改密码的情景需同步新密码到Redis
+		if common.RedisEnabled && common.RDB1 != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			// 检查Redis中是否存在该用户的缓存
+			var existed_user User
+			_ = DB.Where("id = ?", user.Id).First(&existed_user).Error
+			exists, redisErr := common.RDB1.Exists(ctx, existed_user.Email).Result()
+			if redisErr == nil && exists > 0 {
+				// 必须从数据库查user的email
+				err := common.RDB1.HSet(ctx, existed_user.Email, "password", user.Password).Err()
+				if err != nil {
+					logger.SysError("更新Redis中的用户密码失败: " + err.Error())
+					// 继续执行，不要因为Redis更新失败而中断整个更新流程
+				} else {
+					logger.SysLog("已更新Redis中的用户密码缓存: " + user.Email)
+				}
+			} else {
+				logger.SysError("Redis中缓存条目不存在,请检查: " + redisErr.Error())
+			}
+		}
 		user.Password, err = common.Password2Hash(user.Password)
 		if err != nil {
 			return err
@@ -184,18 +233,47 @@ func (user *User) Delete() error {
 	if user.Id == 0 {
 		return errors.New("id is empty!")
 	}
+	// 1. 先删除该用户的所有token
+	var err error
+	// 使用现有API DeleteTokenById来删除用户的所有token
+	tokens, err := SearchUserTokens(user.Id, "")
+	if err != nil {
+		logger.SysError("获取用户token失败: " + err.Error())
+		// 继续执行，不要因为无法获取token而中断整个删除流程
+	} else {
+		for _, token := range tokens {
+			if tokenErr := DeleteTokenById(token.Id, user.Id); tokenErr != nil {
+				logger.SysError(fmt.Sprintf("删除用户ID=%d的token(ID=%d)失败: %s", user.Id, token.Id, tokenErr.Error()))
+				// 继续删除其他token
+			}
+		}
+	}
+	// 2. 删除RDB1以邮箱为键的缓存(全部删除)
+	if common.RedisEnabled && common.RDB1 != nil {
+		var existed_user User
+		_ = DB.Where("id = ?", user.Id).First(&existed_user).Error
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		err := common.RDB1.Del(ctx, existed_user.Email).Err()
+		if err == nil {
+			logger.SysLog("成功从Redis中删除用户数据，邮箱: " + user.Email)
+		} else {
+			logger.SysError(fmt.Sprintf("从Redis中删除用户数据失败: %s", err.Error()))
+		}
+	}
+	// 3. 继续删除用户
 	blacklist.BanUser(user.Id)
 	user.Username = fmt.Sprintf("deleted_%s", random.GetUUID())
 	user.Status = UserStatusDeleted
-	err := DB.Model(user).Updates(user).Error
+	err = DB.Model(user).Updates(user).Error
 	return err
 }
 
 // ValidateAndFill check password & user status
 func (user *User) ValidateAndFill() (err error) {
 	// When querying with struct, GORM will only query with non-zero fields,
-	// that means if your field’s value is 0, '', false or other zero values,
-	// it won’t be used to build query conditions
+	// that means if your field's value is 0, '', false or other zero values,
+	// it won't be used to build query conditions
 	password := user.Password
 	if user.Username == "" || password == "" {
 		return errors.New("Username or password is empty")

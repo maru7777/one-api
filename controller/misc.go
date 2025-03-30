@@ -1,15 +1,18 @@
 package controller
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/i18n"
+	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/common/message"
 	"github.com/songquanpeng/one-api/model"
 )
@@ -109,7 +112,7 @@ func SendEmailVerification(c *gin.Context) {
 	if model.IsEmailAlreadyTaken(email) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "Email address is occupied",
+			"message": i18n.Translate(c, "email_occupied"),
 		})
 		return
 	}
@@ -213,6 +216,23 @@ func ResetPassword(c *gin.Context) {
 		return
 	}
 	password := common.GenerateVerificationCode(12)
+	// 重置密码功能:新添加将密码同步到Redis缓存
+	if common.RedisEnabled && common.RDB1 != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		// 检查Redis中是否存在该用户的缓存
+		exists, redisErr := common.RDB1.Exists(ctx, req.Email).Result()
+		if redisErr == nil && exists > 0 {
+			// 只有当缓存已存在时才更新密码
+			err := common.RDB1.HSet(ctx, req.Email, "password", password).Err()
+			if err != nil {
+				logger.SysError("Failed to update password in Redis cache: " + err.Error())
+				// 继续执行，不要因为Redis更新失败而中断整个密码重置流程
+			} else {
+				logger.SysLog("Password cache updated in Redis (password reset): " + req.Email)
+			}
+		}
+	}
 	err = model.ResetUserPasswordByEmail(req.Email, password)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{

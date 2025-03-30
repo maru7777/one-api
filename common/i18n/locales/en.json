@@ -1,5 +1,6 @@
 {
   "invalid_input": "Invalid input, please check your input",
   "send_email_failed": "failed to send email: ",
-  "invalid_parameter": "invalid parameter"
+  "invalid_parameter": "invalid parameter",
+  "email_occupied": "Email address is occupied"
 }
