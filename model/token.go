@@ -1,7 +1,9 @@
 package model
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common"
@@ -166,6 +168,36 @@ func DeleteTokenById(id int, userId int) (err error) {
 	err = DB.Where(token).First(&token).Error
 	if err != nil {
 		return err
+	}
+	// 检查Redis中是否有该用户邮箱关联的apikey
+	if common.RedisEnabled && common.RDB1 != nil {
+		// 被删除的token不见得和redis里的相同,相同时才将redis里的apikey置空
+		var user User
+		userErr := DB.Where("id = ?", userId).First(&user).Error
+		if userErr != nil {
+			// 用户可能已被删除，这是正常情况，不需要处理Redis
+			logger.SysLog("查找用户失败，可能用户已被删除")
+		} else {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			// 先检查key是否存在
+			exists, redisErr := common.RDB1.Exists(ctx, user.Email).Result()
+			if redisErr != nil || exists == 0 {
+				logger.SysLog("Redis中未找到该邮箱对应的记录，可能已被删除")
+			} else {
+				// 获取存储在Redis中的apikey
+				apikey, redisErr := common.RDB1.HGet(ctx, user.Email, "apikey").Result()
+				if redisErr == nil && apikey == token.Key {
+					// 如果Redis中存储的apikey与要删除的token.Key相同，则将其置空
+					err := common.RDB1.HSet(ctx, user.Email, "apikey", "").Err()
+					if err != nil {
+						logger.SysError("清除Redis中的apikey失败: " + err.Error())
+					} else {
+						logger.SysLog("已成功清除Redis中用户的apikey: " + user.Email)
+					}
+				}
+			}
+		}
 	}
 	return token.Delete()
 }

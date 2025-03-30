@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -93,10 +94,79 @@ func SetupLogin(user *model.User, c *gin.Context) {
 		Role:        user.Role,
 		Status:      user.Status,
 	}
+
+	// 从Redis DB1中获取用户的apikey
+	var apikey string = ""
+	if common.RedisEnabled && common.RDB1 != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		var exist_user model.User
+		_ = model.DB.Where("id = ?", user.Id).First(&exist_user).Error
+		// 使用用户邮箱作为键从Redis DB1中获取token
+		apikey_redis, err := common.RDB1.HGet(ctx, user.Email, "apikey").Result()
+		if err == nil && apikey_redis != "" {
+			apikey = apikey_redis
+		}
+	}
+	// 如果Redis中没有找到token，则从数据库中查询
+	if apikey == "" {
+		// 查询用户的第一个可用token
+		var token model.Token
+		err := model.DB.Where("user_id = ? AND status = ?", user.Id, model.TokenStatusEnabled).
+			Order("id desc").
+			Limit(1).
+			First(&token).Error
+		if err == nil {
+			apikey = token.Key
+			// 将查询到的token缓存到Redis中
+			if common.RedisEnabled && common.RDB1 != nil {
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				var exist_user model.User
+				_ = model.DB.Where("id = ?", user.Id).First(&exist_user).Error
+				err := common.RDB1.HSet(ctx, exist_user.Email, "apikey", token.Key).Err()
+				if err != nil {
+					logger.SysError("缓存 apikey 到 redis 失败,请检查: " + err.Error())
+				}
+			}
+		} else {
+			// 数据库中也没有找到token，创建一个新token
+			key := random.GenerateKey()
+			if key != "" {
+				// 使用已有的模式创建新token，参考Register函数中的token创建逻辑
+				token := model.Token{
+					UserId:         user.Id,
+					Name:           user.Username + " automaticlly generated token",
+					Key:            key,
+					CreatedTime:    time.Now().Unix(),
+					AccessedTime:   time.Now().Unix(),
+					ExpiredTime:    -1,        // 永不过期
+					RemainQuota:    500000000, // 示例额度
+					UnlimitedQuota: true,
+				}
+				if err := token.Insert(); err == nil {
+					apikey = key
+					// 如果Redis可用且用户有邮箱，将token保存到Redis中
+					if common.RedisEnabled && common.RDB1 != nil {
+						ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+						defer cancel()
+						var exist_user model.User
+						_ = model.DB.Where("id = ?", user.Id).First(&exist_user).Error
+						err := common.RDB1.HSet(ctx, exist_user.Email, "apikey", key).Err()
+						if err != nil {
+							logger.SysError("缓存 apikey 到 redis 失败,请检查: " + err.Error())
+						}
+					}
+				}
+			}
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "",
 		"success": true,
 		"data":    cleanUser,
+		"apikey":  apikey,
 	})
 }
 
@@ -428,6 +498,11 @@ func UpdateUser(c *gin.Context) {
 		updatedUser.Password = "" // rollback to what it should be
 	}
 	updatePassword := updatedUser.Password != ""
+	var existed_user model.User
+	_ = model.DB.Where("id = ?", updatedUser.Id).First(&existed_user).Error
+	if hashedNewPassword, err := common.Password2Hash(updatedUser.Password); err == nil && hashedNewPassword == existed_user.Password {
+		updatePassword = false // 如果新密码与旧密码相同，则不更新密码
+	}
 	if err := updatedUser.Update(updatePassword); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -477,6 +552,11 @@ func UpdateSelf(c *gin.Context) {
 		cleanUser.Password = ""
 	}
 	updatePassword := user.Password != ""
+	var existed_user model.User
+	_ = model.DB.Where("id = ?", cleanUser.Id).First(&existed_user).Error
+	if hashedNewPassword, err := common.Password2Hash(cleanUser.Password); err == nil && hashedNewPassword == existed_user.Password {
+		updatePassword = false // 如果新密码与旧密码相同，则不更新密码
+	}
 	if err := cleanUser.Update(updatePassword); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,

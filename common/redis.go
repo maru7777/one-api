@@ -12,6 +12,7 @@ import (
 )
 
 var RDB redis.Cmdable
+var RDB1 *redis.Client
 var RedisEnabled = true
 
 // InitRedisClient This function is called after init()
@@ -42,6 +43,25 @@ func InitRedisClient() (err error) {
 			Password:   os.Getenv("REDIS_PASSWORD"),
 			MasterName: os.Getenv("REDIS_MASTER_NAME"),
 		})
+	}
+	// 初始化 RDB1（可选）
+	redisConnString1 := os.Getenv("REDIS_CONN_STRING_1")
+	if redisConnString1 != "" {
+		logger.SysLog("RDB1 for cross-project data enabled")
+		opt1, err := redis.ParseURL(redisConnString1)
+		if err != nil {
+			logger.FatalLog("failed to parse Redis connection string for RDB1: " + err.Error())
+		}
+		RDB1 = redis.NewClient(opt1)
+		// 测试 RDB1 连接
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_, err = RDB1.Ping(ctx).Result()
+		if err != nil {
+			logger.FatalLog("RDB1 ping test failed: " + err.Error())
+		}
+	} else {
+		logger.SysLog("REDIS_CONN_STRING_1 not set, RDB1 is not enabled")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
