@@ -14,7 +14,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common/client"
-
 	_ "golang.org/x/image/webp"
 )
 
@@ -26,6 +25,16 @@ func IsImageUrl(url string) (bool, error) {
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to fetch image URL: %s", url)
 	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		// this file may not support HEAD method
+		resp, err = client.UserContentRequestHTTPClient.Get(url)
+		if err != nil {
+			return false, errors.Wrapf(err, "failed to fetch image URL: %s", url)
+		}
+		defer resp.Body.Close()
+	}
 
 	if resp.StatusCode != http.StatusOK {
 		return false, errors.Errorf("failed to fetch image URL: %s, status code: %d", url, resp.StatusCode)
@@ -33,6 +42,13 @@ func IsImageUrl(url string) (bool, error) {
 
 	if resp.ContentLength > 10*1024*1024 {
 		return false, errors.Errorf("image size should not exceed 10MB: %s, size: %d", url, resp.ContentLength)
+	}
+
+	contentType := strings.ToLower(resp.Header.Get("Content-Type"))
+	if !strings.HasPrefix(contentType, "image/") &&
+		!strings.Contains(contentType, "application/octet-stream") {
+		return false,
+			errors.Errorf("invalid content type: %s, expected image type", contentType)
 	}
 
 	return true, nil
@@ -51,6 +67,7 @@ func GetImageSizeFromUrl(url string) (width int, height int, err error) {
 		return 0, 0, errors.Wrap(err, "failed to get image from URL")
 	}
 	defer resp.Body.Close()
+
 	img, _, err := image.DecodeConfig(resp.Body)
 	if err != nil {
 		return 0, 0, errors.Wrap(err, "failed to decode image")
@@ -81,11 +98,20 @@ func GetImageFromUrl(url string) (mimeType string, data string, err error) {
 		return mimeType, data, errors.Wrap(err, "failed to get image from URL")
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return mimeType, data, errors.Errorf("failed to fetch image URL: %s, status code: %d", url, resp.StatusCode)
+	}
+	if resp.ContentLength > 10*1024*1024 {
+		return mimeType, data, errors.Errorf("image size should not exceed 10MB: %s, size: %d", url, resp.ContentLength)
+	}
+
 	buffer := bytes.NewBuffer(nil)
 	_, err = buffer.ReadFrom(resp.Body)
 	if err != nil {
 		return mimeType, data, errors.Wrap(err, "failed to read image data from response")
 	}
+
 	mimeType = resp.Header.Get("Content-Type")
 	data = base64.StdEncoding.EncodeToString(buffer.Bytes())
 	return mimeType, data, nil

@@ -6,7 +6,10 @@ on:
       - "master"
       - "main"
       - "test/ci"
-      - fix/arm
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build_latest:
