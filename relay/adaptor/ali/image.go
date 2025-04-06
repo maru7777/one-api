@@ -146,6 +146,11 @@ func responseAli2OpenAIImage(response *TaskResponse, responseFormat string) *ope
 	}
 
 	for _, data := range response.Output.Results {
+		if data.Code != "" && data.Message != "" && data.Url == "" {
+			// 检查结果项是否包含错误信息
+			logger.SysError(fmt.Sprintf("Ali image generation partial error: %s - %s", data.Code, data.Message))
+			continue
+		}
 		var b64Json string
 		if responseFormat == "b64_json" {
 			// Read the image data from data.Url and store it in b64Json
@@ -160,7 +165,7 @@ func responseAli2OpenAIImage(response *TaskResponse, responseFormat string) *ope
 			b64Json = Base64Encode(imageData)
 		} else {
 			// If responseFormat is not "b64_json", use data.B64Image directly
-			b64Json = data.B64Image
+			b64Json = "" // data.B64Image
 		}
 
 		imageResponse.Data = append(imageResponse.Data, openai.ImageData{

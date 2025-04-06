@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
@@ -17,9 +16,7 @@ import (
 	"github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/relay"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
-	"github.com/songquanpeng/one-api/relay/adaptor/replicate"
 	billingratio "github.com/songquanpeng/one-api/relay/billing/ratio"
-	"github.com/songquanpeng/one-api/relay/channeltype"
 	metalib "github.com/songquanpeng/one-api/relay/meta"
 	relaymodel "github.com/songquanpeng/one-api/relay/model"
 )
@@ -103,7 +100,16 @@ func getImageCostRatio(imageRequest *relaymodel.ImageRequest) (float64, error) {
 	}
 	return imageCostRatio, nil
 }
-
+func getFromContext[T any](c *gin.Context, key string, defaultValue T) T {
+	val, exists := c.Get(key)
+	if !exists {
+		return defaultValue
+	}
+	if typedVal, ok := val.(T); ok {
+		return typedVal
+	}
+	return defaultValue
+}
 func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatusCode {
 	ctx := c.Request.Context()
 	meta := metalib.GetByContext(c)
@@ -113,94 +119,105 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 		return openai.ErrorWrapper(err, "invalid_image_request", http.StatusBadRequest)
 	}
 
-	// map model name
-	var isModelMapped bool
-	meta.OriginModelName = imageRequest.Model
-	imageRequest.Model = meta.ActualModelName
-	isModelMapped = meta.OriginModelName != meta.ActualModelName
-	meta.ActualModelName = imageRequest.Model
-	metalib.Set2Context(c, meta)
-
-	// model validation
-	bizErr := validateImageRequest(imageRequest, meta)
-	if bizErr != nil {
-		return bizErr
-	}
-
-	imageCostRatio, err := getImageCostRatio(imageRequest)
-	if err != nil {
-		return openai.ErrorWrapper(err, "get_image_cost_ratio_failed", http.StatusInternalServerError)
-	}
-
-	imageModel := imageRequest.Model
-	// Convert the original image model
-	imageRequest.Model = metalib.GetMappedModelName(imageRequest.Model, billingratio.ImageOriginModelName)
-	c.Set("response_format", imageRequest.ResponseFormat)
-
-	var requestBody io.Reader
-	if strings.ToLower(c.GetString(ctxkey.ContentType)) == "application/json" &&
-		isModelMapped || meta.ChannelType == channeltype.Azure { // make Azure channel request body
-		jsonStr, err := json.Marshal(imageRequest)
-		if err != nil {
-			return openai.ErrorWrapper(err, "marshal_image_request_failed", http.StatusInternalServerError)
-		}
-		requestBody = bytes.NewBuffer(jsonStr)
-	} else {
-		requestBody = c.Request.Body
-	}
-
 	adaptor := relay.GetAdaptor(meta.APIType)
 	if adaptor == nil {
 		return openai.ErrorWrapper(fmt.Errorf("invalid api type: %d", meta.APIType), "invalid_api_type", http.StatusBadRequest)
 	}
 	adaptor.Init(meta)
-
-	// these adaptors need to convert the request
-	switch meta.ChannelType {
-	case channeltype.Zhipu,
-		channeltype.Ali,
-		channeltype.VertextAI,
-		channeltype.Baidu:
-		finalRequest, err := adaptor.ConvertImageRequest(c, imageRequest)
-		if err != nil {
-			return openai.ErrorWrapper(err, "convert_image_request_failed", http.StatusInternalServerError)
-		}
-		jsonStr, err := json.Marshal(finalRequest)
-		if err != nil {
-			return openai.ErrorWrapper(err, "marshal_image_request_failed", http.StatusInternalServerError)
-		}
-		requestBody = bytes.NewBuffer(jsonStr)
-	case channeltype.Replicate:
-		finalRequest, err := replicate.ConvertImageRequest(c, imageRequest)
-		if err != nil {
-			return openai.ErrorWrapper(err, "convert_image_request_failed", http.StatusInternalServerError)
-		}
-		jsonStr, err := json.Marshal(finalRequest)
-		if err != nil {
-			return openai.ErrorWrapper(err, "marshal_image_request_failed", http.StatusInternalServerError)
-		}
-		requestBody = bytes.NewBuffer(jsonStr)
+	finalRequest, err := adaptor.ConvertImageRequest(c, imageRequest)
+	if err != nil {
+		return openai.ErrorWrapper(err, "convert_image_request_failed", http.StatusInternalServerError)
 	}
+	// // map model name
+	// var isModelMapped bool
+	// meta.OriginModelName = finalRequest.Model
+	// imageRequest.Model = meta.ActualModelName
+	// isModelMapped = meta.OriginModelName != meta.ActualModelName
+	// meta.ActualModelName = imageRequest.Model
+	// metalib.Set2Context(c, meta)
 
-	modelRatio := billingratio.GetModelRatio(imageModel, meta.ChannelType)
-	// groupRatio := billingratio.GetGroupRatio(meta.Group)
+	// // model validation
+	// bizErr := validateImageRequest(imageRequest, meta)
+	// if bizErr != nil {
+	// 	return bizErr
+	// }
+
+	// c.Set("response_format", imageRequest.ResponseFormat)
+
+	var requestBody io.Reader
+	// if strings.ToLower(c.GetString(ctxkey.ContentType)) == "application/json" &&
+	// 	isModelMapped || meta.ChannelType == channeltype.Azure { // make Azure channel request body
+	// 	jsonStr, err := json.Marshal(imageRequest)
+	// 	if err != nil {
+	// 		return openai.ErrorWrapper(err, "marshal_image_request_failed", http.StatusInternalServerError)
+	// 	}
+	// 	requestBody = bytes.NewBuffer(jsonStr)
+	// } else {
+	// 	requestBody = c.Request.Body
+	// }
+	jsonStr, err := json.Marshal(finalRequest)
+	if err != nil {
+		return openai.ErrorWrapper(err, "marshal_image_request_failed", http.StatusInternalServerError)
+	}
+	requestBody = bytes.NewBuffer(jsonStr)
+
+	// // these adaptors need to convert the request
+	// switch meta.ChannelType {
+	// case channeltype.Zhipu,
+	// 	channeltype.Ali,
+	// 	channeltype.VertextAI,
+	// 	channeltype.Baidu:
+	// 	finalRequest, err := adaptor.ConvertImageRequest(c, imageRequest)
+	// 	if err != nil {
+	// 		return openai.ErrorWrapper(err, "convert_image_request_failed", http.StatusInternalServerError)
+	// 	}
+	// 	jsonStr, err := json.Marshal(finalRequest)
+	// 	if err != nil {
+	// 		return openai.ErrorWrapper(err, "marshal_image_request_failed", http.StatusInternalServerError)
+	// 	}
+	// 	requestBody = bytes.NewBuffer(jsonStr)
+	// case channeltype.Replicate:
+	// 	finalRequest, err := replicate.ConvertImageRequest(c, imageRequest)
+	// 	if err != nil {
+	// 		return openai.ErrorWrapper(err, "convert_image_request_failed", http.StatusInternalServerError)
+	// 	}
+	// 	jsonStr, err := json.Marshal(finalRequest)
+	// 	if err != nil {
+	// 		return openai.ErrorWrapper(err, "marshal_image_request_failed", http.StatusInternalServerError)
+	// 	}
+	// 	requestBody = bytes.NewBuffer(jsonStr)
+	// }
+
+	// 适配所有图像请求的计费方法
+	n := getFromContext[int64](c, "temp_n", 1)
+	modelStr := getFromContext[string](c, "temp_model", "")
+	sizeStr := getFromContext[string](c, "temp_size", "")
+	qualityStr := getFromContext[string](c, "temp_quality", "")
+	var imageCostRatio float64 = 1.0
+	if billingratio.ImageSizeRatios[modelStr] != nil {
+		if ratio, ok := billingratio.ImageSizeRatios[modelStr][sizeStr]; ok {
+			imageCostRatio = ratio
+		}
+	}
+	if qualityStr == "hd" && modelStr == "dall-e-3" {
+		if sizeStr == "1024x1024" {
+			imageCostRatio *= 2
+		} else {
+			imageCostRatio *= 1.5
+		}
+	}
+	modelRatio := billingratio.GetModelRatio(imageRequest.Model, meta.ChannelType)
 	groupRatio := c.GetFloat64(ctxkey.ChannelRatio)
-
-	ratio := modelRatio * groupRatio
-	userQuota, err := model.CacheGetUserQuota(ctx, meta.UserId)
-
 	var quota int64
-	switch meta.ChannelType {
-	case channeltype.Replicate:
-		// replicate always return 1 image
-		quota = int64(ratio*imageCostRatio) * 1000
-	default:
-		quota = int64(ratio*imageCostRatio) * int64(imageRequest.N) * 1000
-	}
-
+	quota = int64(modelRatio*groupRatio*imageCostRatio) * int64(n) * 1000
+	userQuota, err := model.CacheGetUserQuota(ctx, meta.UserId)
 	if userQuota < quota {
 		return openai.ErrorWrapper(errors.New("user quota is not enough"), "insufficient_user_quota", http.StatusForbidden)
 	}
+	delete(c.Keys, "temp_n")
+	delete(c.Keys, "temp_model")
+	delete(c.Keys, "temp_size")
+	delete(c.Keys, "temp_quality")
 
 	// do request
 	resp, err := adaptor.DoRequest(c, meta, requestBody)

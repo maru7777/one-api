@@ -34,7 +34,8 @@ func GetByPath(path string) int {
 		relayMode = ImagesEdits
 	} else if strings.HasPrefix(path, "/v1/oneapi/proxy") {
 		relayMode = Proxy
+	} else if strings.Contains(path, "/aigc/text2image/") || strings.Contains(path, "/aigc/image2image/") || strings.Contains(path, "/aigc/image-generation/generation") || strings.Contains(path, "/aigc/background-generation/generation") || strings.Contains(path, "/aigc/virtualmodel/generation") || strings.Contains(path, "/vision/image-process/process") || strings.Contains(path, "/aigc/album/") || strings.Contains(path, "/aigc/wordart/") {
+		relayMode = ImagesGenerations // 阿里图片生成 纯原生接口
 	}
-
 	return relayMode
 }

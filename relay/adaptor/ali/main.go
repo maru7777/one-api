@@ -73,7 +73,7 @@ func ConvertImageRequest(request model.ImageRequest) *ImageRequest {
 	imageRequest.Model = request.Model
 	imageRequest.Parameters.Size = strings.Replace(request.Size, "x", "*", -1)
 	imageRequest.Parameters.N = request.N
-	imageRequest.ResponseFormat = request.ResponseFormat
+	// imageRequest.ResponseFormat = request.ResponseFormat
 
 	return &imageRequest
 }
