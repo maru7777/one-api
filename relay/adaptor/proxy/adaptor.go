@@ -45,7 +45,14 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Met
 		}
 	}
 
-	return nil, nil
+	// Return empty usage with zero tokens for proxy requests
+	// This will allow proper logging in postConsumeQuota without charging anything
+	return &model.Usage{
+		PromptTokens:     0,
+		CompletionTokens: 0,
+		TotalTokens:      0,
+		ToolsCost:        0,
+	}, nil
 }
 
 func (a *Adaptor) GetModelList() (models []string) {
