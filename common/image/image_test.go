@@ -1,8 +1,8 @@
 package image_test
 
 import (
+	"bytes"
 	"encoding/base64"
-	"github.com/songquanpeng/one-api/common/client"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/songquanpeng/one-api/common/client"
 	img "github.com/songquanpeng/one-api/common/image"
-
 	"github.com/stretchr/testify/assert"
 	_ "golang.org/x/image/webp"
 )
@@ -51,6 +51,8 @@ func TestMain(m *testing.M) {
 }
 
 func TestDecode(t *testing.T) {
+	t.Parallel()
+
 	// Bytes read: varies sometimes
 	// jpeg: 1063892
 	// png: 294462
@@ -96,6 +98,8 @@ func TestDecode(t *testing.T) {
 }
 
 func TestBase64(t *testing.T) {
+	t.Parallel()
+
 	// Bytes read:
 	// jpeg: 1063892
 	// png: 294462
@@ -149,6 +153,8 @@ func TestBase64(t *testing.T) {
 }
 
 func TestGetImageSize(t *testing.T) {
+	t.Parallel()
+
 	for i, c := range cases {
 		t.Run("Decode:"+strconv.Itoa(i), func(t *testing.T) {
 			width, height, err := img.GetImageSize(c.url)
@@ -160,6 +166,8 @@ func TestGetImageSize(t *testing.T) {
 }
 
 func TestGetImageSizeFromBase64(t *testing.T) {
+	t.Parallel()
+
 	for i, c := range cases {
 		t.Run("Decode:"+strconv.Itoa(i), func(t *testing.T) {
 			resp, err := http.Get(c.url)
@@ -172,6 +180,86 @@ func TestGetImageSizeFromBase64(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, c.width, width)
 			assert.Equal(t, c.height, height)
+		})
+	}
+}
+
+func TestGetImageFromUrl(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		input      string
+		wantMime   string
+		wantErr    bool
+		errMessage string
+	}{
+		{
+			name:     "Valid JPEG URL",
+			input:    cases[0].url, // Using the existing JPEG test case
+			wantMime: "image/jpeg",
+			wantErr:  false,
+		},
+		{
+			name:     "Valid PNG URL",
+			input:    cases[1].url, // Using the existing PNG test case
+			wantMime: "image/png",
+			wantErr:  false,
+		},
+		{
+			name:     "Valid Data URL",
+			input:    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+			wantMime: "image/png",
+			wantErr:  false,
+		},
+		{
+			name:       "Invalid URL",
+			input:      "https://invalid.example.com/nonexistent.jpg",
+			wantErr:    true,
+			errMessage: "failed to fetch image URL",
+		},
+		{
+			name:       "Non-image URL",
+			input:      "https://ario.laisky.com/alias/doc",
+			wantErr:    true,
+			errMessage: "invalid content type",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt // capture range variable
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			mimeType, data, err := img.GetImageFromUrl(tt.input)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errMessage != "" {
+					assert.Contains(t, err.Error(), tt.errMessage)
+				}
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.NotEmpty(t, data)
+
+			// For data URLs, we should verify the mime type matches the input
+			if strings.HasPrefix(tt.input, "data:image/") {
+				assert.Equal(t, tt.wantMime, mimeType)
+				return
+			}
+
+			// For regular URLs, verify the base64 data is valid and can be decoded
+			decoded, err := base64.StdEncoding.DecodeString(data)
+			assert.NoError(t, err)
+			assert.NotEmpty(t, decoded)
+
+			// Verify the decoded data is a valid image
+			reader := bytes.NewReader(decoded)
+			_, format, err := image.DecodeConfig(reader)
+			assert.NoError(t, err)
+			assert.Equal(t, strings.TrimPrefix(tt.wantMime, "image/"), format)
 		})
 	}
 }
