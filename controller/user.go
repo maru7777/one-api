@@ -68,6 +68,11 @@ func Login(c *gin.Context) {
 // setup session & cookies and then return user info
 func SetupLogin(user *model.User, c *gin.Context) {
 	session := sessions.Default(c)
+	session.Options(sessions.Options{
+		Path:     "/",  // 设置 cookie 在整个网站下都有效
+		MaxAge:   0,    // 86400 * 14 有效期 14 天（单位：秒）
+		HttpOnly: true, // 只允许后端访问，提高安全性
+	})
 	session.Set("id", user.Id)
 	session.Set("username", user.Username)
 	session.Set("role", user.Role)

@@ -60,7 +60,7 @@ var ImagePromptLengthLimitations = map[string]int{
 	"step-1x-medium":            4000,
 }
 
-var ImageOriginModelName = map[string]string{
-	"ali-stable-diffusion-xl":   "stable-diffusion-xl",
-	"ali-stable-diffusion-v1.5": "stable-diffusion-v1.5",
-}
+// var ImageOriginModelName = map[string]string{
+// 	"ali-stable-diffusion-xl":   "stable-diffusion-xl",
+// 	"ali-stable-diffusion-v1.5": "stable-diffusion-v1.5",
+// }

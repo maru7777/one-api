@@ -24,4 +24,33 @@ var ModelList = []string{
 	"ali-stable-diffusion-xl", "ali-stable-diffusion-v1.5", "wanx-v1",
 	"qwen-mt-plus", "qwen-mt-turbo",
 	"deepseek-r1", "deepseek-v3", "deepseek-r1-distill-qwen-1.5b", "deepseek-r1-distill-qwen-7b", "deepseek-r1-distill-qwen-14b", "deepseek-r1-distill-qwen-32b", "deepseek-r1-distill-llama-8b", "deepseek-r1-distill-llama-70b",
+
+	// 新增图像模型
+	"wanx2.1-t2i-turbo", "wanx2.1-t2i-plus", "wanx2.0-t2i-turbo",
+	"wanx-poster-generation-v1",
+	"stable-diffusion-xl", "stable-diffusion-v1.5", "stable-diffusion-3.5-large", "stable-diffusion-3.5-large-turbo",
+	"flux-schnell", "flux-dev", "flux-merged",
+	"wanx-ast",
+
+	// 图像编辑模型
+	"wanx2.1-imageedit", "wanx-sketch-to-image-lite", "wanx-x-painting",
+	"image-instance-segmentation", "image-erase-completion",
+	"aitryon", "aitryon-refiner", "aitryon-parsing-v1",
+
+	// 风格变换模型
+	"wanx-style-repaint-v1", "wanx-style-cosplay-v1",
+
+	// 特殊图像处理
+	"image-out-painting",
+	"wanx-virtualmodel", "virtualmodel-v2", "shoemodel-v1",
+	"wanx-background-generation-v2",
+
+	// 人像和文字艺术
+	"facechain-generation",
+	"wordart-semantic", "wordart-texture", "wordart-surnames",
+}
+
+var AliModelMapping = map[string]string{
+	"ali-stable-diffusion-xl":   "stable-diffusion-xl",
+	"ali-stable-diffusion-v1.5": "stable-diffusion-v1.5",
 }

@@ -2,24 +2,19 @@ package replicate
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"image"
 	"image/png"
 	"io"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
-	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/relay/meta"
 	"github.com/songquanpeng/one-api/relay/model"
 	"golang.org/x/image/webp"
-	"golang.org/x/sync/errgroup"
 )
 
 var errNextLoop = errors.New("next_loop")
@@ -40,7 +35,7 @@ func ImageHandler(c *gin.Context, resp *http.Response) (
 		return openai.ErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError), nil
 	}
 
-	respData := new(ImageResponse)
+	respData := new(replicateImageResponse)
 	if err = json.Unmarshal(respBody, respData); err != nil {
 		return openai.ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError), nil
 	}
@@ -72,7 +67,7 @@ func ImageHandler(c *gin.Context, resp *http.Response) (
 				return errors.Wrap(err, "read task response")
 			}
 
-			taskData := new(ImageResponse)
+			taskData := new(replicateImageResponse)
 			if err = json.Unmarshal(taskBody, taskData); err != nil {
 				return errors.Wrap(err, "decode task response")
 			}
@@ -94,64 +89,68 @@ func ImageHandler(c *gin.Context, resp *http.Response) (
 				return errors.New("response output is empty")
 			}
 
-			var mu sync.Mutex
-			var pool errgroup.Group
+			// var mu sync.Mutex
+			// var pool errgroup.Group
 			respBody := &openai.ImageResponse{
 				Created: taskData.CompletedAt.Unix(),
 				Data:    []openai.ImageData{},
 			}
 
-			for _, imgOut := range output {
-				imgOut := imgOut
-				pool.Go(func() error {
-					// download image
-					downloadReq, err := http.NewRequestWithContext(c.Request.Context(),
-						http.MethodGet, imgOut, nil)
-					if err != nil {
-						return errors.Wrap(err, "new request")
-					}
+			// for _, imgOut := range output {
+			// 	imgOut := imgOut
+			// 	pool.Go(func() error {
+			// 		// download image
+			// 		downloadReq, err := http.NewRequestWithContext(c.Request.Context(),
+			// 			http.MethodGet, imgOut, nil)
+			// 		if err != nil {
+			// 			return errors.Wrap(err, "new request")
+			// 		}
 
-					imgResp, err := http.DefaultClient.Do(downloadReq)
-					if err != nil {
-						return errors.Wrap(err, "download image")
-					}
-					defer imgResp.Body.Close()
+			// 		imgResp, err := http.DefaultClient.Do(downloadReq)
+			// 		if err != nil {
+			// 			return errors.Wrap(err, "download image")
+			// 		}
+			// 		defer imgResp.Body.Close()
 
-					if imgResp.StatusCode != http.StatusOK {
-						payload, _ := io.ReadAll(imgResp.Body)
-						return errors.Errorf("bad status code [%d]%s",
-							imgResp.StatusCode, string(payload))
-					}
+			// 		if imgResp.StatusCode != http.StatusOK {
+			// 			payload, _ := io.ReadAll(imgResp.Body)
+			// 			return errors.Errorf("bad status code [%d]%s",
+			// 				imgResp.StatusCode, string(payload))
+			// 		}
 
-					imgData, err := io.ReadAll(imgResp.Body)
-					if err != nil {
-						return errors.Wrap(err, "read image")
-					}
+			// 		imgData, err := io.ReadAll(imgResp.Body)
+			// 		if err != nil {
+			// 			return errors.Wrap(err, "read image")
+			// 		}
 
-					imgData, err = ConvertImageToPNG(imgData)
-					if err != nil {
-						return errors.Wrap(err, "convert image")
-					}
+			// 		imgData, err = ConvertImageToPNG(imgData)
+			// 		if err != nil {
+			// 			return errors.Wrap(err, "convert image")
+			// 		}
 
-					mu.Lock()
-					respBody.Data = append(respBody.Data, openai.ImageData{
-						B64Json: fmt.Sprintf("data:image/png;base64,%s",
-							base64.StdEncoding.EncodeToString(imgData)),
-					})
-					mu.Unlock()
+			// 		mu.Lock()
+			// 		respBody.Data = append(respBody.Data, openai.ImageData{
+			// 			B64Json: fmt.Sprintf("data:image/png;base64,%s",
+			// 				base64.StdEncoding.EncodeToString(imgData)),
+			// 		})
+			// 		mu.Unlock()
 
-					return nil
+			// 		return nil
+			// 	})
+			// }
+
+			// if err := pool.Wait(); err != nil {
+			// 	if len(respBody.Data) == 0 {
+			// 		return errors.WithStack(err)
+			// 	}
+
+			// 	logger.Error(c, fmt.Sprintf("some images failed to download: %+v", err))
+			// }
+			for _, imgOut := range output { // 直接使用URL，不需要下载和转换图片
+				respBody.Data = append(respBody.Data, openai.ImageData{
+					Url: imgOut, // 只保留URL
 				})
 			}
-
-			if err := pool.Wait(); err != nil {
-				if len(respBody.Data) == 0 {
-					return errors.WithStack(err)
-				}
-
-				logger.Error(c, fmt.Sprintf("some images failed to download: %+v", err))
-			}
-
 			c.JSON(http.StatusOK, respBody)
 			return nil
 		}()
