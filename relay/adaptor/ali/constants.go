@@ -49,3 +49,8 @@ var ModelList = []string{
 	"facechain-generation",
 	"wordart-semantic", "wordart-texture", "wordart-surnames",
 }
+
+var AliModelMapping = map[string]string{
+	"ali-stable-diffusion-xl":   "stable-diffusion-xl",
+	"ali-stable-diffusion-v1.5": "stable-diffusion-v1.5",
+}

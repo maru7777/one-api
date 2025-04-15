@@ -33,12 +33,12 @@ type ChatRequest struct {
 	Parameters Parameters `json:"parameters,omitempty"`
 }
 
-type ImageRequest struct {
+type AliImageRequest struct {
 	Model           string           `json:"model" validate:"required"`                   // 模型名称，例如 "wanx2.1-t2i-turbo", "facechain-generation"
-	Input           *ImageInput      `json:"input" validate:"required"`                   // 输入参数对象
+	Input           ImageInput       `json:"input" validate:"required"`                   // 输入参数对象
 	Parameters      *ImageParameters `json:"parameters,omitempty"`                        // 处理参数对象，可选
-	Resources       []Resource       `json:"resources,omitempty" validate:"dive"`         // 资源列表，例如 "facechain-generation"，与 input/parameters 同级
-	TrainingFileIds []string         `json:"training_file_ids,omitempty" validate:"dive"` // 训练文件ID列表，例如 "facechain-finetune" 模型使用
+	Resources       *[]Resource      `json:"resources,omitempty" validate:"dive"`         // 资源列表，例如 "facechain-generation"，与 input/parameters 同级
+	TrainingFileIds *[]string        `json:"training_file_ids,omitempty" validate:"dive"` // 训练文件ID列表，例如 "facechain-finetune" 模型使用
 	// ResponseFormat  string           `json:"response_format,omitempty"`                // 响应格式，已注释，无需修改
 }
 
@@ -82,12 +82,12 @@ type ImageInput struct {
 	ModelIndex int `json:"model_index,omitempty" validate:"min=1"`        // 模型索引，例如 "wanx-style-cosplay-v1"
 
 	// --- 文本和标题字段 ---
-	Title    interface{} `json:"title,omitempty"`                                                                                                                                                                                                                   // 标题，可为 string 或 []string，建议长度≤30字符
-	Subtitle interface{} `json:"subtitle,omitempty"`                                                                                                                                                                                                                // 副标题，可为 string 或 []string，建议长度≤30字符
-	Text     interface{} `json:"text,omitempty"`                                                                                                                                                                                                                    // 文本，可为 []string 或 *TextObject，建议长度≤30字符
-	BodyText string      `json:"body_text,omitempty" validate:"lte=50"`                                                                                                                                                                                             // 正文，长度≤50字符，例如 "wanx-poster-generation-v1"
-	Surname  string      `json:"surname,omitempty" validate:"lte=2"`                                                                                                                                                                                                // 姓氏，长度1-2字符，例如 "wordart-surnames"
-	Style    string      `json:"style,omitempty" validate:"oneof=diy fantasy_pavilion peerless_beauty landscape_pavilion traditional_buildings green_dragon_girl cherry_blossoms lovely_girl ink_hero anime_girl lake_pavilion tranquil_countryside dusk_splendor"` // 风格，例如 "wordart-surnames"
+	Title    any    `json:"title,omitempty"`                                                                                                                                                                                                                   // 标题，可为 string 或 []string，建议长度≤30字符
+	Subtitle any    `json:"subtitle,omitempty"`                                                                                                                                                                                                                // 副标题，可为 string 或 []string，建议长度≤30字符
+	Text     any    `json:"text,omitempty"`                                                                                                                                                                                                                    // 文本，可为 []string 或 *TextObject，建议长度≤30字符
+	BodyText string `json:"body_text,omitempty" validate:"lte=50"`                                                                                                                                                                                             // 正文，长度≤50字符，例如 "wanx-poster-generation-v1"
+	Surname  string `json:"surname,omitempty" validate:"lte=2"`                                                                                                                                                                                                // 姓氏，长度1-2字符，例如 "wordart-surnames"
+	Style    string `json:"style,omitempty" validate:"oneof=diy fantasy_pavilion peerless_beauty landscape_pavilion traditional_buildings green_dragon_girl cherry_blossoms lovely_girl ink_hero anime_girl lake_pavilion tranquil_countryside dusk_splendor"` // 风格，例如 "wordart-surnames"
 
 	// --- 海报和生成控制字段 ---
 	GenerateMode string  `json:"generate_mode,omitempty" validate:"oneof=generate sr hrf"`                                                                            // 生成模式，例如 "wanx-poster-generation-v1"

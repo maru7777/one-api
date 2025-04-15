@@ -27,79 +27,79 @@ func getImageRequest(c *gin.Context, _ int) (*relaymodel.ImageRequest, error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	if imageRequest.N == 0 {
-		imageRequest.N = 1
-	}
-	if imageRequest.Size == "" {
-		imageRequest.Size = "1024x1024"
-	}
-	if imageRequest.Model == "" {
-		imageRequest.Model = "dall-e-2"
-	}
+	// if imageRequest.N == 0 {
+	// 	imageRequest.N = 1
+	// }
+	// if imageRequest.Size == "" {
+	// 	imageRequest.Size = "1024x1024"
+	// }
+	// if imageRequest.Model == "" {
+	// 	imageRequest.Model = "dall-e-2"
+	// }
 	return imageRequest, nil
 }
 
-func isValidImageSize(model string, size string) bool {
-	if model == "cogview-3" || billingratio.ImageSizeRatios[model] == nil {
-		return true
-	}
-	_, ok := billingratio.ImageSizeRatios[model][size]
-	return ok
-}
+// func isValidImageSize(model string, size string) bool {
+// 	if model == "cogview-3" || billingratio.ImageSizeRatios[model] == nil {
+// 		return true
+// 	}
+// 	_, ok := billingratio.ImageSizeRatios[model][size]
+// 	return ok
+// }
 
-func isValidImagePromptLength(model string, promptLength int) bool {
-	maxPromptLength, ok := billingratio.ImagePromptLengthLimitations[model]
-	return !ok || promptLength <= maxPromptLength
-}
+// func isValidImagePromptLength(model string, promptLength int) bool {
+// 	maxPromptLength, ok := billingratio.ImagePromptLengthLimitations[model]
+// 	return !ok || promptLength <= maxPromptLength
+// }
 
-func isWithinRange(element string, value int) bool {
-	amounts, ok := billingratio.ImageGenerationAmounts[element]
-	return !ok || (value >= amounts[0] && value <= amounts[1])
-}
+// func isWithinRange(element string, value int) bool {
+// 	amounts, ok := billingratio.ImageGenerationAmounts[element]
+// 	return !ok || (value >= amounts[0] && value <= amounts[1])
+// }
 
-func getImageSizeRatio(model string, size string) float64 {
-	if ratio, ok := billingratio.ImageSizeRatios[model][size]; ok {
-		return ratio
-	}
-	return 1
-}
+// func getImageSizeRatio(model string, size string) float64 {
+// 	if ratio, ok := billingratio.ImageSizeRatios[model][size]; ok {
+// 		return ratio
+// 	}
+// 	return 1
+// }
 
-func validateImageRequest(imageRequest *relaymodel.ImageRequest, _ *metalib.Meta) *relaymodel.ErrorWithStatusCode {
-	// check prompt length
-	if imageRequest.Prompt == "" {
-		return openai.ErrorWrapper(errors.New("prompt is required"), "prompt_missing", http.StatusBadRequest)
-	}
+// func validateImageRequest(imageRequest *relaymodel.ImageRequest, _ *metalib.Meta) *relaymodel.ErrorWithStatusCode {
+// 	// check prompt length
+// 	if imageRequest.Prompt == "" {
+// 		return openai.ErrorWrapper(errors.New("prompt is required"), "prompt_missing", http.StatusBadRequest)
+// 	}
 
-	// model validation
-	if !isValidImageSize(imageRequest.Model, imageRequest.Size) {
-		return openai.ErrorWrapper(errors.New("size not supported for this image model"), "size_not_supported", http.StatusBadRequest)
-	}
+// 	// model validation
+// 	if !isValidImageSize(imageRequest.Model, imageRequest.Size) {
+// 		return openai.ErrorWrapper(errors.New("size not supported for this image model"), "size_not_supported", http.StatusBadRequest)
+// 	}
 
-	if !isValidImagePromptLength(imageRequest.Model, len(imageRequest.Prompt)) {
-		return openai.ErrorWrapper(errors.New("prompt is too long"), "prompt_too_long", http.StatusBadRequest)
-	}
+// 	if !isValidImagePromptLength(imageRequest.Model, len(imageRequest.Prompt)) {
+// 		return openai.ErrorWrapper(errors.New("prompt is too long"), "prompt_too_long", http.StatusBadRequest)
+// 	}
 
-	// Number of generated images validation
-	if !isWithinRange(imageRequest.Model, imageRequest.N) {
-		return openai.ErrorWrapper(errors.New("invalid value of n"), "n_not_within_range", http.StatusBadRequest)
-	}
-	return nil
-}
+// 	// Number of generated images validation
+// 	if !isWithinRange(imageRequest.Model, imageRequest.N) {
+// 		return openai.ErrorWrapper(errors.New("invalid value of n"), "n_not_within_range", http.StatusBadRequest)
+// 	}
+// 	return nil
+// }
 
-func getImageCostRatio(imageRequest *relaymodel.ImageRequest) (float64, error) {
-	if imageRequest == nil {
-		return 0, errors.New("imageRequest is nil")
-	}
-	imageCostRatio := getImageSizeRatio(imageRequest.Model, imageRequest.Size)
-	if imageRequest.Quality == "hd" && imageRequest.Model == "dall-e-3" {
-		if imageRequest.Size == "1024x1024" {
-			imageCostRatio *= 2
-		} else {
-			imageCostRatio *= 1.5
-		}
-	}
-	return imageCostRatio, nil
-}
+//	func getImageCostRatio(imageRequest *relaymodel.ImageRequest) (float64, error) {
+//		if imageRequest == nil {
+//			return 0, errors.New("imageRequest is nil")
+//		}
+//		imageCostRatio := getImageSizeRatio(imageRequest.Model, imageRequest.Size)
+//		if imageRequest.Quality == "hd" && imageRequest.Model == "dall-e-3" {
+//			if imageRequest.Size == "1024x1024" {
+//				imageCostRatio *= 2
+//			} else {
+//				imageCostRatio *= 1.5
+//			}
+//		}
+//		return imageCostRatio, nil
+//	}
 func getFromContext[T any](c *gin.Context, key string, defaultValue T) T {
 	val, exists := c.Get(key)
 	if !exists {
@@ -189,33 +189,32 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	// }
 
 	// 适配所有图像请求的计费方法
-	n := getFromContext[int64](c, "temp_n", 1)
-	modelStr := getFromContext[string](c, "temp_model", "")
-	sizeStr := getFromContext[string](c, "temp_size", "")
-	qualityStr := getFromContext[string](c, "temp_quality", "")
+	n := getFromContext(c, "temp_n", 1)
+	originModelName := getFromContext(c, "temp_origin_model", "dall-e-2")
+	size := getFromContext(c, "temp_size", "512x512")
+	quality := getFromContext(c, "temp_quality", "")
 	var imageCostRatio float64 = 1.0
-	if billingratio.ImageSizeRatios[modelStr] != nil {
-		if ratio, ok := billingratio.ImageSizeRatios[modelStr][sizeStr]; ok {
+	if billingratio.ImageSizeRatios[originModelName] != nil {
+		if ratio, ok := billingratio.ImageSizeRatios[originModelName][size]; ok {
 			imageCostRatio = ratio
 		}
 	}
-	if qualityStr == "hd" && modelStr == "dall-e-3" {
-		if sizeStr == "1024x1024" {
+	if quality == "hd" && originModelName == "dall-e-3" {
+		if size == "1024x1024" {
 			imageCostRatio *= 2
 		} else {
 			imageCostRatio *= 1.5
 		}
 	}
-	modelRatio := billingratio.GetModelRatio(imageRequest.Model, meta.ChannelType)
+	modelRatio := billingratio.GetModelRatio(meta.ActualModelName, meta.ChannelType)
 	groupRatio := c.GetFloat64(ctxkey.ChannelRatio)
-	var quota int64
-	quota = int64(modelRatio*groupRatio*imageCostRatio) * int64(n) * 1000
-	userQuota, err := model.CacheGetUserQuota(ctx, meta.UserId)
+	var quota = int64(modelRatio*groupRatio*imageCostRatio) * int64(n) * 1000
+	userQuota, _ := model.CacheGetUserQuota(ctx, meta.UserId)
 	if userQuota < quota {
 		return openai.ErrorWrapper(errors.New("user quota is not enough"), "insufficient_user_quota", http.StatusForbidden)
 	}
 	delete(c.Keys, "temp_n")
-	delete(c.Keys, "temp_model")
+	delete(c.Keys, "temp_origin_model")
 	delete(c.Keys, "temp_size")
 	delete(c.Keys, "temp_quality")
 
@@ -244,13 +243,13 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 		if quota >= 0 {
 			tokenName := c.GetString(ctxkey.TokenName)
 			logContent := fmt.Sprintf("model rate %.2f, group rate %.2f, num %d",
-				modelRatio, groupRatio, imageRequest.N)
+				modelRatio, groupRatio, n)
 			model.RecordConsumeLog(ctx, &model.Log{
 				UserId:           meta.UserId,
 				ChannelId:        meta.ChannelId,
 				PromptTokens:     0,
 				CompletionTokens: 0,
-				ModelName:        imageRequest.Model,
+				ModelName:        originModelName,
 				TokenName:        tokenName,
 				Quota:            int(quota),
 				Content:          logContent,

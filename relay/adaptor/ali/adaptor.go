@@ -1,15 +1,15 @@
 package ali
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 
 	"github.com/gin-gonic/gin"
-	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/relay/adaptor"
-	billingratio "github.com/songquanpeng/one-api/relay/billing/ratio"
 	"github.com/songquanpeng/one-api/relay/meta"
 	metalib "github.com/songquanpeng/one-api/relay/meta"
 	"github.com/songquanpeng/one-api/relay/model"
@@ -94,28 +94,80 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 	}
 }
 
+// ConvertImageRequest 转换 ImageRequest
 func (a *Adaptor) ConvertImageRequest(c *gin.Context, request *model.ImageRequest) (any, error) {
 	if request == nil {
 		return nil, errors.New("request is nil")
 	}
-
-	aliimageRequest := &ImageRequest{}
-	err := common.UnmarshalBodyReusable(c, aliimageRequest)
+	meta := meta.GetByContext(c)
+	inputJSON, err := json.Marshal(request)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("marshal input: %w, please check the request", err)
 	}
-	c.Set("temp_n", aliimageRequest.Parameters.N)
-	c.Set("temp_model", aliimageRequest.Model)
-	c.Set("temp_size", aliimageRequest.Parameters.Size)
+	aliImageRequest := &AliImageRequest{}
+	nestedJSON := map[string]any{
+		"model":             request.Model,
+		"input":             json.RawMessage(inputJSON),
+		"params":            json.RawMessage(inputJSON),
+		"resources":         request.Resources,
+		"training_file_ids": request.TrainingFileIDs,
+	}
+	nestedJSONBytes, err := json.Marshal(nestedJSON)
+	if err != nil {
+		return nil, fmt.Errorf("marshal nested: %w, please check the request", err)
+	}
+	if err := json.Unmarshal(nestedJSONBytes, &aliImageRequest); err != nil {
+		return nil, fmt.Errorf("unmarshal to AliImageRequest: %w, please check the request", err)
+	}
+	meta.OriginModelName = aliImageRequest.Model
+	meta.ActualModelName = metalib.GetMappedModelName(aliImageRequest.Model, AliModelMapping)
+	aliImageRequest.Model = meta.ActualModelName
+	metalib.Set2Context(c, meta)
+	// 设置图片数量(计费)
+	if aliImageRequest.Input.GenerateNum != 0 {
+		c.Set("temp_n", aliImageRequest.Input.GenerateNum)
+	} else if aliImageRequest.Parameters.N != 0 {
+		c.Set("temp_n", aliImageRequest.Parameters.N)
+	} else {
+		c.Set("temp_n", 1)
+	}
+	// 设置图片尺寸(计费)
+	if aliImageRequest.Parameters.Size != "" {
+		c.Set("temp_size", aliImageRequest.Parameters.Size)
+	} else {
+		c.Set("temp_size", "")
+	}
+	c.Set("temp_model", aliImageRequest.Model)
 	c.Set("temp_quality", "")
-	// var isModelMapped bool
-	a.meta.OriginModelName = aliimageRequest.Model
-	aliimageRequest.Model = a.meta.ActualModelName
-	// isModelMapped = a.meta.OriginModelName != a.meta.ActualModelName
-	metalib.Set2Context(c, a.meta)
-	// Convert the original image model
-	aliimageRequest.Model = metalib.GetMappedModelName(aliimageRequest.Model, billingratio.ImageOriginModelName)
-	return aliimageRequest, nil
+	if aliImageRequest.Parameters != nil && isZero(reflect.ValueOf(*aliImageRequest.Parameters)) {
+		aliImageRequest.Parameters = nil //置为nil后,该字段可以在序列化时被自动删除
+	}
+	// if aliimageRequest.Resources != nil && len(*aliimageRequest.Resources) == 0 {
+	// 	aliimageRequest.Resources = nil //因为Resources底层是切片 切片默认值已经是nil 就不需要特殊处理了
+	// }
+	// if aliimageRequest.TrainingFileIds != nil && len(*aliimageRequest.TrainingFileIds) == 0 {
+	// 	aliimageRequest.TrainingFileIds = nil //置为nil后,该字段可以在序列化时被自动删除
+	// }
+	return aliImageRequest, nil
+}
+
+// isZero 检查结构体是否所有字段为零值
+func isZero(v reflect.Value) bool {
+	if !v.IsValid() || v.IsNil() {
+		return true
+	}
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	if v.Kind() != reflect.Struct {
+		return v.IsZero()
+	}
+	for i := 0; i < v.NumField(); i++ {
+		if !v.Field(i).IsZero() {
+			return false
+		}
+	}
+	return true
 }
 
 func (a *Adaptor) DoRequest(c *gin.Context, meta *meta.Meta, requestBody io.Reader) (*http.Response, error) {

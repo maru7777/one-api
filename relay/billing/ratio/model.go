@@ -696,11 +696,12 @@ var ModelRatio = map[string]float64{
 	"undi95/remm-slerp-l2-13b":                     0.6,
 	"undi95/toppy-m-7b":                            0.035,
 	"undi95/toppy-m-7b:free":                       0.0,
-	"x-ai/grok-2-1212":                             5.0,
-	"x-ai/grok-2-vision-1212":                      5.0,
-	"x-ai/grok-beta":                               7.5,
-	"x-ai/grok-vision-beta":                        7.5,
-	"xwin-lm/xwin-lm-70b":                          1.875,
+	// https://x.ai/api
+	"x-ai/grok-2-1212":        5.0,
+	"x-ai/grok-2-vision-1212": 5.0,
+	"x-ai/grok-beta":          7.5,
+	"x-ai/grok-vision-beta":   7.5,
+	"xwin-lm/xwin-lm-70b":     1.875,
 }
 
 // CompletionRatio is the price ratio between completion tokens and prompt tokens
