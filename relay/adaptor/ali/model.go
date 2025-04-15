@@ -35,7 +35,7 @@ type ChatRequest struct {
 
 type AliImageRequest struct {
 	Model           string           `json:"model" validate:"required"`                   // 模型名称，例如 "wanx2.1-t2i-turbo", "facechain-generation"
-	Input           ImageInput       `json:"input" validate:"required"`                   // 输入参数对象
+	Input           *ImageInput      `json:"input,omitempty" validate:"required"`         // 输入参数对象
 	Parameters      *ImageParameters `json:"parameters,omitempty"`                        // 处理参数对象，可选
 	Resources       *[]Resource      `json:"resources,omitempty" validate:"dive"`         // 资源列表，例如 "facechain-generation"，与 input/parameters 同级
 	TrainingFileIds *[]string        `json:"training_file_ids,omitempty" validate:"dive"` // 训练文件ID列表，例如 "facechain-finetune" 模型使用
@@ -198,29 +198,36 @@ type Resource struct {
 	ResourceType string `json:"resource_type" validate:"eq=facelora"` // 资源类型，固定为 "facelora"
 }
 
+type TaskResult struct {
+	B64Image string `json:"b64_image,omitempty"`
+	Url      string `json:"url,omitempty"`
+	Code     string `json:"code,omitempty"`
+	Message  string `json:"message,omitempty"`
+}
+
+type TaskMetrics struct {
+	Total     int `json:"TOTAL,omitempty"`
+	Succeeded int `json:"SUCCEEDED,omitempty"`
+	Failed    int `json:"FAILED,omitempty"`
+}
+
+type TaskOutput struct {
+	TaskId      string       `json:"task_id,omitempty"`
+	TaskStatus  string       `json:"task_status,omitempty"`
+	Code        string       `json:"code,omitempty"`
+	Message     string       `json:"message,omitempty"`
+	Results     []TaskResult `json:"results,omitempty"`
+	TaskMetrics *TaskMetrics `json:"task_metrics,omitempty"`
+	ImageURL    string       `json:"image_url,omitempty"`
+}
+
 type TaskResponse struct {
-	StatusCode int    `json:"status_code,omitempty"`
-	RequestId  string `json:"request_id,omitempty"`
-	Code       string `json:"code,omitempty"`
-	Message    string `json:"message,omitempty"`
-	Output     struct {
-		TaskId     string `json:"task_id,omitempty"`
-		TaskStatus string `json:"task_status,omitempty"`
-		Code       string `json:"code,omitempty"`
-		Message    string `json:"message,omitempty"`
-		Results    []struct {
-			B64Image string `json:"b64_image,omitempty"`
-			Url      string `json:"url,omitempty"`
-			Code     string `json:"code,omitempty"`
-			Message  string `json:"message,omitempty"`
-		} `json:"results,omitempty"`
-		TaskMetrics struct {
-			Total     int `json:"TOTAL,omitempty"`
-			Succeeded int `json:"SUCCEEDED,omitempty"`
-			Failed    int `json:"FAILED,omitempty"`
-		} `json:"task_metrics,omitempty"`
-	} `json:"output,omitempty"`
-	Usage Usage `json:"usage"`
+	StatusCode int         `json:"status_code,omitempty"`
+	RequestId  string      `json:"request_id,omitempty"`
+	Code       string      `json:"code,omitempty"`
+	Message    string      `json:"message,omitempty"`
+	Output     *TaskOutput `json:"output,omitempty"`
+	Usage      Usage       `json:"usage"`
 }
 
 type Header struct {
@@ -233,22 +240,28 @@ type Header struct {
 	Attributes   any    `json:"attributes,omitempty"`
 }
 
+type PayloadParameters struct {
+	SampleRate int     `json:"sample_rate,omitempty"`
+	Rate       float64 `json:"rate,omitempty"`
+	Format     string  `json:"format,omitempty"`
+}
+
+type PayloadInput struct {
+	Text string `json:"text,omitempty"`
+}
+
+type PayloadUsage struct {
+	Characters int `json:"characters,omitempty"`
+}
+
 type Payload struct {
-	Model      string `json:"model,omitempty"`
-	Task       string `json:"task,omitempty"`
-	TaskGroup  string `json:"task_group,omitempty"`
-	Function   string `json:"function,omitempty"`
-	Parameters struct {
-		SampleRate int     `json:"sample_rate,omitempty"`
-		Rate       float64 `json:"rate,omitempty"`
-		Format     string  `json:"format,omitempty"`
-	} `json:"parameters,omitempty"`
-	Input struct {
-		Text string `json:"text,omitempty"`
-	} `json:"input,omitempty"`
-	Usage struct {
-		Characters int `json:"characters,omitempty"`
-	} `json:"usage,omitempty"`
+	Model      string             `json:"model,omitempty"`
+	Task       string             `json:"task,omitempty"`
+	TaskGroup  string             `json:"task_group,omitempty"`
+	Function   string             `json:"function,omitempty"`
+	Parameters *PayloadParameters `json:"parameters,omitempty"`
+	Input      *PayloadInput      `json:"input,omitempty"`
+	Usage      *PayloadUsage      `json:"usage,omitempty"`
 }
 
 type WSSMessage struct {
@@ -256,11 +269,13 @@ type WSSMessage struct {
 	Payload Payload `json:"payload,omitempty"`
 }
 
+type EmbeddingInput struct {
+	Texts []string `json:"texts"`
+}
+
 type EmbeddingRequest struct {
-	Model string `json:"model"`
-	Input struct {
-		Texts []string `json:"texts"`
-	} `json:"input"`
+	Model      string         `json:"model"`
+	Input      EmbeddingInput `json:"input"`
 	Parameters *struct {
 		TextType string `json:"text_type,omitempty"`
 	} `json:"parameters,omitempty"`
@@ -271,11 +286,13 @@ type Embedding struct {
 	TextIndex int       `json:"text_index"`
 }
 
+type EmbeddingOutput struct {
+	Embeddings []Embedding `json:"embeddings"`
+}
+
 type EmbeddingResponse struct {
-	Output struct {
-		Embeddings []Embedding `json:"embeddings"`
-	} `json:"output"`
-	Usage Usage `json:"usage"`
+	Output *EmbeddingOutput `json:"output,omitempty"`
+	Usage  Usage            `json:"usage"`
 	Error
 }
 

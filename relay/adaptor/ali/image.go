@@ -144,7 +144,26 @@ func responseAli2OpenAIImage(response *TaskResponse, responseFormat string) *ope
 	imageResponse := openai.ImageResponse{
 		Created: helper.GetTimestamp(),
 	}
-
+	// 检查是否是新格式（image_url 直接在 output 中）
+	if response.Output.ImageURL != "" {
+		var b64Json string
+		if responseFormat == "b64_json" {
+			// 从 image_url 获取图像数据并转换为 Base64
+			imageData, err := getImageData(response.Output.ImageURL)
+			if err != nil {
+				logger.SysError("getImageData Error getting image data: " + err.Error())
+				return &imageResponse
+			}
+			b64Json = Base64Encode(imageData)
+		}
+		imageResponse.Data = append(imageResponse.Data, openai.ImageData{
+			Url:           response.Output.ImageURL,
+			B64Json:       b64Json,
+			RevisedPrompt: "",
+		})
+		return &imageResponse
+	}
+	// 处理旧格式（Results 数组）
 	for _, data := range response.Output.Results {
 		if data.Code != "" && data.Message != "" && data.Url == "" {
 			// 检查结果项是否包含错误信息
@@ -153,19 +172,13 @@ func responseAli2OpenAIImage(response *TaskResponse, responseFormat string) *ope
 		}
 		var b64Json string
 		if responseFormat == "b64_json" {
-			// Read the image data from data.Url and store it in b64Json
+			// 从 data.Url 获取图像数据并转换为 Base64
 			imageData, err := getImageData(data.Url)
 			if err != nil {
-				// Handle the case where getting image data fails
 				logger.SysError("getImageData Error getting image data: " + err.Error())
 				continue
 			}
-
-			// Convert the image data to a Base64 encoded string
 			b64Json = Base64Encode(imageData)
-		} else {
-			// If responseFormat is not "b64_json", use data.B64Image directly
-			b64Json = "" // data.B64Image
 		}
 
 		imageResponse.Data = append(imageResponse.Data, openai.ImageData{

@@ -108,7 +108,7 @@ func (a *Adaptor) ConvertImageRequest(c *gin.Context, request *model.ImageReques
 	nestedJSON := map[string]any{
 		"model":             request.Model,
 		"input":             json.RawMessage(inputJSON),
-		"params":            json.RawMessage(inputJSON),
+		"parameters":        json.RawMessage(inputJSON),
 		"resources":         request.Resources,
 		"training_file_ids": request.TrainingFileIDs,
 	}
@@ -123,25 +123,29 @@ func (a *Adaptor) ConvertImageRequest(c *gin.Context, request *model.ImageReques
 	meta.ActualModelName = metalib.GetMappedModelName(aliImageRequest.Model, AliModelMapping)
 	aliImageRequest.Model = meta.ActualModelName
 	metalib.Set2Context(c, meta)
+	if aliImageRequest.Parameters != nil && isZero(reflect.ValueOf(*aliImageRequest.Parameters)) {
+		aliImageRequest.Parameters = nil //置为nil后,该字段可以在序列化时被自动删除.不确定是否必须
+	}
+	if aliImageRequest.Input != nil && isZero(reflect.ValueOf(*aliImageRequest.Input)) {
+		aliImageRequest.Input = nil //置为nil后,该字段可以在序列化时被自动删除.不确定是否必须
+	}
 	// 设置图片数量(计费)
 	if aliImageRequest.Input.GenerateNum != 0 {
 		c.Set("temp_n", aliImageRequest.Input.GenerateNum)
-	} else if aliImageRequest.Parameters.N != 0 {
+	} else if aliImageRequest.Parameters != nil && aliImageRequest.Parameters.N != 0 {
 		c.Set("temp_n", aliImageRequest.Parameters.N)
 	} else {
 		c.Set("temp_n", 1)
 	}
 	// 设置图片尺寸(计费)
-	if aliImageRequest.Parameters.Size != "" {
+	if aliImageRequest.Parameters != nil && aliImageRequest.Parameters.Size != "" {
 		c.Set("temp_size", aliImageRequest.Parameters.Size)
 	} else {
 		c.Set("temp_size", "")
 	}
 	c.Set("temp_model", aliImageRequest.Model)
 	c.Set("temp_quality", "")
-	if aliImageRequest.Parameters != nil && isZero(reflect.ValueOf(*aliImageRequest.Parameters)) {
-		aliImageRequest.Parameters = nil //置为nil后,该字段可以在序列化时被自动删除
-	}
+
 	// if aliimageRequest.Resources != nil && len(*aliimageRequest.Resources) == 0 {
 	// 	aliimageRequest.Resources = nil //因为Resources底层是切片 切片默认值已经是nil 就不需要特殊处理了
 	// }
@@ -151,23 +155,35 @@ func (a *Adaptor) ConvertImageRequest(c *gin.Context, request *model.ImageReques
 	return aliImageRequest, nil
 }
 
-// isZero 检查结构体是否所有字段为零值
+// isZero 检查值是否为零值（包括结构体是否所有字段为零值）
 func isZero(v reflect.Value) bool {
-	if !v.IsValid() || v.IsNil() {
+	// 检查值是否无效
+	if !v.IsValid() {
 		return true
 	}
-	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
-	}
-	if v.Kind() != reflect.Struct {
+	// 根据类型处理
+	switch v.Kind() {
+	case reflect.Ptr:
+		// 指针类型：检查是否为 nil，若非 nil 则解引用
+		if v.IsNil() {
+			return true
+		}
+		return isZero(v.Elem())
+	case reflect.Interface, reflect.Slice, reflect.Map, reflect.Chan:
+		// 这些类型支持 IsNil
+		return v.IsNil()
+	case reflect.Struct:
+		// 检查结构体所有字段是否为零值
+		for i := 0; i < v.NumField(); i++ {
+			if !isZero(v.Field(i)) {
+				return false
+			}
+		}
+		return true
+	default:
+		// 其他类型（int, string 等）使用 IsZero
 		return v.IsZero()
 	}
-	for i := 0; i < v.NumField(); i++ {
-		if !v.Field(i).IsZero() {
-			return false
-		}
-	}
-	return true
 }
 
 func (a *Adaptor) DoRequest(c *gin.Context, meta *meta.Meta, requestBody io.Reader) (*http.Response, error) {

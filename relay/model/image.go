@@ -59,7 +59,7 @@ type ImageRequest struct {
 	OutputImageRatio string `json:"output_image_ratio,omitempty" form:"output_image_ratio"` // 输出图像宽高比
 	WhRatios         string `json:"wh_ratios,omitempty" form:"wh_ratios"`                   // 海报版式
 	AspectRatio      string `json:"aspect_ratio,omitempty" form:"aspect_ratio"`             // 图像宽高比
-	Resolution       string `json:"resolution,omitempty" form:"resolution"`                 // 分辨率
+	Resolution       any    `json:"resolution,omitempty" form:"resolution"`                 // 分辨率
 	Width            int    `json:"width,omitempty" form:"width"`                           // 宽度
 	Height           int    `json:"height,omitempty" form:"height"`                         // 高度
 	ImageShortSize   int    `json:"image_short_size,omitempty" form:"image_short_size"`     // 短边长度
