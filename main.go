@@ -131,7 +131,7 @@ func main() {
 		logger.SysLog("session secret is not base64 encoded, using raw value instead")
 		sessionStore = cookie.NewStore([]byte(config.SessionSecret))
 	} else {
-		sessionStore = cookie.NewStore(sessionSecret)
+		sessionStore = cookie.NewStore(sessionSecret, sessionSecret)
 	}
 
 	if config.DisableCookieSecret {
