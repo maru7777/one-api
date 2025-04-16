@@ -135,7 +135,7 @@ func main() {
 	}
 
 	if config.DisableCookieSecret {
-		logger.SysWarn("DISABLE_COOKIE_SECRET is set, using insecure cookie store")
+		logger.SysWarn("DISABLE_COOKIE_SECURE is set, using insecure cookie store")
 		sessionStore.Options(sessions.Options{
 			Path:     "/",
 			MaxAge:   86400 * 30,

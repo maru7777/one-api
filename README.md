@@ -60,8 +60,8 @@ oneapi:
     DEBUG: "true"
     # (optional) DEBUG_SQL display SQL logs
     DEBUG_SQL: "true"
-    # (optional) If you access one-api using a non-HTTPS address, you need to set DISABLE_COOKIE_SECRET to true
-    DISABLE_COOKIE_SECRET: "true"
+    # (optional) If you access one-api using a non-HTTPS address, you need to set DISABLE_COOKIE_SECURE to true
+    DISABLE_COOKIE_SECURE: "true"
     # (optional) ENFORCE_INCLUDE_USAGE require upstream API responses to include usage field
     ENFORCE_INCLUDE_USAGE: "true"
     # (optional) GLOBAL_API_RATE_LIMIT maximum API requests per IP within three minutes, default is 1000
