@@ -39,6 +39,7 @@ Also welcome to register and use my deployed one-api gateway, which supports var
     - [Support gemini multimodal output #2197](#support-gemini-multimodal-output-2197)
     - [Support coze oauth authentication](#support-coze-oauth-authentication)
     - [Support gemini-2.5-pro](#support-gemini-25-pro)
+    - [Support o3 \& o4-mini \& gpt-4.1](#support-o3--o4-mini--gpt-41)
   - [Bug fix](#bug-fix)
 
 ## Turtorial
@@ -243,6 +244,8 @@ support `gpt-4o-search-preview` & `gpt-4o-mini-search-preview`
 - [feat: support coze oauth authentication](https://github.com/Laisky/one-api/pull/52)
 
 ### Support gemini-2.5-pro
+
+### Support o3 & o4-mini & gpt-4.1
 
 ## Bug fix
 

@@ -38,6 +38,16 @@ var ModelRatio = map[string]float64{
 	// OpenAI
 	// https://openai.com/pricing
 	// -------------------------------------
+	"gpt-4.1":                    2 * MilliTokensUsd,
+	"gpt-4.1-2025-04-14":         2 * MilliTokensUsd,
+	"gpt-4.1-mini":               0.4 * MilliTokensUsd,
+	"gpt-4.1-mini-2025-04-14":    0.4 * MilliTokensUsd,
+	"gpt-4.1-nano":               0.1 * MilliTokensUsd,
+	"gpt-4.1-nano-2025-04-14":    0.1 * MilliTokensUsd,
+	"o3":                         10 * MilliTokensUsd,
+	"o3-2025-04-16":              10 * MilliTokensUsd,
+	"o4-mini":                    1.1 * MilliTokensUsd,
+	"o4-mini-2025-04-16":         1.1 * MilliTokensUsd,
 	"gpt-4.5-preview":            75 * MilliTokensUsd,
 	"gpt-4.5-preview-2025-02-27": 75 * MilliTokensUsd,
 	"gpt-4":                      30 * MilliTokensUsd,
@@ -1037,10 +1047,12 @@ func GetCompletionRatio(name string, channelType int) float64 {
 		return 3
 	case strings.HasPrefix(name, "gpt-4"):
 		switch {
-		case strings.HasPrefix(name, "gpt-4o"):
+		case strings.HasPrefix(name, "gpt-4o"),
+			strings.HasPrefix(name, "gpt-4.1"):
 			if name == "gpt-4o-2024-05-13" {
 				return 3
 			}
+
 			return 4
 		case strings.HasPrefix(name, "gpt-4-"):
 			return 3
@@ -1049,7 +1061,8 @@ func GetCompletionRatio(name string, channelType int) float64 {
 		}
 	// including o1/o1-preview/o1-mini
 	case strings.HasPrefix(name, "o1") ||
-		strings.HasPrefix(name, "o3"):
+		strings.HasPrefix(name, "o3") ||
+		strings.HasPrefix(name, "o4"):
 		return 4
 	}
 
