@@ -79,6 +79,9 @@ func SetupLogin(user *model.User, c *gin.Context) {
 	//   	(*session).Set: s.Session().Values[key] = val
 	//   /home/laisky/repo/laisky/one-api/controller/user.go:70 (0x28145a7)
 	//   	SetupLogin: session.Set("id", user.Id)
+	//
+	// BUG: https://github.com/gin-contrib/sessions/issues/287
+	// github.com/gin-contrib/sessions 不要使用 v1.0.3
 	session := sessions.Default(c)
 	session.Set("id", user.Id)
 	session.Set("username", user.Username)
