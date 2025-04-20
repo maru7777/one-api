@@ -39,7 +39,7 @@ export default function Log() {
 
   const loadLogs = async (startIdx) => {
     setSearching(true);
-    const url = userIsAdmin ? '/api/log/' : '/api/log/self/';
+    const url = userIsAdmin ? '/api/log/' : '/api/log/self';
     const query = searchKeyword;
 
     query.p = startIdx;
