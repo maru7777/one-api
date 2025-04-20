@@ -68,7 +68,7 @@ type GeneralOpenAIRequest struct {
 	ParallelTooCalls *bool           `json:"parallel_tool_calls,omitempty"`
 	User             string          `json:"user,omitempty"`
 	FunctionCall     any             `json:"function_call,omitempty"`
-	Functions        any             `json:"functions,omitempty"`
+	Functions        []Function      `json:"functions,omitempty"`
 	// https://platform.openai.com/docs/api-reference/embeddings/create
 	Input          any    `json:"input,omitempty"`
 	EncodingFormat string `json:"encoding_format,omitempty"`
