@@ -189,10 +189,10 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	// }
 
 	// 适配所有图像请求的计费方法
-	n := getFromContext(c, "temp_n", 1)
-	originModelName := getFromContext(c, "temp_origin_model", "dall-e-2")
-	size := getFromContext(c, "temp_size", "512x512")
-	quality := getFromContext(c, "temp_quality", "")
+	n := meta.VendorContext["PicNumber"].(int)
+	originModelName := meta.VendorContext["Model"].(string)
+	size := meta.VendorContext["PicSize"].(string)
+	quality := meta.VendorContext["Quality"].(string)
 	var imageCostRatio float64 = 1.0
 	if billingratio.ImageSizeRatios[originModelName] != nil {
 		if ratio, ok := billingratio.ImageSizeRatios[originModelName][size]; ok {
@@ -213,10 +213,6 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	if userQuota < quota {
 		return openai.ErrorWrapper(errors.New("user quota is not enough"), "insufficient_user_quota", http.StatusForbidden)
 	}
-	delete(c.Keys, "temp_n")
-	delete(c.Keys, "temp_origin_model")
-	delete(c.Keys, "temp_size")
-	delete(c.Keys, "temp_quality")
 
 	// do request
 	resp, err := adaptor.DoRequest(c, meta, requestBody)

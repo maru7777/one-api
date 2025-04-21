@@ -326,6 +326,21 @@ var ModelRatio = map[string]float64{
 	"hunyuan-turbo-vision":      0.08 * KiloRmb,
 	"hunyuan-vision":            0.018 * KiloRmb,
 	"hunyuan-embedding":         0.0007 * KiloRmb,
+	// 腾讯生图模型
+	"hunyuan-image":                    0.04 * ImageUsdPerPic,
+	"hunyuan-image-chat":               0.04 * ImageUsdPerPic,
+	"hunyuan-draw-portrait":            0.04 * ImageUsdPerPic,
+	"hunyuan-draw-portrait-chat":       0.04 * ImageUsdPerPic,
+	"hunyuan-generate-avatar":          0.04 * ImageUsdPerPic,
+	"hunyuan-image-toimage":            0.04 * ImageUsdPerPic,
+	"hunyuan-change-clothes":           0.04 * ImageUsdPerPic,
+	"hunyuan-replace-background":       0.04 * ImageUsdPerPic,
+	"hunyuan-sketch-to-image":          0.04 * ImageUsdPerPic,
+	"hunyuan-refine-image":             0.04 * ImageUsdPerPic,
+	"hunyuan-image-inpainting-removal": 0.04 * ImageUsdPerPic,
+	"hunyuan-image-outpainting":        0.04 * ImageUsdPerPic,
+	// 腾讯3D模型
+	"hunyuan-to3d": 0.04 * ImageUsdPerPic,
 	// https://platform.moonshot.cn/pricing
 	"moonshot-v1-8k":   0.012 * KiloRmb,
 	"moonshot-v1-32k":  0.024 * KiloRmb,

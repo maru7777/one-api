@@ -124,34 +124,27 @@ func (a *Adaptor) ConvertImageRequest(c *gin.Context, request *model.ImageReques
 	aliImageRequest.Model = meta.ActualModelName
 	metalib.Set2Context(c, meta)
 	if aliImageRequest.Parameters != nil && isZero(reflect.ValueOf(*aliImageRequest.Parameters)) {
-		aliImageRequest.Parameters = nil //置为nil后,该字段可以在序列化时被自动删除.不确定是否必须
+		aliImageRequest.Parameters = nil //置为nil后,该字段可以在序列化时被自动删除(是否必须?)
 	}
 	if aliImageRequest.Input != nil && isZero(reflect.ValueOf(*aliImageRequest.Input)) {
-		aliImageRequest.Input = nil //置为nil后,该字段可以在序列化时被自动删除.不确定是否必须
+		aliImageRequest.Input = nil //置为nil后,该字段可以在序列化时被自动删除(是否必须?)
 	}
 	// 设置图片数量(计费)
 	if aliImageRequest.Input.GenerateNum != 0 {
-		c.Set("temp_n", aliImageRequest.Input.GenerateNum)
+		meta.VendorContext["PicNumber"] = aliImageRequest.Input.GenerateNum
 	} else if aliImageRequest.Parameters != nil && aliImageRequest.Parameters.N != 0 {
-		c.Set("temp_n", aliImageRequest.Parameters.N)
+		meta.VendorContext["PicNumber"] = aliImageRequest.Parameters.N
 	} else {
-		c.Set("temp_n", 1)
+		meta.VendorContext["PicNumber"] = 1
 	}
 	// 设置图片尺寸(计费)
 	if aliImageRequest.Parameters != nil && aliImageRequest.Parameters.Size != "" {
-		c.Set("temp_size", aliImageRequest.Parameters.Size)
+		meta.VendorContext["PicSize"] = aliImageRequest.Parameters.Size
 	} else {
-		c.Set("temp_size", "")
+		meta.VendorContext["PicSize"] = ""
 	}
-	c.Set("temp_model", aliImageRequest.Model)
-	c.Set("temp_quality", "")
-
-	// if aliimageRequest.Resources != nil && len(*aliimageRequest.Resources) == 0 {
-	// 	aliimageRequest.Resources = nil //因为Resources底层是切片 切片默认值已经是nil 就不需要特殊处理了
-	// }
-	// if aliimageRequest.TrainingFileIds != nil && len(*aliimageRequest.TrainingFileIds) == 0 {
-	// 	aliimageRequest.TrainingFileIds = nil //置为nil后,该字段可以在序列化时被自动删除
-	// }
+	meta.VendorContext["Model"] = aliImageRequest.Model
+	meta.VendorContext["Quality"] = ""
 	return aliImageRequest, nil
 }
 
@@ -187,7 +180,15 @@ func isZero(v reflect.Value) bool {
 }
 
 func (a *Adaptor) DoRequest(c *gin.Context, meta *meta.Meta, requestBody io.Reader) (*http.Response, error) {
-	return adaptor.DoRequestHelper(a, c, meta, requestBody)
+	resp, err := adaptor.DoRequestHelper(a, c, meta, requestBody)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("HTTP request failed with status %d: %s", resp.StatusCode, string(body))
+	}
+	return resp, nil
 }
 
 func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Meta) (usage *model.Usage, err *model.ErrorWithStatusCode) {

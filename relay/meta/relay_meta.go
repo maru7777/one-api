@@ -35,6 +35,7 @@ type Meta struct {
 	ChannelRatio       float64
 	ForcedSystemPrompt string
 	StartTime          time.Time
+	VendorContext      map[string]any // add by myself
 }
 
 // GetMappedModelName returns the mapped model name and a bool indicating if the model name is mapped
@@ -73,6 +74,7 @@ func GetByContext(c *gin.Context) *Meta {
 		ChannelRatio:       c.GetFloat64(ctxkey.ChannelRatio), // add by Laisky
 		ForcedSystemPrompt: c.GetString(ctxkey.SystemPrompt),
 		StartTime:          time.Now(),
+		VendorContext:      make(map[string]any),
 	}
 	cfg, ok := c.Get(ctxkey.Config)
 	if ok {

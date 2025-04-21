@@ -42,7 +42,7 @@ func getRequestModel(c *gin.Context) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "common.UnmarshalBodyReusable failed")
 	}
-	// 个人认为这个switch是设计缺陷 但原项目作者写的 暂时保留
+	// 个人认为这个switch有设计缺陷 但这是原作者写的 暂时保留
 	switch {
 	case strings.HasPrefix(c.Request.URL.Path, "/v1/moderations"):
 		if modelRequest.Model == "" {

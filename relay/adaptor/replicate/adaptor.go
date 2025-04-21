@@ -90,22 +90,22 @@ func (a *Adaptor) ConvertImageRequest(c *gin.Context, request *model.ImageReques
 	meta.ActualModelName = metalib.GetMappedModelName(request.Model, ReplicateModelMapping)
 	// 设置图像生成数量(计费)
 	if replicateImageRequest.Input.NumOutputs != 0 {
-		c.Set("temp_n", replicateImageRequest.Input.NumOutputs)
+		meta.VendorContext["PicNumber"] = replicateImageRequest.Input.NumOutputs
 	} else if replicateImageRequest.Input.NumberOfImages != 0 {
-		c.Set("temp_n", replicateImageRequest.Input.NumberOfImages)
+		meta.VendorContext["PicNumber"] = replicateImageRequest.Input.NumberOfImages
 	} else {
-		c.Set("temp_n", 1)
+		meta.VendorContext["PicNumber"] = 1
 	}
 	// 设置图像尺寸，如果有的话(计费)
 	if replicateImageRequest.Input.Size != "" {
-		c.Set("temp_size", replicateImageRequest.Input.Size)
+		meta.VendorContext["PicSize"] = replicateImageRequest.Input.Size
 	} else if replicateImageRequest.Input.Resolution != "" {
-		c.Set("temp_size", replicateImageRequest.Input.Resolution)
+		meta.VendorContext["PicSize"] = replicateImageRequest.Input.Resolution
 	} else {
-		c.Set("temp_size", "")
+		meta.VendorContext["PicSize"] = ""
 	}
-	c.Set("temp_origin_model", meta.OriginModelName)
-	c.Set("temp_quality", "")
+	meta.VendorContext["Model"] = meta.OriginModelName
+	meta.VendorContext["Quality"] = ""
 	metalib.Set2Context(c, meta)
 	return replicateImageRequest, nil
 }
@@ -215,7 +215,15 @@ func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Request, meta *me
 
 func (a *Adaptor) DoRequest(c *gin.Context, meta *meta.Meta, requestBody io.Reader) (*http.Response, error) {
 	logger.Info(c, "send request to replicate")
-	return adaptor.DoRequestHelper(a, c, meta, requestBody)
+	resp, err := adaptor.DoRequestHelper(a, c, meta, requestBody)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("HTTP request failed with status %d: %s", resp.StatusCode, string(body))
+	}
+	return resp, nil
 }
 
 func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Meta) (usage *model.Usage, err *model.ErrorWithStatusCode) {
