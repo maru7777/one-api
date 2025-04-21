@@ -194,6 +194,7 @@ var ModelRatio = map[string]float64{
 	"cogview-3-flash":  0,
 	"cogviewx":         0.5 * KiloRmb,
 	"cogviewx-flash":   0,
+	"cogview-4-250304": 0.001 * KiloRmb,
 	"charglm-4":        0.001 * KiloRmb,
 	"emohaa":           0.015 * KiloRmb,
 	"codegeex-4":       0.0001 * KiloRmb,

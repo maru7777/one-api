@@ -8,7 +8,7 @@ var ModelList = []string{
 	"glm-4", "glm-3-turbo",
 	"glm-4v-plus", "glm-4v", "glm-4v-flash",
 	"cogview-3-plus", "cogview-3", "cogview-3-flash",
-	"cogviewx", "cogviewx-flash",
+	"cogviewx", "cogviewx-flash", "cogview-4-250304",
 	"charglm-4", "emohaa", "codegeex-4",
 	"embedding-2", "embedding-3",
 }

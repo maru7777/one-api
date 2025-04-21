@@ -244,4 +244,5 @@ type ImageRequest struct {
 	ResponseFormat string `json:"response_format,omitempty" form:"response_format"` // 响应格式，解决 vertexai/imagen 错误
 	User           string `json:"user,omitempty" form:"user"`                       // 用户标识，解决 zhipu 错误
 	Quality        string `json:"quality,omitempty" form:"quality"`                 // 图像质量
+	UserId         string `json:"user_id,omitempty" form:"user_id"`                 // 用户标识，zhipu 标记人
 }

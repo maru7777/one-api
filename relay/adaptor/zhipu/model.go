@@ -65,7 +65,9 @@ type EmbeddingData struct {
 }
 
 type ImageRequest struct {
-	Model  string `json:"model"`
-	Prompt string `json:"prompt"`
-	UserId string `json:"user_id,omitempty"`
+	Model   string `json:"model,omitempty"`
+	Prompt  string `json:"prompt,omitempty"`
+	Quality string `json:"quality,omitempty" validate:"oneof=hd standard low"`
+	Size    string `json:"size,omitempty" validate:"oneof=1024x1024 768x1344 864x1152 1344x768 1152x864 1440x720 720x1440"`
+	UserId  string `json:"user_id,omitempty"`
 }
