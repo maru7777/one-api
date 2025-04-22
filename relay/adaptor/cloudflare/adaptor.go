@@ -1,6 +1,7 @@
 package cloudflare
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/relay/adaptor"
 	"github.com/songquanpeng/one-api/relay/meta"
+	metalib "github.com/songquanpeng/one-api/relay/meta"
 	"github.com/songquanpeng/one-api/relay/model"
 	"github.com/songquanpeng/one-api/relay/relaymode"
 )
@@ -19,8 +21,29 @@ type Adaptor struct {
 }
 
 // ConvertImageRequest implements adaptor.Adaptor.
-func (*Adaptor) ConvertImageRequest(_ *gin.Context, request *model.ImageRequest) (any, error) {
-	return nil, errors.New("not implemented")
+func (*Adaptor) ConvertImageRequest(c *gin.Context, request *model.ImageRequest) (any, error) {
+	if request == nil {
+		return nil, errors.New("request is nil")
+	}
+	meta := meta.GetByContext(c)
+	inputJSON, err := json.Marshal(request)
+	if err != nil {
+		return nil, fmt.Errorf("marshal input: %w, please check the request", err)
+	}
+	cloudflareImageRequest := &CloudflareImageRequest{}
+	json.Unmarshal(inputJSON, &cloudflareImageRequest)
+	// 模型映射
+	meta.OriginModelName = cloudflareImageRequest.Model
+	meta.ActualModelName = metalib.GetMappedModelName(cloudflareImageRequest.Model, CloudflareModelMapping)
+	cloudflareImageRequest.Model = meta.ActualModelName
+	// 计费相关
+	meta.VendorContext["PicNumber"] = 1
+	meta.VendorContext["PicSize"] = ""
+	meta.VendorContext["Model"] = cloudflareImageRequest.Model
+	meta.VendorContext["Quality"] = ""
+	// 去掉多余字段
+	cloudflareImageRequest.Model = ""
+	return cloudflareImageRequest, nil
 }
 
 // ConvertImageRequest implements adaptor.Adaptor.
@@ -50,6 +73,8 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 		return fmt.Sprintf("%s/v1/chat/completions", urlPrefix), nil
 	case relaymode.Embeddings:
 		return fmt.Sprintf("%s/v1/embeddings", urlPrefix), nil
+	case relaymode.ImagesGenerations:
+		return fmt.Sprintf("%s/run/%s", urlPrefix, meta.ActualModelName), nil
 	default:
 		if isAIGateWay {
 			return fmt.Sprintf("%s/%s", urlPrefix, meta.ActualModelName), nil
@@ -85,6 +110,8 @@ func (a *Adaptor) DoRequest(c *gin.Context, meta *meta.Meta, requestBody io.Read
 func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Meta) (usage *model.Usage, err *model.ErrorWithStatusCode) {
 	if meta.IsStream {
 		err, usage = StreamHandler(c, resp, meta.PromptTokens, meta.ActualModelName)
+	} else if meta.Mode == relaymode.ImagesGenerations {
+		err, usage = ImageHandler(c, resp, meta.PromptTokens, meta.ActualModelName)
 	} else {
 		err, usage = Handler(c, resp, meta.PromptTokens, meta.ActualModelName)
 	}

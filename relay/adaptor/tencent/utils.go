@@ -100,3 +100,58 @@ func GetSign(req any, meta *metalib.Meta) string {
 		signature)
 	return authorization
 }
+
+/*
+原本的getsign
+
+func GetSign(req any, meta *metalib.Meta) string {
+	host := meta.VendorContext["Host"].(string)
+	service := strings.Split(host, ".")[0] // 从域名中提取服务名
+	// build canonical request string
+	httpRequestMethod := "POST"
+	canonicalURI := "/"
+	canonicalQueryString := ""
+	canonicalHeaders := fmt.Sprintf("content-type:%s\nhost:%s\nx-tc-action:%s\n",
+		"application/json; charset=utf-8", host, strings.ToLower(meta.VendorContext["Action"].(string)))
+	signedHeaders := "content-type;host;x-tc-action"
+	payload, _ := json.Marshal(req)
+	hashedRequestPayload := sha256hex(string(payload))
+	canonicalRequest := fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%s",
+		httpRequestMethod,
+		canonicalURI,
+		canonicalQueryString,
+		canonicalHeaders,
+		signedHeaders,
+		hashedRequestPayload)
+	// build string to sign
+	algorithm := "TC3-HMAC-SHA256"
+	requestTimestamp := strconv.FormatInt(time.Now().Unix(), 10)
+	meta.VendorContext["Timestamp"] = requestTimestamp // my add
+	timestamp, _ := strconv.ParseInt(requestTimestamp, 10, 64)
+	t := time.Unix(timestamp, 0).UTC()
+	// must be the format 2006-01-02, ref to package time for more info
+	date := t.Format("2006-01-02")
+	credentialScope := fmt.Sprintf("%s/%s/tc3_request", date, service)
+	hashedCanonicalRequest := sha256hex(canonicalRequest)
+	string2sign := fmt.Sprintf("%s\n%s\n%s\n%s",
+		algorithm,
+		requestTimestamp,
+		credentialScope,
+		hashedCanonicalRequest)
+
+	// sign string
+	secretDate := hmacSha256(date, "TC3"+meta.VendorContext["SecretKey"].(string))
+	secretService := hmacSha256(service, secretDate)
+	secretKey := hmacSha256("tc3_request", secretService)
+	signature := hex.EncodeToString([]byte(hmacSha256(string2sign, secretKey)))
+
+	// build authorization
+	authorization := fmt.Sprintf("%s Credential=%s/%s, SignedHeaders=%s, Signature=%s",
+		algorithm,
+		meta.VendorContext["SecretId"].(string),
+		credentialScope,
+		signedHeaders,
+		signature)
+	return authorization
+}
+*/

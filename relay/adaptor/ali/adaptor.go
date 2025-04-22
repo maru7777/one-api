@@ -119,10 +119,11 @@ func (a *Adaptor) ConvertImageRequest(c *gin.Context, request *model.ImageReques
 	if err := json.Unmarshal(nestedJSONBytes, &aliImageRequest); err != nil {
 		return nil, fmt.Errorf("unmarshal to AliImageRequest: %w, please check the request", err)
 	}
+	// 模型映射
 	meta.OriginModelName = aliImageRequest.Model
 	meta.ActualModelName = metalib.GetMappedModelName(aliImageRequest.Model, AliModelMapping)
 	aliImageRequest.Model = meta.ActualModelName
-	metalib.Set2Context(c, meta)
+	// metalib.Set2Context(c, meta) //感觉没有必要吧
 	if aliImageRequest.Parameters != nil && isZero(reflect.ValueOf(*aliImageRequest.Parameters)) {
 		aliImageRequest.Parameters = nil //置为nil后,该字段可以在序列化时被自动删除(是否必须?)
 	}
