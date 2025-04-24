@@ -40,6 +40,7 @@ Also welcome to register and use my deployed one-api gateway, which supports var
     - [Support coze oauth authentication](#support-coze-oauth-authentication)
     - [Support gemini-2.5-pro](#support-gemini-25-pro)
     - [Support o3 \& o4-mini \& gpt-4.1](#support-o3--o4-mini--gpt-41)
+    - [Support gpt-image-1's image generation \& edits](#support-gpt-image-1s-image-generation--edits)
   - [Bug fix](#bug-fix)
 
 ## Turtorial
@@ -246,6 +247,14 @@ support `gpt-4o-search-preview` & `gpt-4o-mini-search-preview`
 ### Support gemini-2.5-pro
 
 ### Support o3 & o4-mini & gpt-4.1
+
+### Support gpt-image-1's image generation & edits
+
+![](https://s3.laisky.com/uploads/2025/04/gpt-image-1-2.png)
+
+![](https://s3.laisky.com/uploads/2025/04/gpt-image-1-3.png)
+
+![](https://s3.laisky.com/uploads/2025/04/gpt-image-1-1.png)
 
 ## Bug fix
 
