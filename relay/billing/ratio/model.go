@@ -126,6 +126,7 @@ var ModelRatio = map[string]float64{
 	"text-moderation-latest":               0.2 * MilliTokensUsd,
 	"dall-e-2":                             0.02 * ImageUsdPerPic,
 	"dall-e-3":                             0.04 * ImageUsdPerPic,
+	"gpt-image-1":                          0.011 * ImageUsdPerPic,
 	// https://www.anthropic.com/api#pricing
 	"claude-instant-1.2":         0.8 * MilliTokensUsd,
 	"claude-2.0":                 8.0 * MilliTokensUsd,

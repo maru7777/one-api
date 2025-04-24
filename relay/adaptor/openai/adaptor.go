@@ -194,10 +194,11 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 		}
 	} else {
 		switch meta.Mode {
-		case relaymode.ImagesGenerations:
-			err, _ = ImageHandler(c, resp)
-		case relaymode.ImagesEdits:
-			err, _ = ImagesEditsHandler(c, resp)
+		case relaymode.ImagesGenerations,
+			relaymode.ImagesEdits:
+			err, usage = ImageHandler(c, resp)
+		// case relaymode.ImagesEdits:
+		// err, usage = ImagesEditsHandler(c, resp)
 		default:
 			err, usage = Handler(c, resp, meta.PromptTokens, meta.ActualModelName)
 		}
