@@ -104,7 +104,7 @@ func (a *Adaptor) ConvertImageRequest(c *gin.Context, request *model.ImageReques
 	} else {
 		meta.VendorContext["PicSize"] = ""
 	}
-	meta.VendorContext["Model"] = meta.OriginModelName
+	meta.VendorContext["Model"] = meta.ActualModelName
 	meta.VendorContext["Quality"] = ""
 	metalib.Set2Context(c, meta)
 	return replicateImageRequest, nil

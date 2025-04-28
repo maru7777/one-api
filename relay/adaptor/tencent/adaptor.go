@@ -149,7 +149,7 @@ func (a *Adaptor) ConvertImageRequest(c *gin.Context, request *model.ImageReques
 	} else {
 		meta.VendorContext["PicSize"] = ""
 	}
-	meta.VendorContext["Model"] = tencentImageRequest.Model
+	meta.VendorContext["Model"] = tencentImageRequest.Model //如有另外除了model-action之外还有别的模型映射时 规则是这里得是真实的模型名称
 	meta.VendorContext["Quality"] = tencentImageRequest.Clarity
 	return tencentImageRequest, nil
 }

@@ -98,7 +98,7 @@ func (a *Adaptor) ConvertImageRequest(c *gin.Context, request *model.ImageReques
 	meta.VendorContext["PicNumber"] = 1
 	meta.VendorContext["PicSize"] = request.Size
 	meta.VendorContext["Quality"] = request.Quality
-	meta.VendorContext["Model"] = request.Model
+	meta.VendorContext["Model"] = request.Model //如有模型映射 需要替换成真实的模型名称
 	return newRequest, nil
 }
 

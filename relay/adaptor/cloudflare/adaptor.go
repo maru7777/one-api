@@ -39,7 +39,7 @@ func (*Adaptor) ConvertImageRequest(c *gin.Context, request *model.ImageRequest)
 	// 计费相关
 	meta.VendorContext["PicNumber"] = 1
 	meta.VendorContext["PicSize"] = ""
-	meta.VendorContext["Model"] = cloudflareImageRequest.Model
+	meta.VendorContext["Model"] = meta.ActualModelName
 	meta.VendorContext["Quality"] = ""
 	// 去掉多余字段
 	cloudflareImageRequest.Model = ""

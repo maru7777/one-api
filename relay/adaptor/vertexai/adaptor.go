@@ -29,7 +29,7 @@ func (a *Adaptor) Init(meta *meta.Meta) {
 func (a *Adaptor) ConvertImageRequest(c *gin.Context, request *model.ImageRequest) (any, error) {
 	meta := meta.GetByContext(c)
 
-	if request.ResponseFormat != "b64_json" {
+	if request.ResponseFormat == nil || *request.ResponseFormat != "b64_json" {
 		return nil, errors.New("only support b64_json response format")
 	}
 

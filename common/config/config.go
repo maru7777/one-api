@@ -38,6 +38,7 @@ var DisplayTokenStatEnabled = true
 // Any options with "Secret", "Token" in its key won't be return by GetOptions
 
 var SessionSecret = os.Getenv("SESSION_SECRET")
+var DisableCookieSecret = strings.ToLower(os.Getenv("DISABLE_COOKIE_SECURE")) == "true"
 
 var OptionMap map[string]string
 var OptionMapRWMutex sync.RWMutex

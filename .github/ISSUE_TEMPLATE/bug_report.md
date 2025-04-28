@@ -15,6 +15,8 @@ assignees: ""
 - [ ] I have thoroughly read the project README
 - [ ] I understand and am willing to follow up on this issue, assist with testing and provide feedback
 
+## What Version/DockerImage Are You Using?
+
 ## Issue Description
 
 ## Steps to Reproduce
