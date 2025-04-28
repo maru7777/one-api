@@ -75,23 +75,42 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *ChatRequest {
 			geminiRequest.GenerationConfig.ResponseMimeType = mimeTypeMap["json_object"]
 		}
 	}
+
+	// FIX(https://github.com/Laisky/one-api/issues/60):
+	// Gemini's function call supports fewer parameters than OpenAI's,
+	// so a conversion is needed here to keep only the parameters supported by Gemini.
 	if textRequest.Tools != nil {
-		functions := make([]model.Function, 0, len(textRequest.Tools))
+		convertedGeminiFunctions := make([]model.Function, 0, len(textRequest.Tools))
 		for _, tool := range textRequest.Tools {
-			functions = append(functions, tool.Function)
+			delete(tool.Function.Parameters, "additionalProperties")
+			convertedGeminiFunctions = append(convertedGeminiFunctions, model.Function{
+				Name:        tool.Function.Name,
+				Description: tool.Function.Description,
+				Parameters:  tool.Function.Parameters,
+				Required:    tool.Function.Required,
+			})
 		}
 		geminiRequest.Tools = []ChatTools{
 			{
-				FunctionDeclarations: functions,
+				FunctionDeclarations: convertedGeminiFunctions,
 			},
 		}
 	} else if textRequest.Functions != nil {
-		geminiRequest.Tools = []ChatTools{
-			{
-				FunctionDeclarations: textRequest.Functions,
-			},
+		for _, function := range textRequest.Functions {
+			delete(function.Parameters, "additionalProperties")
+			geminiRequest.Tools = append(geminiRequest.Tools, ChatTools{
+				FunctionDeclarations: []model.Function{
+					{
+						Name:        function.Name,
+						Description: function.Description,
+						Parameters:  function.Parameters,
+						Required:    function.Required,
+					},
+				},
+			})
 		}
 	}
+
 	shouldAddDummyModelMessage := false
 	for _, message := range textRequest.Messages {
 		content := ChatContent{

@@ -246,3 +246,8 @@ type ImageRequest struct {
 	Quality        string `json:"quality,omitempty" form:"quality"`                 // 图像质量
 	UserId         string `json:"user_id,omitempty" form:"user_id"`                 // 用户标识，zhipu 标记人
 }
+
+// // ToFormData converts the ImageRequest to form data
+// func (r *ImageRequest) ToFormData() ([]byte, error) {
+
+// }

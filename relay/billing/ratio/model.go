@@ -23,7 +23,7 @@ const (
 	// MilliRmb multiply by the RMB price per 1 million tokens to get the quota cost per token
 	MilliRmb       float64 = MilliTokensUsd / USD2RMB
 	ImageUsdPerPic float64 = QuotaPerUsd / 1000
-	QuotaPerRmb    float64 = QuotaPerUsd / USD2RMB //一个QuotaPerRmb代表1元人民币
+	ImageRMBPerPic float64 = ImageUsdPerPic / USD2RMB //一个QuotaPerRmb代表1元人民币
 )
 
 var modelRatioLock sync.RWMutex
@@ -154,22 +154,22 @@ var AliModelRatio = map[string]float64{
 	"text-embedding-async-v2": 0.0007 * KiloRmb,
 	"text-embedding-async-v1": 0.0007 * KiloRmb,
 	// 生图模型
-	"ali-stable-diffusion-xl":       0.016 * ImageUsdPerPic,
-	"ali-stable-diffusion-v1.5":     0.016 * ImageUsdPerPic,
-	"wanx-v1":                       0.04 * ImageUsdPerPic, // 0.02192, 原作者的是 0.016 * ImageUsdPerPic
-	"wanx2.1-t2i-turbo":             0.04 * ImageUsdPerPic, // 0.01918
-	"wanx2.1-t2i-plus":              0.04 * ImageUsdPerPic, // 0.02740
-	"wanx2.0-t2i-turbo":             0.01 * ImageUsdPerPic, // 0.00548
-	"wanx2.1-imageedit":             0.04 * ImageUsdPerPic, // 0.01918
-	"wanx-sketch-to-image-lite":     0.01 * ImageUsdPerPic, // 0.00822
-	"wanx-style-repaint-v1":         0.04 * ImageUsdPerPic, // 0.01644
-	"wanx-background-generation-v2": 0.04 * ImageUsdPerPic, // 0.01096
-	"aitryon":                       0.04 * ImageUsdPerPic, // 0.02740
-	"aitryon-parsing-v1":            0.01 * ImageUsdPerPic, // 0.00055
-	"aitryon-refiner":               0.05 * ImageUsdPerPic, // 0.04110
-	"facechain-generation":          0.04 * ImageUsdPerPic, // 0.02466
-	"wordart-texture":               0.04 * ImageUsdPerPic, // 0.01096
-	"wordart-semantic":              0.04 * ImageUsdPerPic, // 0.03288
+	"ali-stable-diffusion-xl":       0.016 * ImageRMBPerPic,
+	"ali-stable-diffusion-v1.5":     0.016 * ImageRMBPerPic,
+	"wanx-v1":                       0.04 * ImageRMBPerPic, // 0.02192, 原作者的是 0.016 * ImageUsdPerPic
+	"wanx2.1-t2i-turbo":             0.04 * ImageRMBPerPic, // 0.01918
+	"wanx2.1-t2i-plus":              0.04 * ImageRMBPerPic, // 0.02740
+	"wanx2.0-t2i-turbo":             0.01 * ImageRMBPerPic, // 0.00548
+	"wanx2.1-imageedit":             0.04 * ImageRMBPerPic, // 0.01918
+	"wanx-sketch-to-image-lite":     0.01 * ImageRMBPerPic, // 0.00822
+	"wanx-style-repaint-v1":         0.04 * ImageRMBPerPic, // 0.01644
+	"wanx-background-generation-v2": 0.04 * ImageRMBPerPic, // 0.01096
+	"aitryon":                       0.04 * ImageRMBPerPic, // 0.02740
+	"aitryon-parsing-v1":            0.01 * ImageRMBPerPic, // 0.00055
+	"aitryon-refiner":               0.05 * ImageRMBPerPic, // 0.04110
+	"facechain-generation":          0.04 * ImageRMBPerPic, // 0.02466
+	"wordart-texture":               0.04 * ImageRMBPerPic, // 0.01096
+	"wordart-semantic":              0.04 * ImageRMBPerPic, // 0.03288
 }
 var AliCompletionRatio = map[string]float64{
 	// 商业版模型
@@ -258,8 +258,8 @@ var ZhiPuModelRatio = map[string]float64{
 	"glm-z1-airx": 0.005 * KiloRmb,
 	//多模态
 	"glm-4v-plus": 0.004 * KiloRmb,
-	"cogview-4":   0.06 * QuotaPerRmb,
-	"cogvideox-2": 0.5 * QuotaPerRmb,
+	"cogview-4":   0.06 * ImageRMBPerPic,
+	"cogvideox-2": 0.5 * ImageRMBPerPic, // 这里应该用视频的计价标准代替
 	// 向量
 	"embedding-2": 0.0005 * KiloRmb,
 	"embedding-3": 0.0005 * KiloRmb,
@@ -299,20 +299,20 @@ var TencetModelRatio = map[string]float64{
 	"hunyuan-vision":            0.018 * KiloRmb,
 	"hunyuan-embedding":         0.0007 * KiloRmb,
 	// 腾讯生图模型
-	"hunyuan-image":                    0.04 * QuotaPerRmb,
-	"hunyuan-image-chat":               0.04 * QuotaPerRmb,
-	"hunyuan-draw-portrait":            0.04 * QuotaPerRmb,
-	"hunyuan-draw-portrait-chat":       0.04 * QuotaPerRmb,
-	"hunyuan-generate-avatar":          0.04 * QuotaPerRmb,
-	"hunyuan-image-toimage":            0.04 * QuotaPerRmb,
-	"hunyuan-change-clothes":           0.04 * QuotaPerRmb,
-	"hunyuan-replace-background":       0.04 * QuotaPerRmb,
-	"hunyuan-sketch-to-image":          0.04 * QuotaPerRmb,
-	"hunyuan-refine-image":             0.04 * QuotaPerRmb,
-	"hunyuan-image-inpainting-removal": 0.04 * QuotaPerRmb,
-	"hunyuan-image-outpainting":        0.04 * QuotaPerRmb,
+	"hunyuan-image":                    0.04 * ImageRMBPerPic,
+	"hunyuan-image-chat":               0.04 * ImageRMBPerPic,
+	"hunyuan-draw-portrait":            0.04 * ImageRMBPerPic,
+	"hunyuan-draw-portrait-chat":       0.04 * ImageRMBPerPic,
+	"hunyuan-generate-avatar":          0.04 * ImageRMBPerPic,
+	"hunyuan-image-toimage":            0.04 * ImageRMBPerPic,
+	"hunyuan-change-clothes":           0.04 * ImageRMBPerPic,
+	"hunyuan-replace-background":       0.04 * ImageRMBPerPic,
+	"hunyuan-sketch-to-image":          0.04 * ImageRMBPerPic,
+	"hunyuan-refine-image":             0.04 * ImageRMBPerPic,
+	"hunyuan-image-inpainting-removal": 0.04 * ImageRMBPerPic,
+	"hunyuan-image-outpainting":        0.04 * ImageRMBPerPic,
 	// 腾讯3D模型
-	"hunyuan-to3d": 0.04 * QuotaPerRmb,
+	"hunyuan-to3d": 0.04 * ImageRMBPerPic,
 }
 var TencetCompletionRatio = map[string]float64{
 	"hunyuan-turbo":             0.015 * KiloRmb,
@@ -445,6 +445,16 @@ var ModelRatio = map[string]float64{
 	// OpenAI
 	// https://openai.com/pricing
 	// -------------------------------------
+	"gpt-4.1":                    2 * MilliTokensUsd,
+	"gpt-4.1-2025-04-14":         2 * MilliTokensUsd,
+	"gpt-4.1-mini":               0.4 * MilliTokensUsd,
+	"gpt-4.1-mini-2025-04-14":    0.4 * MilliTokensUsd,
+	"gpt-4.1-nano":               0.1 * MilliTokensUsd,
+	"gpt-4.1-nano-2025-04-14":    0.1 * MilliTokensUsd,
+	"o3":                         10 * MilliTokensUsd,
+	"o3-2025-04-16":              10 * MilliTokensUsd,
+	"o4-mini":                    1.1 * MilliTokensUsd,
+	"o4-mini-2025-04-16":         1.1 * MilliTokensUsd,
 	"gpt-4.5-preview":            75 * MilliTokensUsd,
 	"gpt-4.5-preview-2025-02-27": 75 * MilliTokensUsd,
 	"gpt-4":                      30 * MilliTokensUsd,
@@ -1199,10 +1209,12 @@ func GetCompletionRatio(name string, channelType int) float64 {
 		return 3
 	case strings.HasPrefix(name, "gpt-4"):
 		switch {
-		case strings.HasPrefix(name, "gpt-4o"):
+		case strings.HasPrefix(name, "gpt-4o"),
+			strings.HasPrefix(name, "gpt-4.1"):
 			if name == "gpt-4o-2024-05-13" {
 				return 3
 			}
+
 			return 4
 		case strings.HasPrefix(name, "gpt-4-"):
 			return 3
@@ -1211,7 +1223,8 @@ func GetCompletionRatio(name string, channelType int) float64 {
 		}
 	// including o1/o1-preview/o1-mini
 	case strings.HasPrefix(name, "o1") ||
-		strings.HasPrefix(name, "o3"):
+		strings.HasPrefix(name, "o3") ||
+		strings.HasPrefix(name, "o4"):
 		return 4
 	}
 

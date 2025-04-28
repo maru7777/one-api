@@ -6,12 +6,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/ctxkey"
+	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/relay"
@@ -190,16 +192,16 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 
 	// 适配所有图像请求的计费方法
 	n := meta.VendorContext["PicNumber"].(int)
-	originModelName := meta.VendorContext["Model"].(string)
+	actualModelName := meta.VendorContext["Model"].(string)
 	size := meta.VendorContext["PicSize"].(string)
 	quality := meta.VendorContext["Quality"].(string)
 	var imageCostRatio float64 = 1.0
-	if billingratio.ImageSizeRatios[originModelName] != nil {
-		if ratio, ok := billingratio.ImageSizeRatios[originModelName][size]; ok {
+	if billingratio.ImageSizeRatios[actualModelName] != nil {
+		if ratio, ok := billingratio.ImageSizeRatios[actualModelName][size]; ok {
 			imageCostRatio = ratio
 		}
 	}
-	if quality == "hd" && originModelName == "dall-e-3" {
+	if quality == "hd" && actualModelName == "dall-e-3" {
 		if size == "1024x1024" {
 			imageCostRatio *= 2
 		} else {
@@ -208,9 +210,9 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	}
 	modelRatio := billingratio.GetModelRatio(meta.ActualModelName, meta.ChannelType)
 	groupRatio := c.GetFloat64(ctxkey.ChannelRatio)
-	var quota = int64(modelRatio*groupRatio*imageCostRatio) * int64(n) * 1000
+	var usedQuota = int64(modelRatio*groupRatio*imageCostRatio) * int64(n) * 1000
 	userQuota, _ := model.CacheGetUserQuota(ctx, meta.UserId)
-	if userQuota < quota {
+	if userQuota < usedQuota {
 		return openai.ErrorWrapper(errors.New("user quota is not enough"), "insufficient_user_quota", http.StatusForbidden)
 	}
 
@@ -221,6 +223,7 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 		return openai.ErrorWrapper(err, "do_request_failed", http.StatusInternalServerError)
 	}
 
+	var promptTokens, completionTokens int
 	defer func(ctx context.Context) {
 		if resp != nil &&
 			resp.StatusCode != http.StatusCreated && // replicate returns 201
@@ -228,7 +231,7 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 			return
 		}
 
-		err := model.PostConsumeTokenQuota(meta.TokenId, quota)
+		err := model.PostConsumeTokenQuota(meta.TokenId, usedQuota)
 		if err != nil {
 			logger.SysError("error consuming token remain quota: " + err.Error())
 		}
@@ -236,29 +239,30 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 		if err != nil {
 			logger.SysError("error update user quota cache: " + err.Error())
 		}
-		if quota >= 0 {
+		if usedQuota >= 0 {
 			tokenName := c.GetString(ctxkey.TokenName)
 			logContent := fmt.Sprintf("model rate %.2f, group rate %.2f, num %d",
 				modelRatio, groupRatio, n)
 			model.RecordConsumeLog(ctx, &model.Log{
 				UserId:           meta.UserId,
 				ChannelId:        meta.ChannelId,
-				PromptTokens:     0,
-				CompletionTokens: 0,
-				ModelName:        originModelName,
+				PromptTokens:     promptTokens,
+				CompletionTokens: completionTokens,
+				ModelName:        actualModelName,
 				TokenName:        tokenName,
-				Quota:            int(quota),
+				Quota:            int(usedQuota),
 				Content:          logContent,
+				ElapsedTime:      helper.CalcElapsedTime(meta.StartTime),
 			})
-			model.UpdateUserUsedQuotaAndRequestCount(meta.UserId, quota)
+			model.UpdateUserUsedQuotaAndRequestCount(meta.UserId, usedQuota)
 			channelId := c.GetInt(ctxkey.ChannelId)
-			model.UpdateChannelUsedQuota(channelId, quota)
+			model.UpdateChannelUsedQuota(channelId, usedQuota)
 
 			// also update user request cost
 			docu := model.NewUserRequestCost(
 				c.GetInt(ctxkey.Id),
 				c.GetString(ctxkey.RequestId),
-				quota,
+				usedQuota,
 			)
 			if err = docu.Insert(); err != nil {
 				logger.Errorf(c, "insert user request cost failed: %+v", err)
@@ -267,10 +271,22 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	}(c.Request.Context())
 
 	// do response
-	_, respErr := adaptor.DoResponse(c, resp, meta)
+	usage, respErr := adaptor.DoResponse(c, resp, meta)
 	if respErr != nil {
 		logger.Errorf(ctx, "respErr is not nil: %+v", respErr)
 		return respErr
+	}
+
+	if usage != nil {
+		promptTokens = usage.PromptTokens
+		completionTokens = usage.CompletionTokens
+
+		switch meta.ActualModelName {
+		case "gpt-image-1":
+			textQuota := int64(math.Ceil(float64(usage.PromptTokensDetails.TextTokens) * 10 * billingratio.MilliTokensUsd))
+			imageQuota := int64(math.Ceil(float64(usage.PromptTokensDetails.ImageTokens) * 10 * billingratio.MilliTokensUsd))
+			usedQuota += textQuota + imageQuota
+		}
 	}
 
 	return nil

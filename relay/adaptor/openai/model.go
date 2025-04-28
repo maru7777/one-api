@@ -143,7 +143,7 @@ type ImageData struct {
 type ImageResponse struct {
 	Created int64       `json:"created"`
 	Data    []ImageData `json:"data"`
-	//model.Usage `json:"usage"`
+	Usage   ImageUsage  `json:"usage"`
 }
 
 type ChatCompletionsStreamResponseChoice struct {
@@ -161,9 +161,40 @@ type ChatCompletionsStreamResponse struct {
 	Usage   *model.Usage                          `json:"usage,omitempty"`
 }
 
+// CompletionsStreamResponse represents the response structure
+// for text completions in streaming mode
 type CompletionsStreamResponse struct {
 	Choices []struct {
 		Text         string `json:"text"`
 		FinishReason string `json:"finish_reason"`
 	} `json:"choices"`
+}
+
+// ImageUsage is the usage info for image request
+//
+// https://platform.openai.com/docs/api-reference/images/object
+type ImageUsage struct {
+	TotalTokens        int                          `json:"total_tokens"`
+	InputTokens        int                          `json:"input_tokens"`
+	OutputTokens       int                          `json:"output_tokens"`
+	InputTokensDetails ImageUsageInputTokensDetails `json:"input_tokens_details"`
+}
+
+// ImageUsageInputTokensDetails is the details of input tokens for image request
+type ImageUsageInputTokensDetails struct {
+	TextTokens  int `json:"text_tokens"`
+	ImageTokens int `json:"image_tokens"`
+}
+
+// Convert2GeneralUsage converts ImageUsage to model.Usage
+func (u *ImageUsage) Convert2GeneralUsage() *model.Usage {
+	return &model.Usage{
+		PromptTokens:     u.InputTokens,
+		CompletionTokens: u.OutputTokens,
+		TotalTokens:      u.TotalTokens,
+		PromptTokensDetails: &model.UsagePromptTokensDetails{
+			ImageTokens: u.InputTokensDetails.ImageTokens,
+			TextTokens:  u.InputTokensDetails.TextTokens,
+		},
+	}
 }
