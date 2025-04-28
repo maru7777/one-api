@@ -12,6 +12,7 @@ import (
 	"github.com/songquanpeng/one-api/relay/adaptor"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/relay/meta"
+	metalib "github.com/songquanpeng/one-api/relay/meta"
 	"github.com/songquanpeng/one-api/relay/model"
 	"github.com/songquanpeng/one-api/relay/relaymode"
 )
@@ -81,15 +82,23 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 	}
 }
 
-func (a *Adaptor) ConvertImageRequest(_ *gin.Context, request *model.ImageRequest) (any, error) {
+func (a *Adaptor) ConvertImageRequest(c *gin.Context, request *model.ImageRequest) (any, error) {
+	meta := metalib.GetByContext(c)
 	if request == nil {
 		return nil, errors.New("request is nil")
 	}
 	newRequest := ImageRequest{
-		Model:  request.Model,
-		Prompt: request.Prompt,
-		UserId: request.User,
+		Model:   request.Model,
+		Prompt:  request.Prompt,
+		Quality: request.Quality,
+		Size:    request.Size,
+		UserId:  request.User,
 	}
+	// 设置计费相关
+	meta.VendorContext["PicNumber"] = 1
+	meta.VendorContext["PicSize"] = request.Size
+	meta.VendorContext["Quality"] = request.Quality
+	meta.VendorContext["Model"] = request.Model
 	return newRequest, nil
 }
 

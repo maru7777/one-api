@@ -105,7 +105,15 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 			suffix,
 		), nil
 	}
-
+	if strings.HasPrefix(meta.ActualModelName, "claude") {
+		return fmt.Sprintf(
+			"https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/anthropic/models/%s:streamRawPredict",
+			meta.Config.Region,
+			meta.Config.VertexAIProjectID,
+			meta.Config.Region,
+			meta.ActualModelName,
+		), nil
+	}
 	return fmt.Sprintf(
 		"https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/google/models/%s:%s",
 		meta.Config.Region,

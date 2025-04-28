@@ -2,20 +2,13 @@ package tencent
 
 import (
 	"bufio"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
-
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/conv"
 	"github.com/songquanpeng/one-api/common/ctxkey"
@@ -232,76 +225,4 @@ func Handler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusCode, *
 		return openai.ErrorWrapper(err, "write_response_body_failed", http.StatusInternalServerError), nil
 	}
 	return nil, &fullTextResponse.Usage
-}
-
-func ParseConfig(config string) (appId int64, secretId string, secretKey string, err error) {
-	parts := strings.Split(config, "|")
-	if len(parts) != 3 {
-		err = errors.New("invalid tencent config")
-		return
-	}
-	appId, err = strconv.ParseInt(parts[0], 10, 64)
-	secretId = parts[1]
-	secretKey = parts[2]
-	return
-}
-
-func sha256hex(s string) string {
-	b := sha256.Sum256([]byte(s))
-	return hex.EncodeToString(b[:])
-}
-
-func hmacSha256(s, key string) string {
-	hashed := hmac.New(sha256.New, []byte(key))
-	hashed.Write([]byte(s))
-	return string(hashed.Sum(nil))
-}
-
-func GetSign(req any, adaptor *Adaptor, secId, secKey string) string {
-	// build canonical request string
-	host := "hunyuan.tencentcloudapi.com"
-	httpRequestMethod := "POST"
-	canonicalURI := "/"
-	canonicalQueryString := ""
-	canonicalHeaders := fmt.Sprintf("content-type:%s\nhost:%s\nx-tc-action:%s\n",
-		"application/json", host, strings.ToLower(adaptor.Action))
-	signedHeaders := "content-type;host;x-tc-action"
-	payload, _ := json.Marshal(req)
-	hashedRequestPayload := sha256hex(string(payload))
-	canonicalRequest := fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%s",
-		httpRequestMethod,
-		canonicalURI,
-		canonicalQueryString,
-		canonicalHeaders,
-		signedHeaders,
-		hashedRequestPayload)
-	// build string to sign
-	algorithm := "TC3-HMAC-SHA256"
-	requestTimestamp := strconv.FormatInt(adaptor.Timestamp, 10)
-	timestamp, _ := strconv.ParseInt(requestTimestamp, 10, 64)
-	t := time.Unix(timestamp, 0).UTC()
-	// must be the format 2006-01-02, ref to package time for more info
-	date := t.Format("2006-01-02")
-	credentialScope := fmt.Sprintf("%s/%s/tc3_request", date, "hunyuan")
-	hashedCanonicalRequest := sha256hex(canonicalRequest)
-	string2sign := fmt.Sprintf("%s\n%s\n%s\n%s",
-		algorithm,
-		requestTimestamp,
-		credentialScope,
-		hashedCanonicalRequest)
-
-	// sign string
-	secretDate := hmacSha256(date, "TC3"+secKey)
-	secretService := hmacSha256("hunyuan", secretDate)
-	secretKey := hmacSha256("tc3_request", secretService)
-	signature := hex.EncodeToString([]byte(hmacSha256(string2sign, secretKey)))
-
-	// build authorization
-	authorization := fmt.Sprintf("%s Credential=%s/%s, SignedHeaders=%s, Signature=%s",
-		algorithm,
-		secId,
-		credentialScope,
-		signedHeaders,
-		signature)
-	return authorization
 }
