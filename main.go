@@ -4,6 +4,7 @@ import (
 	"embed"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"os"
 	"strconv"
 
@@ -122,16 +123,27 @@ func main() {
 	server.Use(middleware.RequestId())
 	server.Use(middleware.Language())
 	middleware.SetUpLogger(server)
+
 	// Initialize session store
 	sessionSecret, err := base64.StdEncoding.DecodeString(config.SessionSecret)
+	var sessionStore cookie.Store
 	if err != nil {
 		logger.SysLog("session secret is not base64 encoded, using raw value instead")
-		store := cookie.NewStore([]byte(config.SessionSecret))
-		server.Use(sessions.Sessions("session", store))
+		sessionStore = cookie.NewStore([]byte(config.SessionSecret))
 	} else {
-		store := cookie.NewStore(sessionSecret, sessionSecret)
-		server.Use(sessions.Sessions("session", store))
+		sessionStore = cookie.NewStore(sessionSecret, sessionSecret)
 	}
+
+	if config.DisableCookieSecret {
+		logger.SysWarn("DISABLE_COOKIE_SECURE is set, using insecure cookie store")
+		sessionStore.Options(sessions.Options{
+			Path:     "/",
+			MaxAge:   86400 * 30,
+			SameSite: http.SameSiteLaxMode,
+			Secure:   false,
+		})
+	}
+	server.Use(sessions.Sessions("session", sessionStore))
 
 	router.SetRouter(server, buildFS)
 	var port = os.Getenv("PORT")

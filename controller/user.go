@@ -66,6 +66,22 @@ func Login(c *gin.Context) {
 
 // setup session & cookies and then return user info
 func SetupLogin(user *model.User, c *gin.Context) {
+	// BUG: 如果用户发送了一段不合法的 session cookie，因为 gorilla 对无法识别的 session 会默认返回 nil，
+	// 导致 session.Set 中会出现 panic
+	//
+	//   2025/04/16 01:20:29 [Recovery] 2025/04/16 - 01:20:29 panic recovered:
+	//   runtime error: invalid memory address or nil pointer dereference
+	//   /opt/go1.24.0/src/runtime/panic.go:262 (0x44b77d)
+	//   	panicmem: panic(memoryError)
+	//   /opt/go1.24.0/src/runtime/signal_unix.go:925 (0x48b764)
+	//   	sigpanic: panicmem()
+	//   /home/laisky/go/pkg/mod/github.com/gin-contrib/sessions@v1.0.3/sessions.go:88 (0x1601112)
+	//   	(*session).Set: s.Session().Values[key] = val
+	//   /home/laisky/repo/laisky/one-api/controller/user.go:70 (0x28145a7)
+	//   	SetupLogin: session.Set("id", user.Id)
+	//
+	// BUG: https://github.com/gin-contrib/sessions/issues/287
+	// github.com/gin-contrib/sessions 不要使用 v1.0.3
 	session := sessions.Default(c)
 	session.Set("id", user.Id)
 	session.Set("username", user.Username)

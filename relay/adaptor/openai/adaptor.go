@@ -129,9 +129,8 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 		request.StreamOptions.IncludeUsage = true
 	}
 
-	// o1/o1-mini/o1-preview do not support system prompt/max_tokens/temperature
-	if strings.HasPrefix(meta.ActualModelName, "o1") ||
-		strings.HasPrefix(meta.ActualModelName, "o3") {
+	// o1/o3/o4 do not support system prompt/max_tokens/temperature
+	if strings.HasPrefix(meta.ActualModelName, "o") {
 		temperature := float64(1)
 		request.Temperature = &temperature // Only the default (1) value is supported
 
@@ -148,8 +147,7 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 	}
 
 	// web search do not support system prompt/max_tokens/temperature
-	if strings.HasPrefix(meta.ActualModelName, "gpt-4o-search") ||
-		strings.HasPrefix(meta.ActualModelName, "gpt-4o-mini-search") {
+	if strings.HasSuffix(meta.ActualModelName, "-search") {
 		request.Temperature = nil
 		request.TopP = nil
 		request.PresencePenalty = nil
@@ -158,8 +156,7 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 	}
 
 	if request.Stream && !config.EnforceIncludeUsage &&
-		(strings.HasPrefix(request.Model, "gpt-4o-audio") ||
-			strings.HasPrefix(request.Model, "gpt-4o-mini-audio")) {
+		strings.HasSuffix(request.Model, "-audio") {
 		// TODO: Since it is not clear how to implement billing in stream mode,
 		// it is temporarily not supported
 		return nil, errors.New("set ENFORCE_INCLUDE_USAGE=true to enable stream mode for gpt-4o-audio")
@@ -197,10 +194,11 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 		}
 	} else {
 		switch meta.Mode {
-		case relaymode.ImagesGenerations:
-			err, _ = ImageHandler(c, resp)
-		case relaymode.ImagesEdits:
-			err, _ = ImagesEditsHandler(c, resp)
+		case relaymode.ImagesGenerations,
+			relaymode.ImagesEdits:
+			err, usage = ImageHandler(c, resp)
+		// case relaymode.ImagesEdits:
+		// err, usage = ImagesEditsHandler(c, resp)
 		default:
 			err, usage = Handler(c, resp, meta.PromptTokens, meta.ActualModelName)
 		}

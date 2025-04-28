@@ -6,9 +6,9 @@ type Usage struct {
 	CompletionTokens int `json:"completion_tokens"`
 	TotalTokens      int `json:"total_tokens"`
 	// PromptTokensDetails may be empty for some models
-	PromptTokensDetails *usagePromptTokensDetails `json:"prompt_tokens_details,omitempty"`
+	PromptTokensDetails *UsagePromptTokensDetails `json:"prompt_tokens_details,omitempty"`
 	// CompletionTokensDetails may be empty for some models
-	CompletionTokensDetails *usageCompletionTokensDetails `json:"completion_tokens_details,omitempty"`
+	CompletionTokensDetails *UsageCompletionTokensDetails `json:"completion_tokens_details,omitempty"`
 	ServiceTier             string                        `json:"service_tier,omitempty"`
 	SystemFingerprint       string                        `json:"system_fingerprint,omitempty"`
 
@@ -31,7 +31,8 @@ type ErrorWithStatusCode struct {
 	StatusCode int `json:"status_code"`
 }
 
-type usagePromptTokensDetails struct {
+// UsagePromptTokensDetails contains details about the prompt tokens used in a request.
+type UsagePromptTokensDetails struct {
 	CachedTokens int `json:"cached_tokens"`
 	AudioTokens  int `json:"audio_tokens"`
 	// TextTokens could be zero for pure text chats
@@ -39,7 +40,8 @@ type usagePromptTokensDetails struct {
 	ImageTokens int `json:"image_tokens"`
 }
 
-type usageCompletionTokensDetails struct {
+// UsageCompletionTokensDetails contains details about the completion tokens used in a request.
+type UsageCompletionTokensDetails struct {
 	ReasoningTokens          int `json:"reasoning_tokens"`
 	AudioTokens              int `json:"audio_tokens"`
 	AcceptedPredictionTokens int `json:"accepted_prediction_tokens"`

@@ -39,6 +39,8 @@ Also welcome to register and use my deployed one-api gateway, which supports var
     - [Support gemini multimodal output #2197](#support-gemini-multimodal-output-2197)
     - [Support coze oauth authentication](#support-coze-oauth-authentication)
     - [Support gemini-2.5-pro](#support-gemini-25-pro)
+    - [Support o3 \& o4-mini \& gpt-4.1](#support-o3--o4-mini--gpt-41)
+    - [Support gpt-image-1's image generation \& edits](#support-gpt-image-1s-image-generation--edits)
   - [Bug fix](#bug-fix)
 
 ## Turtorial
@@ -60,6 +62,8 @@ oneapi:
     DEBUG: "true"
     # (optional) DEBUG_SQL display SQL logs
     DEBUG_SQL: "true"
+    # (optional) If you access one-api using a non-HTTPS address, you need to set DISABLE_COOKIE_SECURE to true
+    DISABLE_COOKIE_SECURE: "true"
     # (optional) ENFORCE_INCLUDE_USAGE require upstream API responses to include usage field
     ENFORCE_INCLUDE_USAGE: "true"
     # (optional) GLOBAL_API_RATE_LIMIT maximum API requests per IP within three minutes, default is 1000
@@ -241,6 +245,16 @@ support `gpt-4o-search-preview` & `gpt-4o-mini-search-preview`
 - [feat: support coze oauth authentication](https://github.com/Laisky/one-api/pull/52)
 
 ### Support gemini-2.5-pro
+
+### Support o3 & o4-mini & gpt-4.1
+
+### Support gpt-image-1's image generation & edits
+
+![](https://s3.laisky.com/uploads/2025/04/gpt-image-1-2.png)
+
+![](https://s3.laisky.com/uploads/2025/04/gpt-image-1-3.png)
+
+![](https://s3.laisky.com/uploads/2025/04/gpt-image-1-1.png)
 
 ## Bug fix
 

@@ -38,6 +38,16 @@ var ModelRatio = map[string]float64{
 	// OpenAI
 	// https://openai.com/pricing
 	// -------------------------------------
+	"gpt-4.1":                    2 * MilliTokensUsd,
+	"gpt-4.1-2025-04-14":         2 * MilliTokensUsd,
+	"gpt-4.1-mini":               0.4 * MilliTokensUsd,
+	"gpt-4.1-mini-2025-04-14":    0.4 * MilliTokensUsd,
+	"gpt-4.1-nano":               0.1 * MilliTokensUsd,
+	"gpt-4.1-nano-2025-04-14":    0.1 * MilliTokensUsd,
+	"o3":                         10 * MilliTokensUsd,
+	"o3-2025-04-16":              10 * MilliTokensUsd,
+	"o4-mini":                    1.1 * MilliTokensUsd,
+	"o4-mini-2025-04-16":         1.1 * MilliTokensUsd,
 	"gpt-4.5-preview":            75 * MilliTokensUsd,
 	"gpt-4.5-preview-2025-02-27": 75 * MilliTokensUsd,
 	"gpt-4":                      30 * MilliTokensUsd,
@@ -116,6 +126,7 @@ var ModelRatio = map[string]float64{
 	"text-moderation-latest":               0.2 * MilliTokensUsd,
 	"dall-e-2":                             0.02 * ImageUsdPerPic,
 	"dall-e-3":                             0.04 * ImageUsdPerPic,
+	"gpt-image-1":                          0.011 * ImageUsdPerPic,
 	// https://www.anthropic.com/api#pricing
 	"claude-instant-1.2":         0.8 * MilliTokensUsd,
 	"claude-2.0":                 8.0 * MilliTokensUsd,
@@ -174,6 +185,7 @@ var ModelRatio = map[string]float64{
 	"gemini-2.0-flash-exp-image-generation": 0.075 * MilliTokensUsd,
 	"gemini-2.0-pro-exp-02-05":              1.25 * MilliTokensUsd,
 	"gemini-2.5-pro-exp-03-25":              1.25 * MilliTokensUsd,
+	"gemini-2.5-flash-preview-04-17":        0.15 * MilliTokensUsd,
 	"aqa":                                   1,
 	// https://open.bigmodel.cn/pricing
 	"glm-zero-preview": 0.01 * KiloRmb,
@@ -1037,10 +1049,12 @@ func GetCompletionRatio(name string, channelType int) float64 {
 		return 3
 	case strings.HasPrefix(name, "gpt-4"):
 		switch {
-		case strings.HasPrefix(name, "gpt-4o"):
+		case strings.HasPrefix(name, "gpt-4o"),
+			strings.HasPrefix(name, "gpt-4.1"):
 			if name == "gpt-4o-2024-05-13" {
 				return 3
 			}
+
 			return 4
 		case strings.HasPrefix(name, "gpt-4-"):
 			return 3
@@ -1049,7 +1063,8 @@ func GetCompletionRatio(name string, channelType int) float64 {
 		}
 	// including o1/o1-preview/o1-mini
 	case strings.HasPrefix(name, "o1") ||
-		strings.HasPrefix(name, "o3"):
+		strings.HasPrefix(name, "o3") ||
+		strings.HasPrefix(name, "o4"):
 		return 4
 	}
 
