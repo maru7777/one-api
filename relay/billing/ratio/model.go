@@ -23,9 +23,416 @@ const (
 	// MilliRmb multiply by the RMB price per 1 million tokens to get the quota cost per token
 	MilliRmb       float64 = MilliTokensUsd / USD2RMB
 	ImageUsdPerPic float64 = QuotaPerUsd / 1000
+	QuotaPerRmb    float64 = QuotaPerUsd / USD2RMB //一个QuotaPerRmb代表1元人民币
 )
 
 var modelRatioLock sync.RWMutex
+
+// -------------------------------------
+// https://www.anthropic.com/api#pricing
+// -------------------------------------
+
+var AnthropicModelRatio = map[string]float64{
+	"claude-3-haiku-20240307":    0.25 * MilliTokensUsd,
+	"claude-3-5-haiku-20241022":  1.0 * MilliTokensUsd,
+	"claude-3-5-haiku-latest":    1.0 * MilliTokensUsd,
+	"claude-3-5-sonnet-20240620": 3.0 * MilliTokensUsd,
+	"claude-3-5-sonnet-20241022": 3.0 * MilliTokensUsd,
+	"claude-3-5-sonnet-latest":   3.0 * MilliTokensUsd,
+	"claude-3-7-sonnet-20250219": 3.0 * MilliTokensUsd,
+	"claude-3-7-sonnet-latest":   3.0 * MilliTokensUsd,
+	"claude-3-opus-20240229":     15.0 * MilliTokensUsd,
+}
+var AnthropicCompletionRatio = map[string]float64{
+	"claude-3-haiku-20240307":    1.25 / 0.25,
+	"claude-3-5-haiku-20241022":  4.0 / 0.80,
+	"claude-3-5-haiku-latest":    4.0 / 0.80,
+	"claude-3-5-sonnet-20240620": 15.0 / 3.0,
+	"claude-3-5-sonnet-20241022": 15.0 / 3.0,
+	"claude-3-5-sonnet-latest":   15.0 / 3.0,
+	"claude-3-7-sonnet-20250219": 15.0 / 3.0,
+	"claude-3-7-sonnet-latest":   15.0 / 3.0,
+	"claude-3-opus-20240229":     75.0 / 15.0,
+}
+
+// -------------------------------------
+// https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Qm9cw2s7m
+// https://cloud.baidu.com/doc/qianfan-docs/s/7m95lyy43
+// -------------------------------------
+var BaiduModelRatio = map[string]float64{
+	"ERNIE-4.0-8K": 0.120 * KiloRmb,
+	"ERNIE-3.5-8K": 0.012 * KiloRmb,
+	// embedding
+	"Embedding-V1": 0.002 * KiloRmb,
+	"bge-large-zh": 0.002 * KiloRmb,
+	"bge-large-en": 0.002 * KiloRmb,
+	"tao-8k":       0.002 * KiloRmb,
+}
+var BaiduCompletionRatio = map[string]float64{
+	"ERNIE-4.0-8K": 0.0016 / 0.004,
+	"ERNIE-3.5-8K": 0.002 / 0.0008,
+	// embedding
+	"Embedding-V1": 0,
+	"bge-large-zh": 0,
+	"bge-large-en": 0,
+	"tao-8k":       0,
+}
+
+// -------------------------------------
+// https://ai.google.dev/pricing
+// https://cloud.google.com/vertex-ai/generative-ai/pricing
+// -------------------------------------
+var GoogleModelRatio = map[string]float64{
+	"gemini-1.5-pro":           1.25 * MilliTokensUsd,
+	"gemini-1.5-flash":         0.075 * MilliTokensUsd,
+	"gemini-2.0-flash":         0.10 * MilliTokensUsd,
+	"gemini-2.0-flash-lite":    0.075 * MilliTokensUsd,
+	"gemini-2.5-pro-exp-03-25": 1.25 * MilliTokensUsd,
+}
+var GoogleCompletionRatio = map[string]float64{
+	"gemini-1.5-pro":           5.00 / 1.25,  //提示小于等于128,000 提示大于128,000 10.00/2.50
+	"gemini-1.5-flash":         0.30 / 0.075, //提示小于等于128,000 提示大于128,000 0.60/0.15
+	"gemini-2.0-flash":         0.40 / 0.10,  // 输入0.70 美元（音频）
+	"gemini-2.0-flash-lite":    0.30 / 0.075,
+	"gemini-2.5-pro-exp-03-25": 10.00 / 1.25, //提示小于等于20万个令牌 大于 15.00/2.50
+}
+
+// -------------------------------------
+// https://help.aliyun.com/zh/dashscope/developer-reference/tongyi-thousand-questions-metering-and-billing
+// https://help.aliyun.com/zh/model-studio/models?spm=a2c4g.11186623.0.i3#9f8890ce29g5u
+// -------------------------------------
+var AliModelRatio = map[string]float64{
+	// 商业版模型
+	"qwen-turbo":        0.0003 * KiloRmb,
+	"qwen-turbo-latest": 0.0003 * KiloRmb,
+	"qwen-plus":         0.0008 * KiloRmb,
+	"qwen-plus-latest":  0.0008 * KiloRmb,
+	"qwen-max":          0.0024 * KiloRmb,
+	"qwen-max-latest":   0.0024 * KiloRmb,
+	//通义千问VL是具有视觉（图像）理解能力的文本生成模型，不仅能进行OCR（图片文字识别），还能进一步总结和推理，例如从商品照片中提取属性，根据习题图进行解题等
+	"qwen-vl-max":         0.003 * KiloRmb,
+	"qwen-vl-max-latest":  0.003 * KiloRmb,
+	"qwen-vl-plus":        0.0015 * KiloRmb,
+	"qwen-vl-plus-latest": 0.0015 * KiloRmb,
+	"qwen-vl-ocr":         0.005 * KiloRmb,
+	"qwen-vl-ocr-latest":  0.005 * KiloRmb,
+	//通义千问Audio是音频理解模型，支持输入多种音频（人类语音、自然音、音乐、歌声）和文本，并输出文本。该模型不仅能对输入的音频进行转录，还具备更深层次的语义理解、情感分析、音频事件检测、语音聊天等能力
+	"qwen-audio-turbo": 1.4286,
+	//通义千问数学模型是专门用于数学解题的语言模型
+	"qwen-math-plus":         0.004 * KiloRmb,
+	"qwen-math-plus-latest":  0.004 * KiloRmb,
+	"qwen-math-turbo":        0.002 * KiloRmb,
+	"qwen-math-turbo-latest": 0.002 * KiloRmb,
+	// 通义千问代码模型
+	"qwen-coder-plus":         0.0035 * KiloRmb,
+	"qwen-coder-plus-latest":  0.0035 * KiloRmb,
+	"qwen-coder-turbo":        0.002 * KiloRmb,
+	"qwen-coder-turbo-latest": 0.002 * KiloRmb,
+	//基于通义千问模型优化的机器翻译大语言模型，擅长中英互译、中文与小语种互译、英文与小语种互译，小语种包括日、韩、法、西、德、葡（巴西）、泰、印尼、越、阿等26种。在多语言互译的基础上，提供术语干预、领域提示、记忆库等能力，提升模型在复杂应用场景下的翻译效果
+	"qwen-mt-plus":  0.015 * KiloRmb,
+	"qwen-mt-turbo": 0.001 * KiloRmb,
+	//文本生成-通义千问-开源版
+	"qwq-32b-preview":            0.002 * KiloRmb,
+	"qwen2.5-72b-instruct":       0.004 * KiloRmb,
+	"qwen2.5-32b-instruct":       0.03 * KiloRmb,
+	"qwen2-72b-instruct":         0.004 * KiloRmb,
+	"qwen2-57b-a14b-instruct":    0.0035 * KiloRmb,
+	"qwen2.5-vl-72b-instruct":    0.016 * KiloRmb,
+	"qwen2.5-vl-32b-instruct":    0.008 * KiloRmb,
+	"qwen2.5-math-72b-instruct":  0.004 * KiloRmb, //基于Qwen模型构建的专门用于数学解题的语言模型。
+	"qvq-72b-preview":            0.012 * KiloRmb, // qvq-72b-preview模型专注于提升视觉推理能力，尤其在数学推理领域
+	"qwen2.5-coder-32b-instruct": 0.002 * KiloRmb,
+	// DeepSeek-R1 在后训练阶段大规模使用了强化学习技术，在仅有极少标注数据的情况下，极大提升了模型推理能力，尤其在数学、代码、自然语言推理等任务上；DeepSeek-V3 为 MoE 模型，671B 参数，激活 37B，在 14.8T token 上进行了预训练，在长文本、代码、数学、百科、中文能力上表现优秀
+	"deepseek-r1":                   0.002 * KiloRmb,
+	"deepseek-v3":                   0.001 * KiloRmb,
+	"deepseek-r1-distill-llama-32b": 0.002 * KiloRmb,
+	"deepseek-r1-distill-qwen-32b":  0.002 * KiloRmb,
+	//文本向量模型用于将文本转换成一组可以代表文字的数字，适用于搜索、聚类、推荐、分类任务。模型根据输入Token数计费。
+	"text-embedding-v1":       0.0007 * KiloRmb, // ￥0.0007 / 1k tokens
+	"text-embedding-v3":       0.0007 * KiloRmb,
+	"text-embedding-v2":       0.0007 * KiloRmb,
+	"text-embedding-async-v2": 0.0007 * KiloRmb,
+	"text-embedding-async-v1": 0.0007 * KiloRmb,
+	// 生图模型
+	"ali-stable-diffusion-xl":       0.016 * ImageUsdPerPic,
+	"ali-stable-diffusion-v1.5":     0.016 * ImageUsdPerPic,
+	"wanx-v1":                       0.04 * ImageUsdPerPic, // 0.02192, 原作者的是 0.016 * ImageUsdPerPic
+	"wanx2.1-t2i-turbo":             0.04 * ImageUsdPerPic, // 0.01918
+	"wanx2.1-t2i-plus":              0.04 * ImageUsdPerPic, // 0.02740
+	"wanx2.0-t2i-turbo":             0.01 * ImageUsdPerPic, // 0.00548
+	"wanx2.1-imageedit":             0.04 * ImageUsdPerPic, // 0.01918
+	"wanx-sketch-to-image-lite":     0.01 * ImageUsdPerPic, // 0.00822
+	"wanx-style-repaint-v1":         0.04 * ImageUsdPerPic, // 0.01644
+	"wanx-background-generation-v2": 0.04 * ImageUsdPerPic, // 0.01096
+	"aitryon":                       0.04 * ImageUsdPerPic, // 0.02740
+	"aitryon-parsing-v1":            0.01 * ImageUsdPerPic, // 0.00055
+	"aitryon-refiner":               0.05 * ImageUsdPerPic, // 0.04110
+	"facechain-generation":          0.04 * ImageUsdPerPic, // 0.02466
+	"wordart-texture":               0.04 * ImageUsdPerPic, // 0.01096
+	"wordart-semantic":              0.04 * ImageUsdPerPic, // 0.03288
+}
+var AliCompletionRatio = map[string]float64{
+	// 商业版模型
+	"qwen-turbo":        0.0006 / 0.0003,
+	"qwen-turbo-latest": 0.0006 / 0.0003,
+	"qwen-plus":         0.002 / 0.0008,
+	"qwen-plus-latest":  0.002 / 0.0008,
+	"qwen-max":          0.0096 / 0.0024,
+	"qwen-max-latest":   0.0096 / 0.0024,
+	//通义千问VL是具有视觉（图像）理解能力的文本生成模型，不仅能进行OCR（图片文字识别），还能进一步总结和推理，例如从商品照片中提取属性，根据习题图进行解题等
+	"qwen-vl-max":         0.009 / 0.003,
+	"qwen-vl-max-latest":  0.009 / 0.003,
+	"qwen-vl-plus":        0.0045 / 0.0015,
+	"qwen-vl-plus-latest": 0.0045 / 0.0015,
+	"qwen-vl-ocr":         0.0,
+	"qwen-vl-ocr-latest":  0.0,
+	//通义千问Audio是音频理解模型，支持输入多种音频（人类语音、自然音、音乐、歌声）和文本，并输出文本。该模型不仅能对输入的音频进行转录，还具备更深层次的语义理解、情感分析、音频事件检测、语音聊天等能力
+	"qwen-audio-turbo": 0.0,
+	//通义千问数学模型是专门用于数学解题的语言模型
+	"qwen-math-plus":         0.012 / 0.004,
+	"qwen-math-plus-latest":  0.012 / 0.004,
+	"qwen-math-turbo":        0.012 / 0.004,
+	"qwen-math-turbo-latest": 0.012 / 0.004,
+	// 通义千问代码模型
+	"qwen-coder-plus":         0.007 / 0.0035,
+	"qwen-coder-plus-latest":  0.007 / 0.0035,
+	"qwen-coder-turbo":        0.007 / 0.0035,
+	"qwen-coder-turbo-latest": 0.007 / 0.0035,
+	//基于通义千问模型优化的机器翻译大语言模型，擅长中英互译、中文与小语种互译、英文与小语种互译，小语种包括日、韩、法、西、德、葡（巴西）、泰、印尼、越、阿等26种。在多语言互译的基础上，提供术语干预、领域提示、记忆库等能力，提升模型在复杂应用场景下的翻译效果
+	"qwen-mt-plus":  0.045 / 0.015,
+	"qwen-mt-turbo": 0.003 / 0.001,
+	//文本生成-通义千问-开源版
+	"qwq-32b-preview":         0.006 / 0.002,
+	"qwen2.5-72b-instruct":    0.048 / 0.016,
+	"qwen2.5-32b-instruct":    0.024 / 0.008,
+	"qwen2-72b-instruct":      0.012 / 0.004,
+	"qwen2-57b-a14b-instruct": 0.007 / 0.0035,
+	"qwen2.5-vl-72b-instruct": 0.048 / 0.016,
+	"qwen2.5-vl-32b-instruct": 0.024 / 0.008,
+	// 基于Qwen模型构建的专门用于数学解题的语言模型。
+	"qwen2.5-math-72b-instruct": 0.012 / 0.004,
+	// qvq-72b-preview模型是由 Qwen 团队开发的实验性研究模型，专注于提升视觉推理能力，尤其在数学推理领域
+	"qvq-72b-preview":            0.036 / 0.012,
+	"qwen2.5-coder-32b-instruct": 0.006 / 0.002,
+	// DeepSeek-R1 在后训练阶段大规模使用了强化学习技术，在仅有极少标注数据的情况下，极大提升了模型推理能力，尤其在数学、代码、自然语言推理等任务上；DeepSeek-V3 为 MoE 模型，671B 参数，激活 37B，在 14.8T token 上进行了预训练，在长文本、代码、数学、百科、中文能力上表现优秀
+	"deepseek-r1":                   0.016 / 0.004,
+	"deepseek-v3":                   0.008 / 0.002,
+	"deepseek-r1-distill-llama-32b": 0.006 / 0.002,
+	"deepseek-r1-distill-qwen-32b":  0.006 / 0.002,
+	//文本向量模型用于将文本转换成一组可以代表文字的数字，适用于搜索、聚类、推荐、分类任务。模型根据输入Token数计费。
+	"text-embedding-v1":       0.0007 * KiloRmb, // ￥0.0007 / 1k tokens
+	"text-embedding-v3":       0.0007 * KiloRmb,
+	"text-embedding-v2":       0.0007 * KiloRmb,
+	"text-embedding-async-v2": 0.0007 * KiloRmb,
+	"text-embedding-async-v1": 0.0007 * KiloRmb,
+	// 生图模型
+	"ali-stable-diffusion-xl":       0.0,
+	"ali-stable-diffusion-v1.5":     0.0,
+	"wanx-v1":                       0.0, // 0.02192, 原作者的是 0.016 * ImageUsdPerPic
+	"wanx2.1-t2i-turbo":             0.0, // 0.01918
+	"wanx2.1-t2i-plus":              0.0, // 0.02740
+	"wanx2.0-t2i-turbo":             0.0, // 0.00548
+	"wanx2.1-imageedit":             0.0, // 0.01918
+	"wanx-sketch-to-image-lite":     0.0, // 0.00822
+	"wanx-style-repaint-v1":         0.0, // 0.01644
+	"wanx-background-generation-v2": 0.0, // 0.01096
+	"aitryon":                       0.0, // 0.02740
+	"aitryon-parsing-v1":            0.0, // 0.00055
+	"aitryon-refiner":               0.0, // 0.04110
+	"facechain-generation":          0.0, // 0.02466
+	"wordart-texture":               0.0, // 0.01096
+	"wordart-semantic":              0.0, // 0.03288
+}
+
+// -------------------------------------
+// https://open.bigmodel.cn/pricing
+// -------------------------------------
+var ZhiPuModelRatio = map[string]float64{
+	"glm-4-plus":          0.05 * KiloRmb,
+	"glm-4-air-250414":    0.0005 * KiloRmb,
+	"glm-4-airx":          0.01 * KiloRmb,
+	"glm-4-long":          0.001 * KiloRmb,
+	"glm-4-flashx-250414": 0.0001 * KiloRmb,
+	// 推理
+	"glm-z1-air":  0.0005 * KiloRmb,
+	"glm-z1-airx": 0.005 * KiloRmb,
+	//多模态
+	"glm-4v-plus": 0.004 * KiloRmb,
+	"cogview-4":   0.06 * QuotaPerRmb,
+	"cogvideox-2": 0.5 * QuotaPerRmb,
+	// 向量
+	"embedding-2": 0.0005 * KiloRmb,
+	"embedding-3": 0.0005 * KiloRmb,
+}
+var ZhiPuCompletionRatio = map[string]float64{
+	"glm-4-plus":          1.0,
+	"glm-4-air-250414":    1.0,
+	"glm-4-airx":          1.0,
+	"glm-4-long":          1.0,
+	"glm-4-flashx-250414": 1.0,
+	// 推理
+	"glm-z1-air":  1.0,
+	"glm-z1-airx": 1.0,
+	//多模态
+	"glm-4v-plus": 1.0,
+	"cogview-4":   01.0,
+	"cogvideox-2": 1.0,
+	// 向量
+	"embedding-2": 1.0,
+	"embedding-3": 1.0,
+}
+
+// -------------------------------------
+// https://cloud.tencent.com/document/product/1729/97731#e0e6be58-60c8-469f-bdeb-6c264ce3b4d0
+// -------------------------------------
+var TencetModelRatio = map[string]float64{
+	"hunyuan-turbo":             0.015 * KiloRmb,
+	"hunyuan-large":             0.004 * KiloRmb,
+	"hunyuan-large-longcontext": 0.006 * KiloRmb,
+	"hunyuan-standard":          0.0008 * KiloRmb,
+	"hunyuan-standard-256K":     0.0005 * KiloRmb,
+	"hunyuan-translation-lite":  0.005 * KiloRmb,
+	"hunyuan-role":              0.004 * KiloRmb,
+	"hunyuan-functioncall":      0.004 * KiloRmb,
+	"hunyuan-code":              0.004 * KiloRmb,
+	"hunyuan-turbo-vision":      0.08 * KiloRmb,
+	"hunyuan-vision":            0.018 * KiloRmb,
+	"hunyuan-embedding":         0.0007 * KiloRmb,
+	// 腾讯生图模型
+	"hunyuan-image":                    0.04 * QuotaPerRmb,
+	"hunyuan-image-chat":               0.04 * QuotaPerRmb,
+	"hunyuan-draw-portrait":            0.04 * QuotaPerRmb,
+	"hunyuan-draw-portrait-chat":       0.04 * QuotaPerRmb,
+	"hunyuan-generate-avatar":          0.04 * QuotaPerRmb,
+	"hunyuan-image-toimage":            0.04 * QuotaPerRmb,
+	"hunyuan-change-clothes":           0.04 * QuotaPerRmb,
+	"hunyuan-replace-background":       0.04 * QuotaPerRmb,
+	"hunyuan-sketch-to-image":          0.04 * QuotaPerRmb,
+	"hunyuan-refine-image":             0.04 * QuotaPerRmb,
+	"hunyuan-image-inpainting-removal": 0.04 * QuotaPerRmb,
+	"hunyuan-image-outpainting":        0.04 * QuotaPerRmb,
+	// 腾讯3D模型
+	"hunyuan-to3d": 0.04 * QuotaPerRmb,
+}
+var TencetCompletionRatio = map[string]float64{
+	"hunyuan-turbo":             0.015 * KiloRmb,
+	"hunyuan-large":             0.004 * KiloRmb,
+	"hunyuan-large-longcontext": 0.006 * KiloRmb,
+	"hunyuan-standard":          0.0008 * KiloRmb,
+	"hunyuan-standard-256K":     0.0005 * KiloRmb,
+	"hunyuan-translation-lite":  0.005 * KiloRmb,
+	"hunyuan-role":              0.004 * KiloRmb,
+	"hunyuan-functioncall":      0.004 * KiloRmb,
+	"hunyuan-code":              0.004 * KiloRmb,
+	"hunyuan-turbo-vision":      0.08 * KiloRmb,
+	"hunyuan-vision":            0.018 * KiloRmb,
+	"hunyuan-embedding":         0.0007 * KiloRmb,
+	// 腾讯生图模型
+	"hunyuan-image":                    0.0,
+	"hunyuan-image-chat":               0.0,
+	"hunyuan-draw-portrait":            0.0,
+	"hunyuan-draw-portrait-chat":       0.0,
+	"hunyuan-generate-avatar":          0.0,
+	"hunyuan-image-toimage":            0.0,
+	"hunyuan-change-clothes":           0.0,
+	"hunyuan-replace-background":       0.0,
+	"hunyuan-sketch-to-image":          0.0,
+	"hunyuan-refine-image":             0.0,
+	"hunyuan-image-inpainting-removal": 0.0,
+	"hunyuan-image-outpainting":        0.0,
+	// 腾讯3D模型
+	"hunyuan-to3d": 0.0,
+}
+
+// -------------------------------------
+// replicate charges based on the number of generated images
+// https://replicate.com/pricing
+// -------------------------------------
+var ReplicateModelRatio = map[string]float64{
+	// replicate chat models
+	"anthropic/claude-3.5-haiku":                1.0 * MilliTokensUsd,
+	"anthropic/claude-3.5-sonnet":               3.75 * MilliTokensUsd,
+	"anthropic/claude-3.7-sonnet":               3.0 * MilliTokensUsd,
+	"deepseek-ai/deepseek-r1":                   10.0 * MilliTokensUsd,
+	"ibm-granite/granite-20b-code-instruct-8k":  0.100 * MilliTokensUsd,
+	"ibm-granite/granite-3.2-8b-instruct":       0.030 * MilliTokensUsd,
+	"ibm-granite/granite-8b-code-instruct-128k": 0.050 * MilliTokensUsd,
+	// picture
+	"black-forest-labs/flux-1.1-pro":                0.04 * ImageUsdPerPic,
+	"black-forest-labs/flux-1.1-pro-ultra":          0.06 * ImageUsdPerPic,
+	"black-forest-labs/flux-canny-dev":              0.025 * ImageUsdPerPic,
+	"black-forest-labs/flux-canny-pro":              0.05 * ImageUsdPerPic,
+	"black-forest-labs/flux-depth-dev":              0.025 * ImageUsdPerPic,
+	"black-forest-labs/flux-depth-pro":              0.05 * ImageUsdPerPic,
+	"black-forest-labs/flux-dev":                    0.025 * ImageUsdPerPic,
+	"black-forest-labs/flux-dev-lora":               0.032 * ImageUsdPerPic,
+	"black-forest-labs/flux-fill-dev":               0.04 * ImageUsdPerPic,
+	"black-forest-labs/flux-fill-pro":               0.05 * ImageUsdPerPic,
+	"black-forest-labs/flux-pro":                    0.055 * ImageUsdPerPic,
+	"black-forest-labs/flux-redux-dev":              0.025 * ImageUsdPerPic,
+	"black-forest-labs/flux-redux-schnell":          0.003 * ImageUsdPerPic,
+	"black-forest-labs/flux-schnell":                0.003 * ImageUsdPerPic,
+	"black-forest-labs/flux-schnell-lora":           0.02 * ImageUsdPerPic,
+	"ideogram-ai/ideogram-v2":                       0.08 * ImageUsdPerPic,
+	"ideogram-ai/ideogram-v2-turbo":                 0.05 * ImageUsdPerPic,
+	"recraft-ai/recraft-v3":                         0.04 * ImageUsdPerPic,
+	"recraft-ai/recraft-v3-svg":                     0.08 * ImageUsdPerPic,
+	"stability-ai/stable-diffusion-3":               0.035 * ImageUsdPerPic,
+	"stability-ai/stable-diffusion-3.5-large":       0.065 * ImageUsdPerPic,
+	"stability-ai/stable-diffusion-3.5-large-turbo": 0.04 * ImageUsdPerPic,
+	"stability-ai/stable-diffusion-3.5-medium":      0.035 * ImageUsdPerPic,
+}
+var ReplicateCompletionRatio = map[string]float64{
+	// replicate chat models
+	"anthropic/claude-3.5-haiku":                5.000 / 1.000,
+	"anthropic/claude-3.5-sonnet":               18.750 / 3.750,
+	"anthropic/claude-3.7-sonnet":               15.000 / 3.000,
+	"deepseek-ai/deepseek-r1":                   10.000 / 3.750,
+	"ibm-granite/granite-20b-code-instruct-8k":  0.100 * MilliTokensUsd,
+	"ibm-granite/granite-3.2-8b-instruct":       0.030 * MilliTokensUsd,
+	"ibm-granite/granite-8b-code-instruct-128k": 0.050 * MilliTokensUsd,
+	// picture
+	"black-forest-labs/flux-1.1-pro":                0.04 * ImageUsdPerPic,
+	"black-forest-labs/flux-1.1-pro-ultra":          0.06 * ImageUsdPerPic,
+	"black-forest-labs/flux-canny-dev":              0.025 * ImageUsdPerPic,
+	"black-forest-labs/flux-canny-pro":              0.05 * ImageUsdPerPic,
+	"black-forest-labs/flux-depth-dev":              0.025 * ImageUsdPerPic,
+	"black-forest-labs/flux-depth-pro":              0.05 * ImageUsdPerPic,
+	"black-forest-labs/flux-dev":                    0.025 * ImageUsdPerPic,
+	"black-forest-labs/flux-dev-lora":               0.032 * ImageUsdPerPic,
+	"black-forest-labs/flux-fill-dev":               0.04 * ImageUsdPerPic,
+	"black-forest-labs/flux-fill-pro":               0.05 * ImageUsdPerPic,
+	"black-forest-labs/flux-pro":                    0.055 * ImageUsdPerPic,
+	"black-forest-labs/flux-redux-dev":              0.025 * ImageUsdPerPic,
+	"black-forest-labs/flux-redux-schnell":          0.003 * ImageUsdPerPic,
+	"black-forest-labs/flux-schnell":                0.003 * ImageUsdPerPic,
+	"black-forest-labs/flux-schnell-lora":           0.02 * ImageUsdPerPic,
+	"ideogram-ai/ideogram-v2":                       0.08 * ImageUsdPerPic,
+	"ideogram-ai/ideogram-v2-turbo":                 0.05 * ImageUsdPerPic,
+	"recraft-ai/recraft-v3":                         0.04 * ImageUsdPerPic,
+	"recraft-ai/recraft-v3-svg":                     0.08 * ImageUsdPerPic,
+	"stability-ai/stable-diffusion-3":               0.035 * ImageUsdPerPic,
+	"stability-ai/stable-diffusion-3.5-large":       0.065 * ImageUsdPerPic,
+	"stability-ai/stable-diffusion-3.5-large-turbo": 0.04 * ImageUsdPerPic,
+	"stability-ai/stable-diffusion-3.5-medium":      0.035 * ImageUsdPerPic,
+}
+
+// -------------------------------------
+// https://console.x.ai/
+// https://x.ai/api
+// -------------------------------------
+var XAIModelRatio = map[string]float64{
+	"grok-2-vision-1212": 2.00 * MilliTokensUsd,
+	"grok-2-image-1212":  0.07 * ImageUsdPerPic,
+	"grok-3-beta":        3.00 * MilliTokensUsd,
+	"grok-3-mini-beta":   0.30 * MilliTokensUsd,
+}
+var XAICompletionRatio = map[string]float64{
+	"grok-2-vision-1212": 10.00 / 2.00,
+	"grok-2-image-1212":  0.0,
+	"grok-3-beta":        15.00 / 3.00,
+	"grok-3-mini-beta":   0.50 / 0.30,
+}
 
 // ModelRatio
 // https://platform.openai.com/docs/models/model-endpoint-compatibility
@@ -116,189 +523,6 @@ var ModelRatio = map[string]float64{
 	"text-moderation-latest":               0.2 * MilliTokensUsd,
 	"dall-e-2":                             0.02 * ImageUsdPerPic,
 	"dall-e-3":                             0.04 * ImageUsdPerPic,
-	// https://www.anthropic.com/api#pricing
-	"claude-instant-1.2":         0.8 * MilliTokensUsd,
-	"claude-2.0":                 8.0 * MilliTokensUsd,
-	"claude-2.1":                 8.0 * MilliTokensUsd,
-	"claude-3-haiku-20240307":    0.25 * MilliTokensUsd,
-	"claude-3-5-haiku-20241022":  1.0 * MilliTokensUsd,
-	"claude-3-5-haiku-latest":    1.0 * MilliTokensUsd,
-	"claude-3-sonnet-20240229":   3.0 * MilliTokensUsd,
-	"claude-3-5-sonnet-20240620": 3.0 * MilliTokensUsd,
-	"claude-3-5-sonnet-20241022": 3.0 * MilliTokensUsd,
-	"claude-3-5-sonnet-latest":   3.0 * MilliTokensUsd,
-	"claude-3-7-sonnet-20250219": 3.0 * MilliTokensUsd,
-	"claude-3-7-sonnet-latest":   3.0 * MilliTokensUsd,
-	"claude-3-opus-20240229":     15.0 * MilliTokensUsd,
-	// https://cloud.baidu.com/doc/WENXINWORKSHOP/s/hlrk4akp7
-	"ERNIE-4.0-8K":       0.120 * KiloRmb,
-	"ERNIE-3.5-8K":       0.012 * KiloRmb,
-	"ERNIE-3.5-8K-0205":  0.024 * KiloRmb,
-	"ERNIE-3.5-8K-1222":  0.012 * KiloRmb,
-	"ERNIE-Bot-8K":       0.024 * KiloRmb,
-	"ERNIE-3.5-4K-0205":  0.012 * KiloRmb,
-	"ERNIE-Speed-8K":     0.004 * KiloRmb,
-	"ERNIE-Speed-128K":   0.004 * KiloRmb,
-	"ERNIE-Lite-8K-0922": 0.008 * KiloRmb,
-	"ERNIE-Lite-8K-0308": 0.003 * KiloRmb,
-	"ERNIE-Tiny-8K":      0.001 * KiloRmb,
-	"BLOOMZ-7B":          0.004 * KiloRmb,
-	"Embedding-V1":       0.002 * KiloRmb,
-	"bge-large-zh":       0.002 * KiloRmb,
-	"bge-large-en":       0.002 * KiloRmb,
-	"tao-8k":             0.002 * KiloRmb,
-	// https://ai.google.dev/pricing
-	// https://cloud.google.com/vertex-ai/generative-ai/pricing
-	"gemma-2-2b-it":                         0,
-	"gemma-2-9b-it":                         0,
-	"gemma-2-27b-it":                        0,
-	"gemma-3-27b-it":                        0,
-	"gemini-pro":                            0.25 * MilliTokensUsd, // $0.00025 / 1k characters -> $0.001 / 1k tokens
-	"gemini-1.0-pro":                        0.125 * MilliTokensUsd,
-	"gemini-1.0-pro-vision":                 0.125 * MilliTokensUsd,
-	"gemini-1.5-pro":                        1.25 * MilliTokensUsd,
-	"gemini-1.5-pro-001":                    1.25 * MilliTokensUsd,
-	"gemini-1.5-pro-002":                    1.25 * MilliTokensUsd,
-	"gemini-1.5-pro-experimental":           1.25 * MilliTokensUsd,
-	"gemini-1.5-flash":                      0.075 * MilliTokensUsd,
-	"gemini-1.5-flash-001":                  0.075 * MilliTokensUsd,
-	"gemini-1.5-flash-002":                  0.075 * MilliTokensUsd,
-	"gemini-1.5-flash-8b":                   0.0375 * MilliTokensUsd,
-	"gemini-2.0-flash":                      0.15 * MilliTokensUsd,
-	"gemini-2.0-flash-exp":                  0.075 * MilliTokensUsd,
-	"gemini-2.0-flash-001":                  0.15 * MilliTokensUsd,
-	"gemini-2.0-flash-lite":                 0.075 * MilliTokensUsd,
-	"gemini-2.0-flash-lite-001":             0.075 * MilliTokensUsd,
-	"gemini-2.0-flash-lite-preview-02-05":   0.075 * MilliTokensUsd,
-	"gemini-2.0-flash-thinking-exp-01-21":   0.075 * MilliTokensUsd,
-	"gemini-2.0-flash-exp-image-generation": 0.075 * MilliTokensUsd,
-	"gemini-2.0-pro-exp-02-05":              1.25 * MilliTokensUsd,
-	"gemini-2.5-pro-exp-03-25":              1.25 * MilliTokensUsd,
-	"aqa":                                   1,
-	// https://open.bigmodel.cn/pricing
-	"glm-zero-preview": 0.01 * KiloRmb,
-	"glm-4-plus":       0.05 * KiloRmb,
-	"glm-4-0520":       0.1 * KiloRmb,
-	"glm-4-airx":       0.01 * KiloRmb,
-	"glm-4-air":        0.0005 * KiloRmb,
-	"glm-4-long":       0.001 * KiloRmb,
-	"glm-4-flashx":     0.0001 * KiloRmb,
-	"glm-4-flash":      0,
-	"glm-4":            0.1 * KiloRmb,   // deprecated model, available until 2025/06
-	"glm-3-turbo":      0.001 * KiloRmb, // deprecated model, available until 2025/06
-	"glm-4v-plus":      0.004 * KiloRmb,
-	"glm-4v":           0.05 * KiloRmb,
-	"glm-4v-flash":     0,
-	"cogview-3-plus":   0.06 * KiloRmb,
-	"cogview-3":        0.1 * KiloRmb,
-	"cogview-3-flash":  0,
-	"cogviewx":         0.5 * KiloRmb,
-	"cogviewx-flash":   0,
-	"cogview-4-250304": 0.001 * KiloRmb,
-	"charglm-4":        0.001 * KiloRmb,
-	"emohaa":           0.015 * KiloRmb,
-	"codegeex-4":       0.0001 * KiloRmb,
-	"embedding-2":      0.0005 * KiloRmb,
-	"embedding-3":      0.0005 * KiloRmb,
-	// https://help.aliyun.com/zh/dashscope/developer-reference/tongyi-thousand-questions-metering-and-billing
-	"qwen-turbo":                  0.0003 * KiloRmb,
-	"qwen-turbo-latest":           0.0003 * KiloRmb,
-	"qwen-plus":                   0.0008 * KiloRmb,
-	"qwen-plus-latest":            0.0008 * KiloRmb,
-	"qwen-max":                    0.0024 * KiloRmb,
-	"qwen-max-latest":             0.0024 * KiloRmb,
-	"qwen-max-longcontext":        0.0005 * KiloRmb,
-	"qwen-vl-max":                 0.003 * KiloRmb,
-	"qwen-vl-max-latest":          0.003 * KiloRmb,
-	"qwen-vl-plus":                0.0015 * KiloRmb,
-	"qwen-vl-plus-latest":         0.0015 * KiloRmb,
-	"qwen-vl-ocr":                 0.005 * KiloRmb,
-	"qwen-vl-ocr-latest":          0.005 * KiloRmb,
-	"qwen-audio-turbo":            1.4286,
-	"qwen-math-plus":              0.004 * KiloRmb,
-	"qwen-math-plus-latest":       0.004 * KiloRmb,
-	"qwen-math-turbo":             0.002 * KiloRmb,
-	"qwen-math-turbo-latest":      0.002 * KiloRmb,
-	"qwen-coder-plus":             0.0035 * KiloRmb,
-	"qwen-coder-plus-latest":      0.0035 * KiloRmb,
-	"qwen-coder-turbo":            0.002 * KiloRmb,
-	"qwen-coder-turbo-latest":     0.002 * KiloRmb,
-	"qwen-mt-plus":                0.015 * KiloRmb,
-	"qwen-mt-turbo":               0.001 * KiloRmb,
-	"qwq-32b-preview":             0.002 * KiloRmb,
-	"qwen2.5-72b-instruct":        0.004 * KiloRmb,
-	"qwen2.5-32b-instruct":        0.03 * KiloRmb,
-	"qwen2.5-14b-instruct":        0.001 * KiloRmb,
-	"qwen2.5-7b-instruct":         0.0005 * KiloRmb,
-	"qwen2.5-3b-instruct":         0.006 * KiloRmb,
-	"qwen2.5-1.5b-instruct":       0.0003 * KiloRmb,
-	"qwen2.5-0.5b-instruct":       0.0003 * KiloRmb,
-	"qwen2-72b-instruct":          0.004 * KiloRmb,
-	"qwen2-57b-a14b-instruct":     0.0035 * KiloRmb,
-	"qwen2-7b-instruct":           0.001 * KiloRmb,
-	"qwen2-1.5b-instruct":         0.001 * KiloRmb,
-	"qwen2-0.5b-instruct":         0.001 * KiloRmb,
-	"qwen1.5-110b-chat":           0.007 * KiloRmb,
-	"qwen1.5-72b-chat":            0.005 * KiloRmb,
-	"qwen1.5-32b-chat":            0.0035 * KiloRmb,
-	"qwen1.5-14b-chat":            0.002 * KiloRmb,
-	"qwen1.5-7b-chat":             0.001 * KiloRmb,
-	"qwen1.5-1.8b-chat":           0.001 * KiloRmb,
-	"qwen1.5-0.5b-chat":           0.001 * KiloRmb,
-	"qwen-72b-chat":               0.02 * KiloRmb,
-	"qwen-14b-chat":               0.008 * KiloRmb,
-	"qwen-7b-chat":                0.006 * KiloRmb,
-	"qwen-1.8b-chat":              0.006 * KiloRmb,
-	"qwen-1.8b-longcontext-chat":  0.006 * KiloRmb,
-	"qvq-72b-preview":             0.012 * KiloRmb,
-	"qwen2.5-vl-72b-instruct":     0.016 * KiloRmb,
-	"qwen2.5-vl-7b-instruct":      0.002 * KiloRmb,
-	"qwen2.5-vl-3b-instruct":      0.0012 * KiloRmb,
-	"qwen2-vl-7b-instruct":        0.016 * KiloRmb,
-	"qwen2-vl-2b-instruct":        0.002 * KiloRmb,
-	"qwen-vl-v1":                  0.002 * KiloRmb,
-	"qwen-vl-chat-v1":             0.002 * KiloRmb,
-	"qwen2-audio-instruct":        0.002 * KiloRmb,
-	"qwen-audio-chat":             0.002 * KiloRmb,
-	"qwen2.5-math-72b-instruct":   0.004 * KiloRmb,
-	"qwen2.5-math-7b-instruct":    0.001 * KiloRmb,
-	"qwen2.5-math-1.5b-instruct":  0.001 * KiloRmb,
-	"qwen2-math-72b-instruct":     0.004 * KiloRmb,
-	"qwen2-math-7b-instruct":      0.001 * KiloRmb,
-	"qwen2-math-1.5b-instruct":    0.001 * KiloRmb,
-	"qwen2.5-coder-32b-instruct":  0.002 * KiloRmb,
-	"qwen2.5-coder-14b-instruct":  0.002 * KiloRmb,
-	"qwen2.5-coder-7b-instruct":   0.001 * KiloRmb,
-	"qwen2.5-coder-3b-instruct":   0.001 * KiloRmb,
-	"qwen2.5-coder-1.5b-instruct": 0.001 * KiloRmb,
-	"qwen2.5-coder-0.5b-instruct": 0.001 * KiloRmb,
-	"text-embedding-v1":           0.0007 * KiloRmb, // ￥0.0007 / 1k tokens
-	"text-embedding-v3":           0.0007 * KiloRmb,
-	"text-embedding-v2":           0.0007 * KiloRmb,
-	"text-embedding-async-v2":     0.0007 * KiloRmb,
-	"text-embedding-async-v1":     0.0007 * KiloRmb,
-	"ali-stable-diffusion-xl":     0.016 * ImageUsdPerPic,
-	"ali-stable-diffusion-v1.5":   0.016 * ImageUsdPerPic,
-	"wanx-v1":                     0.04 * ImageUsdPerPic, // 0.02192, 原作者的是 0.016 * ImageUsdPerPic
-	// ali新增生图模型
-	"wanx2.1-t2i-turbo":             0.04 * ImageUsdPerPic, // 0.01918
-	"wanx2.1-t2i-plus":              0.04 * ImageUsdPerPic, // 0.02740
-	"wanx2.0-t2i-turbo":             0.01 * ImageUsdPerPic, // 0.00548
-	"wanx2.1-imageedit":             0.04 * ImageUsdPerPic, // 0.01918
-	"wanx-sketch-to-image-lite":     0.01 * ImageUsdPerPic, // 0.00822
-	"wanx-style-repaint-v1":         0.04 * ImageUsdPerPic, // 0.01644
-	"wanx-background-generation-v2": 0.04 * ImageUsdPerPic, // 0.01096
-	"aitryon":                       0.04 * ImageUsdPerPic, // 0.02740
-	"aitryon-parsing-v1":            0.01 * ImageUsdPerPic, // 0.00055
-	"aitryon-refiner":               0.05 * ImageUsdPerPic, // 0.04110
-	"facechain-generation":          0.04 * ImageUsdPerPic, // 0.02466
-	"wordart-texture":               0.04 * ImageUsdPerPic, // 0.01096
-	"wordart-semantic":              0.04 * ImageUsdPerPic, // 0.03288
-	"deepseek-r1":                   0.002 * KiloRmb,
-	"deepseek-v3":                   0.001 * KiloRmb,
-	"deepseek-r1-distill-qwen-1.5b": 0.001 * KiloRmb,
-	"deepseek-r1-distill-qwen-7b":   0.0005 * KiloRmb,
-	"deepseek-r1-distill-qwen-14b":  0.001 * KiloRmb,
 	// "deepseek-r1-distill-qwen-32b":  0.002 * KiloRmb,
 	"deepseek-r1-distill-llama-8b": 0.0005 * KiloRmb,
 	// "deepseek-r1-distill-llama-70b": 0.004 * KiloRmb,
@@ -314,34 +538,6 @@ var ModelRatio = map[string]float64{
 	"embedding-bert-512-v1":     0.0715, // ¥0.001 / 1k tokens
 	"embedding_s1_v1":           0.0715, // ¥0.001 / 1k tokens
 	"semantic_similarity_s1_v1": 0.0715, // ¥0.001 / 1k tokens
-	// https://cloud.tencent.com/document/product/1729/97731#e0e6be58-60c8-469f-bdeb-6c264ce3b4d0
-	"hunyuan-turbo":             0.015 * KiloRmb,
-	"hunyuan-large":             0.004 * KiloRmb,
-	"hunyuan-large-longcontext": 0.006 * KiloRmb,
-	"hunyuan-standard":          0.0008 * KiloRmb,
-	"hunyuan-standard-256K":     0.0005 * KiloRmb,
-	"hunyuan-translation-lite":  0.005 * KiloRmb,
-	"hunyuan-role":              0.004 * KiloRmb,
-	"hunyuan-functioncall":      0.004 * KiloRmb,
-	"hunyuan-code":              0.004 * KiloRmb,
-	"hunyuan-turbo-vision":      0.08 * KiloRmb,
-	"hunyuan-vision":            0.018 * KiloRmb,
-	"hunyuan-embedding":         0.0007 * KiloRmb,
-	// 腾讯生图模型
-	"hunyuan-image":                    0.04 * ImageUsdPerPic,
-	"hunyuan-image-chat":               0.04 * ImageUsdPerPic,
-	"hunyuan-draw-portrait":            0.04 * ImageUsdPerPic,
-	"hunyuan-draw-portrait-chat":       0.04 * ImageUsdPerPic,
-	"hunyuan-generate-avatar":          0.04 * ImageUsdPerPic,
-	"hunyuan-image-toimage":            0.04 * ImageUsdPerPic,
-	"hunyuan-change-clothes":           0.04 * ImageUsdPerPic,
-	"hunyuan-replace-background":       0.04 * ImageUsdPerPic,
-	"hunyuan-sketch-to-image":          0.04 * ImageUsdPerPic,
-	"hunyuan-refine-image":             0.04 * ImageUsdPerPic,
-	"hunyuan-image-inpainting-removal": 0.04 * ImageUsdPerPic,
-	"hunyuan-image-outpainting":        0.04 * ImageUsdPerPic,
-	// 腾讯3D模型
-	"hunyuan-to3d": 0.04 * ImageUsdPerPic,
 	// https://platform.moonshot.cn/pricing
 	"moonshot-v1-8k":   0.012 * KiloRmb,
 	"moonshot-v1-32k":  0.024 * KiloRmb,
@@ -422,66 +618,12 @@ var ModelRatio = map[string]float64{
 	"deepl-zh": 25.0 * MilliTokensUsd,
 	"deepl-en": 25.0 * MilliTokensUsd,
 	"deepl-ja": 25.0 * MilliTokensUsd,
-	// https://console.x.ai/
-	"grok-beta": 5.0 * MilliTokensUsd,
 	// vertex imagen3
 	// https://cloud.google.com/vertex-ai/generative-ai/pricing#imagen-models
 	"imagen-3.0-generate-001":      0.04 * ImageUsdPerPic,
 	"imagen-3.0-generate-002":      0.04 * ImageUsdPerPic,
 	"imagen-3.0-fast-generate-001": 0.02 * ImageUsdPerPic,
 	"imagen-3.0-capability-001":    0.04 * ImageUsdPerPic,
-	// -------------------------------------
-	// replicate charges based on the number of generated images
-	// https://replicate.com/pricing
-	// -------------------------------------
-	"black-forest-labs/flux-1.1-pro":                0.04 * ImageUsdPerPic,
-	"black-forest-labs/flux-1.1-pro-ultra":          0.06 * ImageUsdPerPic,
-	"black-forest-labs/flux-canny-dev":              0.025 * ImageUsdPerPic,
-	"black-forest-labs/flux-canny-pro":              0.05 * ImageUsdPerPic,
-	"black-forest-labs/flux-depth-dev":              0.025 * ImageUsdPerPic,
-	"black-forest-labs/flux-depth-pro":              0.05 * ImageUsdPerPic,
-	"black-forest-labs/flux-dev":                    0.025 * ImageUsdPerPic,
-	"black-forest-labs/flux-dev-lora":               0.032 * ImageUsdPerPic,
-	"black-forest-labs/flux-fill-dev":               0.04 * ImageUsdPerPic,
-	"black-forest-labs/flux-fill-pro":               0.05 * ImageUsdPerPic,
-	"black-forest-labs/flux-pro":                    0.055 * ImageUsdPerPic,
-	"black-forest-labs/flux-redux-dev":              0.025 * ImageUsdPerPic,
-	"black-forest-labs/flux-redux-schnell":          0.003 * ImageUsdPerPic,
-	"black-forest-labs/flux-schnell":                0.003 * ImageUsdPerPic,
-	"black-forest-labs/flux-schnell-lora":           0.02 * ImageUsdPerPic,
-	"ideogram-ai/ideogram-v2":                       0.08 * ImageUsdPerPic,
-	"ideogram-ai/ideogram-v2-turbo":                 0.05 * ImageUsdPerPic,
-	"recraft-ai/recraft-v3":                         0.04 * ImageUsdPerPic,
-	"recraft-ai/recraft-v3-svg":                     0.08 * ImageUsdPerPic,
-	"stability-ai/stable-diffusion-3":               0.035 * ImageUsdPerPic,
-	"stability-ai/stable-diffusion-3.5-large":       0.065 * ImageUsdPerPic,
-	"stability-ai/stable-diffusion-3.5-large-turbo": 0.04 * ImageUsdPerPic,
-	"stability-ai/stable-diffusion-3.5-medium":      0.035 * ImageUsdPerPic,
-	// replicate chat models
-	"anthropic/claude-3.5-haiku":                1.0 * MilliTokensUsd,
-	"anthropic/claude-3.5-sonnet":               3.75 * MilliTokensUsd,
-	"anthropic/claude-3.7-sonnet":               3.0 * MilliTokensUsd,
-	"deepseek-ai/deepseek-r1":                   10.0 * MilliTokensUsd,
-	"ibm-granite/granite-20b-code-instruct-8k":  0.100 * MilliTokensUsd,
-	"ibm-granite/granite-3.0-2b-instruct":       0.030 * MilliTokensUsd,
-	"ibm-granite/granite-3.0-8b-instruct":       0.050 * MilliTokensUsd,
-	"ibm-granite/granite-3.1-2b-instruct":       0.030 * MilliTokensUsd,
-	"ibm-granite/granite-3.1-8b-instruct":       0.030 * MilliTokensUsd,
-	"ibm-granite/granite-3.2-8b-instruct":       0.030 * MilliTokensUsd,
-	"ibm-granite/granite-8b-code-instruct-128k": 0.050 * MilliTokensUsd,
-	"meta/llama-2-13b":                          0.100 * MilliTokensUsd,
-	"meta/llama-2-13b-chat":                     0.100 * MilliTokensUsd,
-	"meta/llama-2-70b":                          0.650 * MilliTokensUsd,
-	"meta/llama-2-70b-chat":                     0.650 * MilliTokensUsd,
-	"meta/llama-2-7b":                           0.050 * MilliTokensUsd,
-	"meta/llama-2-7b-chat":                      0.050 * MilliTokensUsd,
-	"meta/meta-llama-3.1-405b-instruct":         9.500 * MilliTokensUsd,
-	"meta/meta-llama-3-70b":                     0.650 * MilliTokensUsd,
-	"meta/meta-llama-3-70b-instruct":            0.650 * MilliTokensUsd,
-	"meta/meta-llama-3-8b":                      0.050 * MilliTokensUsd,
-	"meta/meta-llama-3-8b-instruct":             0.050 * MilliTokensUsd,
-	"mistralai/mistral-7b-instruct-v0.2":        0.050 * MilliTokensUsd,
-	"mistralai/mistral-7b-v0.1":                 0.050 * MilliTokensUsd,
 	// -------------------------------------
 	//https://openrouter.ai/models
 	// -------------------------------------
@@ -712,12 +854,6 @@ var ModelRatio = map[string]float64{
 	"undi95/remm-slerp-l2-13b":                     0.6,
 	"undi95/toppy-m-7b":                            0.035,
 	"undi95/toppy-m-7b:free":                       0.0,
-	// https://x.ai/api
-	"x-ai/grok-2-1212":        5.0,
-	"x-ai/grok-2-vision-1212": 5.0,
-	"x-ai/grok-beta":          7.5,
-	"x-ai/grok-vision-beta":   7.5,
-	"xwin-lm/xwin-lm-70b":     1.875,
 }
 
 // CompletionRatio is the price ratio between completion tokens and prompt tokens
@@ -770,33 +906,6 @@ var CompletionRatio = map[string]float64{
 	"qwen-qwq-32b":                          0.39 / 0.29,
 	"qwen-2.5-coder-32b":                    1.0,
 	"qwen-2.5-32b":                          1.0,
-	// -------------------------------------
-	// Replicate
-	// -------------------------------------
-	"anthropic/claude-3.5-haiku":                5.0 / 1.0,
-	"anthropic/claude-3.5-sonnet":               18.75 / 3.75,
-	"anthropic/claude-3.7-sonnet":               15.0 / 3.0,
-	"deepseek-ai/deepseek-r1":                   10.0 / 10.0,
-	"ibm-granite/granite-20b-code-instruct-8k":  0.5 / 0.1,
-	"ibm-granite/granite-3.0-2b-instruct":       0.25 / 0.03,
-	"ibm-granite/granite-3.0-8b-instruct":       0.25 / 0.05,
-	"ibm-granite/granite-3.1-2b-instruct":       0.25 / 0.03,
-	"ibm-granite/granite-3.1-8b-instruct":       0.25 / 0.03,
-	"ibm-granite/granite-3.2-8b-instruct":       0.25 / 0.03,
-	"ibm-granite/granite-8b-code-instruct-128k": 0.25 / 0.05,
-	"meta/llama-2-13b":                          0.5 / 0.1,
-	"meta/llama-2-13b-chat":                     0.5 / 0.1,
-	"meta/llama-2-70b":                          2.75 / 0.65,
-	"meta/llama-2-70b-chat":                     2.75 / 0.65,
-	"meta/llama-2-7b":                           0.25 / 0.05,
-	"meta/llama-2-7b-chat":                      0.25 / 0.05,
-	"meta/meta-llama-3.1-405b-instruct":         9.5 / 9.5,
-	"meta/meta-llama-3-70b":                     2.75 / 0.65,
-	"meta/meta-llama-3-70b-instruct":            2.75 / 0.65,
-	"meta/meta-llama-3-8b":                      0.25 / 0.05,
-	"meta/meta-llama-3-8b-instruct":             0.25 / 0.05,
-	"mistralai/mistral-7b-instruct-v0.2":        0.25 / 0.05,
-	"mistralai/mistral-7b-v0.1":                 0.25 / 0.05,
 }
 
 // AudioRatio represents the price ratio between audio tokens and text tokens
@@ -880,6 +989,28 @@ var (
 )
 
 func init() {
+	modelRatioMaps := []map[string]float64{
+		AnthropicModelRatio, BaiduModelRatio, GoogleModelRatio, AliModelRatio, ZhiPuModelRatio, TencetModelRatio,
+		ReplicateModelRatio, XAIModelRatio,
+	}
+	for _, m := range modelRatioMaps {
+		for k, v := range m {
+			if _, ok := ModelRatio[k]; !ok {
+				ModelRatio[k] = v
+			}
+		}
+	}
+	completionRatioMaps := []map[string]float64{
+		AnthropicCompletionRatio, BaiduCompletionRatio, GoogleCompletionRatio, AliCompletionRatio, ZhiPuCompletionRatio, TencetCompletionRatio,
+		ReplicateCompletionRatio, XAICompletionRatio,
+	}
+	for _, m := range completionRatioMaps {
+		for k, v := range m {
+			if _, ok := CompletionRatio[k]; !ok {
+				CompletionRatio[k] = v
+			}
+		}
+	}
 	DefaultModelRatio = make(map[string]float64)
 	for k, v := range ModelRatio {
 		DefaultModelRatio[k] = v
