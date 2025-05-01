@@ -17,7 +17,7 @@ func GetAllRedemptions(c *gin.Context) {
 	if p < 0 {
 		p = 0
 	}
-	redemptions, err := model.GetAllRedemptions(p*config.ItemsPerPage, config.ItemsPerPage)
+	redemptions, err := model.GetAllRedemptions(p*config.MaxItemsPerPage, config.MaxItemsPerPage)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,

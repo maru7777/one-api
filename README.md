@@ -66,6 +66,8 @@ oneapi:
     DISABLE_COOKIE_SECURE: "true"
     # (optional) ENFORCE_INCLUDE_USAGE require upstream API responses to include usage field
     ENFORCE_INCLUDE_USAGE: "true"
+    # (optional) MAX_ITEMS_PER_PAGE maximum items per page, default is 10
+    MAX_ITEMS_PER_PAGE: 10
     # (optional) GLOBAL_API_RATE_LIMIT maximum API requests per IP within three minutes, default is 1000
     GLOBAL_API_RATE_LIMIT: 1000
     # (optional) GLOBAL_WEB_RATE_LIMIT maximum web page requests per IP within three minutes, default is 1000

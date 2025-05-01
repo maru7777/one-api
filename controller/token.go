@@ -44,7 +44,7 @@ func GetAllTokens(c *gin.Context) {
 	}
 
 	order := c.Query("order")
-	tokens, err := model.GetAllUserTokens(userId, p*config.ItemsPerPage, config.ItemsPerPage, order)
+	tokens, err := model.GetAllUserTokens(userId, p*config.MaxItemsPerPage, config.MaxItemsPerPage, order)
 
 	if err != nil {
 		helper.RespondError(c, err)
