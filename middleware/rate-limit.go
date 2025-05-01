@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"time"
 
@@ -17,14 +19,13 @@ var inMemoryRateLimiter common.InMemoryRateLimiter
 
 func redisRateLimiter(c *gin.Context, maxRequestNum int, duration int64, mark string) {
 	ctx := gmw.Ctx(c)
-
-	rdb := common.RDB
-
 	key := "rateLimit:" + mark + c.ClientIP()
 	if mark == "GR" {
-		key = "rateLimit:" + mark + GetTokenKeyParts(c)[0]
+		hashedToken := sha256.Sum256([]byte(GetTokenKeyParts(c)[0]))
+		key = "rateLimit:" + mark + hex.EncodeToString(hashedToken[:8])
 	}
 
+	rdb := common.RDB
 	listLength, err := rdb.LLen(ctx, key).Result()
 	if err != nil {
 		AbortWithError(c, http.StatusInternalServerError, errors.Wrap(err, "failed to get list length"))

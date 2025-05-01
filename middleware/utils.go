@@ -77,6 +77,9 @@ func isModelInList(modelName string, models string) bool {
 	return false
 }
 
+// GetTokenKeyParts extracts the token key parts from the Authorization header
+//
+// key like `sk-{token}[-{channelid}]`
 func GetTokenKeyParts(c *gin.Context) []string {
 	key := c.Request.Header.Get("Authorization")
 	key = strings.TrimPrefix(key, "Bearer ")
