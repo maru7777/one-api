@@ -29,11 +29,12 @@ func redisRateLimiter(c *gin.Context, maxRequestNum int, duration int64, mark st
 		hashedToken := sha256.Sum256([]byte(GetTokenKeyParts(c)[0]))
 		key = fmt.Sprintf("rateLimit:%s:%s", mark, hex.EncodeToString(hashedToken[:8]))
 	case "CR":
-		if c.GetInt(ctxkey.RateLimit) <= 0 {
+		maxRequestNum = c.GetInt(ctxkey.RateLimit)
+		if maxRequestNum <= 0 {
 			return
 		}
 		hashedToken := sha256.Sum256([]byte(GetTokenKeyParts(c)[0]))
-		key = fmt.Sprintf("rateLimit:%s:%s:%s", mark, hex.EncodeToString(hashedToken[:8]), ctxkey.ChannelId)
+		key = fmt.Sprintf("rateLimit:%s:%s:%d", mark, hex.EncodeToString(hashedToken[:8]), c.GetInt(ctxkey.ChannelId))
 	}
 
 	rdb := common.RDB
@@ -87,11 +88,12 @@ func memoryRateLimiter(c *gin.Context, maxRequestNum int, duration int64, mark s
 		hashedToken := sha256.Sum256([]byte(GetTokenKeyParts(c)[0]))
 		key = fmt.Sprintf("rateLimit:%s:%s", mark, hex.EncodeToString(hashedToken[:8]))
 	case "CR":
-		if c.GetInt(ctxkey.RateLimit) <= 0 {
+		maxRequestNum = c.GetInt(ctxkey.RateLimit)
+		if maxRequestNum <= 0 {
 			return
 		}
 		hashedToken := sha256.Sum256([]byte(GetTokenKeyParts(c)[0]))
-		key = fmt.Sprintf("rateLimit:%s:%s:%s", mark, hex.EncodeToString(hashedToken[:8]), ctxkey.ChannelId)
+		key = fmt.Sprintf("rateLimit:%s:%s:%d", mark, hex.EncodeToString(hashedToken[:8]), c.GetInt(ctxkey.ChannelId))
 	}
 
 	if !inMemoryRateLimiter.Request(key, maxRequestNum, duration) {
@@ -101,7 +103,7 @@ func memoryRateLimiter(c *gin.Context, maxRequestNum int, duration int64, mark s
 }
 
 func rateLimitFactory(maxRequestNum int, duration int64, mark string) func(c *gin.Context) {
-	if maxRequestNum == 0 || config.DebugEnabled {
+	if maxRequestNum <= 0 || config.DebugEnabled {
 		return func(c *gin.Context) {
 			c.Next()
 		}
@@ -144,5 +146,5 @@ func GlobalRelayRateLimit() func(c *gin.Context) {
 }
 
 func ChannelRateLimit() func(c *gin.Context) {
-	return rateLimitFactory(config.ChannelRateLimitNum, config.ChannelRateLimitDuration, "CR")
+	return rateLimitFactory(config.ChannelRateLimitEnabled, config.ChannelRateLimitDuration, "CR")
 }
