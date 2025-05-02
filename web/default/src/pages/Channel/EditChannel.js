@@ -57,6 +57,7 @@ const EditChannel = () => {
     system_prompt: '',
     models: [],
     groups: ['default'],
+    ratelimit: 0,
   };
   const [batch, setBatch] = useState(false);
   const [inputs, setInputs] = useState(originInputs);
@@ -247,6 +248,7 @@ const EditChannel = () => {
     let res;
     localInputs.models = localInputs.models.join(',');
     localInputs.group = localInputs.groups.join(',');
+    localInputs.ratelimit = parseInt(localInputs.ratelimit);
     localInputs.config = JSON.stringify(config);
     if (isEdit) {
       res = await API.put(`/api/channel/`, {
@@ -767,6 +769,22 @@ const EditChannel = () => {
                 />
               </Form.Field>
             )}
+            {inputs.type !== 3 &&
+              inputs.type !== 33 &&
+              inputs.type !== 8 &&
+                inputs.type !== 50 &&
+              inputs.type !== 22 && (
+                <Form.Field>
+                  <Form.Input
+                      label={t('channel.edit.ratelimit')}
+                    name='ratelimit'
+                      placeholder={t('channel.edit.ratelimit_placeholder')}
+                    onChange={handleInputChange}
+                    value={inputs.ratelimit}
+                    autoComplete='new-password'
+                  />
+                </Form.Field>
+              )}
             <Button onClick={handleCancel}>
               {t('channel.edit.buttons.cancel')}
             </Button>

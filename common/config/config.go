@@ -158,6 +158,9 @@ var (
 	GlobalRelayRateLimitNum            = env.Int("GLOBAL_RELAY_RATE_LIMIT", 480)
 	GlobalRelayRateLimitDuration int64 = 3 * 60
 
+	ChannelRateLimitNum            = 0
+	ChannelRateLimitDuration int64 = 3 * 60
+
 	UploadRateLimitNum            = 10
 	UploadRateLimitDuration int64 = 60
 

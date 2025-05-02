@@ -38,6 +38,7 @@ type Channel struct {
 	Priority           *int64  `json:"priority" gorm:"bigint;default:0"`
 	Config             string  `json:"config"`
 	SystemPrompt       *string `json:"system_prompt" gorm:"type:text"`
+	RateLimit          int     `json:"rate_limit" gorm:"default:0"`
 }
 
 type ChannelConfig struct {

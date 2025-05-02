@@ -30,4 +30,5 @@ const (
 	KeyRequestBody      = gin.BodyBytesKey
 	SystemPrompt        = "system_prompt"
 	Meta                = "meta"
+	RateLimit           = "rate_limit"
 )
