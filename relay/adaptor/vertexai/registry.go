@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/songquanpeng/one-api/relay/adaptor/geminiv2"
 	claude "github.com/songquanpeng/one-api/relay/adaptor/vertexai/claude"
 	gemini "github.com/songquanpeng/one-api/relay/adaptor/vertexai/gemini"
 	"github.com/songquanpeng/one-api/relay/adaptor/vertexai/imagen"
@@ -28,8 +29,8 @@ func init() {
 		modelMapping[model] = VertexAIClaude
 	}
 
-	modelList = append(modelList, gemini.ModelList...)
-	for _, model := range gemini.ModelList {
+	modelList = append(modelList, geminiv2.ModelList...)
+	for _, model := range geminiv2.ModelList {
 		modelMapping[model] = VertexAIGemini
 	}
 
