@@ -146,5 +146,9 @@ func GlobalRelayRateLimit() func(c *gin.Context) {
 }
 
 func ChannelRateLimit() func(c *gin.Context) {
-	return rateLimitFactory(config.ChannelRateLimitEnabled, config.ChannelRateLimitDuration, "CR")
+	maxRequestNum := 0
+	if config.ChannelRateLimitEnabled {
+		maxRequestNum = 1
+	}
+	return rateLimitFactory(maxRequestNum, config.ChannelRateLimitDuration, "CR")
 }
