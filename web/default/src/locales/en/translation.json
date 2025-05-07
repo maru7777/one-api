@@ -108,6 +108,8 @@
       "proxy_url_placeholder": "This is optional and used for API calls via a proxy. Please enter the proxy URL, formatted as: https://domain.com",
       "base_url": "Base URL",
       "base_url_placeholder": "The Base URL required by the OpenAPI SDK",
+      "ratelimit": "Channel RateLimit",
+      "ratelimit_placeholder": "Limit the rate for each token in each channel (3min), The default(0) is Unlimited",
       "key": "Key",
       "key_placeholder": "Please enter key",
       "batch": "Batch Create",

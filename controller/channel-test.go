@@ -38,6 +38,7 @@ func buildTestRequest(model string) *relaymodel.GeneralOpenAIRequest {
 		model = "gpt-3.5-turbo"
 	}
 	testRequest := &relaymodel.GeneralOpenAIRequest{
+		MaxTokens: 2,
 		Model: model,
 	}
 	testMessage := relaymodel.Message{

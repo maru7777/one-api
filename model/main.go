@@ -19,6 +19,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	// glogger "gorm.io/gorm/logger"
 )
 
 var DB *gorm.DB
@@ -91,6 +92,7 @@ func openPostgreSQL(dsn string) (*gorm.DB, error) {
 		PreferSimpleProtocol: true, // disables implicit prepared statement usage
 	}), &gorm.Config{
 		PrepareStmt: true, // precompile SQL
+		// Logger: glogger.Default.LogMode(glogger.Info),  // debug sql
 	})
 }
 

@@ -72,6 +72,10 @@ oneapi:
     GLOBAL_API_RATE_LIMIT: 1000
     # (optional) GLOBAL_WEB_RATE_LIMIT maximum web page requests per IP within three minutes, default is 1000
     GLOBAL_WEB_RATE_LIMIT: 1000
+    # /v1 API ratelimit for each token
+    GLOBAL_RELAY_RATE_LIMIT: 1000
+    # Whether to ratelimit for channel, 0 is unlimited, 1 is to enable the ratelimit
+    GLOBAL_CHANNEL_RATE_LIMIT: 1
     # (optional) REDIS_CONN_STRING set REDIS cache connection
     REDIS_CONN_STRING: redis://100.122.41.16:6379/1
     # (optional) FRONTEND_BASE_URL redirect page requests to specified address, server-side setting only

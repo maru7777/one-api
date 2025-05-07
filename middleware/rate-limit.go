@@ -3,6 +3,7 @@ package middleware
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/ctxkey"
 )
 
 var timeFormat = "2006-01-02T15:04:05.000Z"
@@ -19,10 +21,20 @@ var inMemoryRateLimiter common.InMemoryRateLimiter
 
 func redisRateLimiter(c *gin.Context, maxRequestNum int, duration int64, mark string) {
 	ctx := gmw.Ctx(c)
-	key := "rateLimit:" + mark + c.ClientIP()
-	if mark == "GR" {
+
+	key := fmt.Sprintf("rateLimit:%s:%s", mark, c.ClientIP())
+
+	switch mark {
+	case "GR":
 		hashedToken := sha256.Sum256([]byte(GetTokenKeyParts(c)[0]))
-		key = "rateLimit:" + mark + hex.EncodeToString(hashedToken[:8])
+		key = fmt.Sprintf("rateLimit:%s:%s", mark, hex.EncodeToString(hashedToken[:8]))
+	case "CR":
+		maxRequestNum = c.GetInt(ctxkey.RateLimit)
+		if maxRequestNum <= 0 {
+			return
+		}
+		hashedToken := sha256.Sum256([]byte(GetTokenKeyParts(c)[0]))
+		key = fmt.Sprintf("rateLimit:%s:%s:%d", mark, hex.EncodeToString(hashedToken[:8]), c.GetInt(ctxkey.ChannelId))
 	}
 
 	rdb := common.RDB
@@ -69,10 +81,21 @@ func redisRateLimiter(c *gin.Context, maxRequestNum int, duration int64, mark st
 }
 
 func memoryRateLimiter(c *gin.Context, maxRequestNum int, duration int64, mark string) {
-	key := mark + c.ClientIP()
-	if mark == "GR" {
-		key = mark + GetTokenKeyParts(c)[0]
+	key := fmt.Sprintf("rateLimit:%s:%s", mark, c.ClientIP())
+
+	switch mark {
+	case "GR":
+		hashedToken := sha256.Sum256([]byte(GetTokenKeyParts(c)[0]))
+		key = fmt.Sprintf("rateLimit:%s:%s", mark, hex.EncodeToString(hashedToken[:8]))
+	case "CR":
+		maxRequestNum = c.GetInt(ctxkey.RateLimit)
+		if maxRequestNum <= 0 {
+			return
+		}
+		hashedToken := sha256.Sum256([]byte(GetTokenKeyParts(c)[0]))
+		key = fmt.Sprintf("rateLimit:%s:%s:%d", mark, hex.EncodeToString(hashedToken[:8]), c.GetInt(ctxkey.ChannelId))
 	}
+
 	if !inMemoryRateLimiter.Request(key, maxRequestNum, duration) {
 		AbortWithError(c, http.StatusTooManyRequests, errors.New("rate limit exceeded"))
 		return
@@ -80,7 +103,7 @@ func memoryRateLimiter(c *gin.Context, maxRequestNum int, duration int64, mark s
 }
 
 func rateLimitFactory(maxRequestNum int, duration int64, mark string) func(c *gin.Context) {
-	if maxRequestNum == 0 || config.DebugEnabled {
+	if maxRequestNum <= 0 || config.DebugEnabled {
 		return func(c *gin.Context) {
 			c.Next()
 		}
@@ -120,4 +143,12 @@ func UploadRateLimit() func(c *gin.Context) {
 
 func GlobalRelayRateLimit() func(c *gin.Context) {
 	return rateLimitFactory(config.GlobalRelayRateLimitNum, config.GlobalRelayRateLimitDuration, "GR")
+}
+
+func ChannelRateLimit() func(c *gin.Context) {
+	maxRequestNum := 0
+	if config.ChannelRateLimitEnabled {
+		maxRequestNum = 1
+	}
+	return rateLimitFactory(maxRequestNum, config.ChannelRateLimitDuration, "CR")
 }
