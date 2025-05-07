@@ -95,7 +95,12 @@ func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, mode
 	c.Set(ctxkey.OriginalModel, modelName) // for retry
 	c.Request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.Key))
 	c.Set(ctxkey.BaseURL, channel.GetBaseURL())
-	c.Set(ctxkey.RateLimit, *channel.RateLimit)
+	if channel.RateLimit != nil {
+		c.Set(ctxkey.RateLimit, *channel.RateLimit)
+	} else {
+		c.Set(ctxkey.RateLimit, 0)
+	}
+	
 	cfg, _ := channel.LoadConfig()
 	// this is for backward compatibility
 	if channel.Other != nil {
