@@ -14,11 +14,12 @@ import (
 )
 
 type Ability struct {
-	Group     string `json:"group" gorm:"type:varchar(32);primaryKey;autoIncrement:false"`
-	Model     string `json:"model" gorm:"primaryKey;autoIncrement:false"`
-	ChannelId int    `json:"channel_id" gorm:"primaryKey;autoIncrement:false;index"`
-	Enabled   bool   `json:"enabled"`
-	Priority  *int64 `json:"priority" gorm:"bigint;default:0;index"`
+	Group        string     `json:"group" gorm:"type:varchar(32);primaryKey;autoIncrement:false"`
+	Model        string     `json:"model" gorm:"primaryKey;autoIncrement:false"`
+	ChannelId    int        `json:"channel_id" gorm:"primaryKey;autoIncrement:false;index"`
+	Enabled      bool       `json:"enabled"`
+	Priority     *int64     `json:"priority" gorm:"bigint;default:0;index"`
+	SuspendUntil *time.Time `json:"suspend_until,omitempty" gorm:"index"`
 }
 
 func GetRandomSatisfiedChannel(group string, model string, ignoreFirstPriority bool) (*Channel, error) {
@@ -29,14 +30,15 @@ func GetRandomSatisfiedChannel(group string, model string, ignoreFirstPriority b
 		groupCol = `"group"`
 		trueVal = "true"
 	}
+	now := time.Now()
 
 	var err error = nil
 	var channelQuery *gorm.DB
 	if ignoreFirstPriority {
-		channelQuery = DB.Where(groupCol+" = ? and model = ? and enabled = "+trueVal, group, model)
+		channelQuery = DB.Where(groupCol+" = ? AND model = ? AND enabled = "+trueVal+" AND (suspend_until IS NULL OR suspend_until < ?)", group, model, now)
 	} else {
-		maxPrioritySubQuery := DB.Model(&Ability{}).Select("MAX(priority)").Where(groupCol+" = ? and model = ? and enabled = "+trueVal, group, model)
-		channelQuery = DB.Where(groupCol+" = ? and model = ? and enabled = "+trueVal+" and priority = (?)", group, model, maxPrioritySubQuery)
+		maxPrioritySubQuery := DB.Model(&Ability{}).Select("MAX(priority)").Where(groupCol+" = ? AND model = ? AND enabled = "+trueVal+" AND (suspend_until IS NULL OR suspend_until < ?)", group, model, now)
+		channelQuery = DB.Where(groupCol+" = ? AND model = ? AND enabled = "+trueVal+" AND priority = (?) AND (suspend_until IS NULL OR suspend_until < ?)", group, model, maxPrioritySubQuery, now)
 	}
 	if common.UsingSQLite || common.UsingPostgreSQL {
 		err = channelQuery.Order("RANDOM()").First(&ability).Error
@@ -46,6 +48,7 @@ func GetRandomSatisfiedChannel(group string, model string, ignoreFirstPriority b
 	if err != nil {
 		return nil, errors.Wrap(err, "get random satisfied channel")
 	}
+
 	channel := Channel{}
 	channel.Id = ability.ChannelId
 	err = DB.First(&channel, "id = ?", ability.ChannelId).Error
@@ -60,11 +63,12 @@ func (channel *Channel) AddAbilities() error {
 	for _, model := range models_ {
 		for _, group := range groups_ {
 			ability := Ability{
-				Group:     group,
-				Model:     model,
-				ChannelId: channel.Id,
-				Enabled:   channel.Status == ChannelStatusEnabled,
-				Priority:  channel.Priority,
+				Group:        group,
+				Model:        model,
+				ChannelId:    channel.Id,
+				Enabled:      channel.Status == ChannelStatusEnabled,
+				Priority:     channel.Priority,
+				SuspendUntil: nil, // Explicitly nil on new creation
 			}
 			abilities = append(abilities, ability)
 		}
@@ -105,7 +109,7 @@ func GetGroupModels(ctx context.Context, group string) ([]string, error) {
 		trueVal = "true"
 	}
 	var models []string
-	err := DB.Model(&Ability{}).Distinct("model").Where(groupCol+" = ? and enabled = "+trueVal, group).Pluck("model", &models).Error
+	err := DB.Model(&Ability{}).Distinct("model").Where(groupCol+" = ? AND enabled = "+trueVal+" AND (suspend_until IS NULL OR suspend_until < ?)", group, time.Now()).Pluck("model", &models).Error
 	if err != nil {
 		return nil, err
 	}
@@ -134,14 +138,15 @@ func GetGroupModelsV2(ctx context.Context, group string) ([]EnabledAbility, erro
 		groupCol = `"group"`
 		trueVal = "true"
 	}
+	now := time.Now()
 
 	// query with JOIN to get model and channel name in a single query
 	var models []EnabledAbility
 	query := DB.Model(&Ability{}).
-		Select("abilities.model AS model, channels.type AS channel_type").
+		Select("DISTINCT abilities.model AS model, channels.type AS channel_type").
 		Joins("JOIN channels ON abilities.channel_id = channels.id").
-		Where("abilities."+groupCol+" = ? AND abilities.enabled = "+trueVal, group).
-		Order("abilities.priority DESC")
+		Where("abilities."+groupCol+" = ? AND abilities.enabled = "+trueVal+" AND (abilities.suspend_until IS NULL OR abilities.suspend_until < ?)", group, now).
+		Order("abilities.model")
 
 	err := query.Find(&models).Error
 	if err != nil {
@@ -152,4 +157,15 @@ func GetGroupModelsV2(ctx context.Context, group string) ([]EnabledAbility, erro
 	getGroupModelsV2Cache.Store(group, models)
 
 	return models, nil
+}
+
+// SuspendAbility sets the SuspendUntil timestamp for a given ability.
+func SuspendAbility(ctx context.Context, group string, modelName string, channelId int, duration time.Duration) error {
+	if group == "" || modelName == "" || channelId == 0 {
+		return errors.New("group, modelName, and channelId must be specified for suspending ability")
+	}
+	suspendTime := time.Now().Add(duration)
+	return DB.Model(&Ability{}).
+		Where("group = ? AND model = ? AND channel_id = ?", group, modelName, channelId).
+		Update("suspend_until", suspendTime).Error
 }

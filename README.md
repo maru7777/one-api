@@ -82,6 +82,8 @@ oneapi:
     FRONTEND_BASE_URL: https://oneapi.laisky.com
     # (optional) OPENROUTER_PROVIDER_SORT set sorting method for OpenRouter Providers, default is throughput
     OPENROUTER_PROVIDER_SORT: throughput
+    # (optional) CHANNEL_SUSPEND_SECONDS_FOR_429 set the duration for channel suspension when receiving 429 error, default is 60 seconds
+    CHANNEL_SUSPEND_SECONDS_FOR_429: 60
   volumes:
     - /var/lib/oneapi:/data
   ports:

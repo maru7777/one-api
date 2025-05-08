@@ -40,6 +40,8 @@ var QuotaPerUnit = 500 * 1000.0 // $0.002 / 1K tokens
 var DisplayInCurrencyEnabled = true
 var DisplayTokenStatEnabled = true
 
+var ChannelSuspendSecondsFor429 = time.Second * time.Duration(env.Int("CHANNEL_SUSPEND_SECONDS_FOR_429", 60))
+
 // Any options with "Secret", "Token" in its key won't be return by GetOptions
 
 var SessionSecret = os.Getenv("SESSION_SECRET")
