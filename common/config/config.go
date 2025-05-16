@@ -48,6 +48,7 @@ var DisableCookieSecret = strings.ToLower(os.Getenv("DISABLE_COOKIE_SECURE")) ==
 var OptionMap map[string]string
 var OptionMapRWMutex sync.RWMutex
 
+var DefaultItemsPerPage = 10
 var MaxItemsPerPage = env.Int("MAX_ITEMS_PER_PAGE", 10)
 var MaxRecentItems = 100
 
