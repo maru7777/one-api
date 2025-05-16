@@ -24,7 +24,7 @@ func GetAllLogs(c *gin.Context) {
 	channel, _ := strconv.Atoi(c.Query("channel"))
 	itemsPerPage, err := strconv.Atoi(c.Query("items_per_page"))
 	if err != nil {
-		itemsPerPage = config.MaxItemsPerPage
+		itemsPerPage = config.DefaultItemsPerPage
 	}
 	if itemsPerPage > config.MaxItemsPerPage {
 		itemsPerPage = config.MaxItemsPerPage
