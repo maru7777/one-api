@@ -100,7 +100,7 @@ func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, mode
 	} else {
 		c.Set(ctxkey.RateLimit, 0)
 	}
-	
+
 	cfg, _ := channel.LoadConfig()
 	// this is for backward compatibility
 	if channel.Other != nil {

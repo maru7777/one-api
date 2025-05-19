@@ -39,7 +39,7 @@ func buildTestRequest(model string) *relaymodel.GeneralOpenAIRequest {
 	}
 	testRequest := &relaymodel.GeneralOpenAIRequest{
 		MaxTokens: 2,
-		Model: model,
+		Model:     model,
 	}
 	testMessage := relaymodel.Message{
 		Role:    "user",

@@ -223,6 +223,9 @@ linters-settings:
       #       - golang.org/x/mod
       #     reason: "`mod` is the official go.mod parser library."  # Reason why the recommended module should be used (Optional)
       versions: # List of blocked module version constraints
+      - github.com/gin-contrib/sessions:
+          version: "!= 1.0.3"
+          reason: https://github.com/gin-contrib/sessions/issues/287
       # - github.com/mitchellh/go-homedir:                          # Blocked module with version constraint
       #     version: "< 1.1.0"                                      # Version constraint, see https://github.com/Masterminds/semver#basic-comparisons
       #     reason: "testing if blocked version constraint works."  # Reason why the version constraint exists. (Optional)
