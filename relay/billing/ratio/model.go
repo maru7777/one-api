@@ -1083,6 +1083,10 @@ func GetCompletionRatio(name string, channelType int) float64 {
 		return 3
 	}
 	if strings.HasPrefix(name, "gemini-") {
+		if strings.HasPrefix(name, "gemini-2.5-pro") {
+			return 8
+		}
+
 		return 4
 	}
 
