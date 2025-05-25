@@ -133,8 +133,12 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 	if strings.HasPrefix(meta.ActualModelName, "o") {
 		temperature := float64(1)
 		request.Temperature = &temperature // Only the default (1) value is supported
-
 		request.MaxTokens = 0
+		if request.ReasoningEffort == nil {
+			effortHigh := "high"
+			request.ReasoningEffort = &effortHigh
+		}
+
 		request.Messages = func(raw []model.Message) (filtered []model.Message) {
 			for i := range raw {
 				if raw[i].Role != "system" {
