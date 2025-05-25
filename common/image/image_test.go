@@ -15,7 +15,7 @@ import (
 
 	"github.com/songquanpeng/one-api/common/client"
 	img "github.com/songquanpeng/one-api/common/image"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	_ "golang.org/x/image/webp"
 )
 
@@ -37,11 +37,11 @@ var (
 		width  int
 		height int
 	}{
-		{"https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg", "jpeg", 2560, 1669},
-		{"https://upload.wikimedia.org/wikipedia/commons/9/97/Basshunter_live_performances.png", "png", 4500, 2592},
-		{"https://upload.wikimedia.org/wikipedia/commons/c/c6/TO_THE_ONE_SOMETHINGNESS.webp", "webp", 984, 985},
-		{"https://upload.wikimedia.org/wikipedia/commons/d/d0/01_Das_Sandberg-Modell.gif", "gif", 1917, 1533},
-		{"https://upload.wikimedia.org/wikipedia/commons/6/62/102Cervus.jpg", "jpeg", 270, 230},
+		{"https://s3.laisky.com/uploads/2025/05/Gfp-wisconsin-madison-the-nature-boardwalk.jpg", "jpeg", 2560, 1669},
+		{"https://s3.laisky.com/uploads/2025/05/Basshunter_live_performances.png", "png", 4500, 2592},
+		{"https://s3.laisky.com/uploads/2025/05/TO_THE_ONE_SOMETHINGNESS.webp", "webp", 984, 985},
+		{"https://s3.laisky.com/uploads/2025/05/01_Das_Sandberg-Modell.gif", "gif", 1917, 1533},
+		{"https://s3.laisky.com/uploads/2025/05/102Cervus.jpg", "jpeg", 270, 230},
 	}
 )
 
@@ -62,15 +62,17 @@ func TestDecode(t *testing.T) {
 	for _, c := range cases {
 		t.Run("Decode:"+c.format, func(t *testing.T) {
 			resp, err := http.Get(c.url)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			defer resp.Body.Close()
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+
 			reader := &CountingReader{reader: resp.Body}
 			img, format, err := image.Decode(reader)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			size := img.Bounds().Size()
-			assert.Equal(t, c.format, format)
-			assert.Equal(t, c.width, size.X)
-			assert.Equal(t, c.height, size.Y)
+			require.Equal(t, c.format, format)
+			require.Equal(t, c.width, size.X)
+			require.Equal(t, c.height, size.Y)
 			t.Logf("Bytes read: %d", reader.BytesRead)
 		})
 	}
@@ -84,14 +86,14 @@ func TestDecode(t *testing.T) {
 	for _, c := range cases {
 		t.Run("DecodeConfig:"+c.format, func(t *testing.T) {
 			resp, err := http.Get(c.url)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			defer resp.Body.Close()
 			reader := &CountingReader{reader: resp.Body}
 			config, format, err := image.DecodeConfig(reader)
-			assert.NoError(t, err)
-			assert.Equal(t, c.format, format)
-			assert.Equal(t, c.width, config.Width)
-			assert.Equal(t, c.height, config.Height)
+			require.NoError(t, err)
+			require.Equal(t, c.format, format)
+			require.Equal(t, c.width, config.Width)
+			require.Equal(t, c.height, config.Height)
 			t.Logf("Bytes read: %d", reader.BytesRead)
 		})
 	}
@@ -109,19 +111,19 @@ func TestBase64(t *testing.T) {
 	for _, c := range cases {
 		t.Run("Decode:"+c.format, func(t *testing.T) {
 			resp, err := http.Get(c.url)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			defer resp.Body.Close()
 			data, err := io.ReadAll(resp.Body)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			encoded := base64.StdEncoding.EncodeToString(data)
 			body := base64.NewDecoder(base64.StdEncoding, strings.NewReader(encoded))
 			reader := &CountingReader{reader: body}
 			img, format, err := image.Decode(reader)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			size := img.Bounds().Size()
-			assert.Equal(t, c.format, format)
-			assert.Equal(t, c.width, size.X)
-			assert.Equal(t, c.height, size.Y)
+			require.Equal(t, c.format, format)
+			require.Equal(t, c.width, size.X)
+			require.Equal(t, c.height, size.Y)
 			t.Logf("Bytes read: %d", reader.BytesRead)
 		})
 	}
@@ -135,18 +137,18 @@ func TestBase64(t *testing.T) {
 	for _, c := range cases {
 		t.Run("DecodeConfig:"+c.format, func(t *testing.T) {
 			resp, err := http.Get(c.url)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			defer resp.Body.Close()
 			data, err := io.ReadAll(resp.Body)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			encoded := base64.StdEncoding.EncodeToString(data)
 			body := base64.NewDecoder(base64.StdEncoding, strings.NewReader(encoded))
 			reader := &CountingReader{reader: body}
 			config, format, err := image.DecodeConfig(reader)
-			assert.NoError(t, err)
-			assert.Equal(t, c.format, format)
-			assert.Equal(t, c.width, config.Width)
-			assert.Equal(t, c.height, config.Height)
+			require.NoError(t, err)
+			require.Equal(t, c.format, format)
+			require.Equal(t, c.width, config.Width)
+			require.Equal(t, c.height, config.Height)
 			t.Logf("Bytes read: %d", reader.BytesRead)
 		})
 	}
@@ -158,9 +160,9 @@ func TestGetImageSize(t *testing.T) {
 	for i, c := range cases {
 		t.Run("Decode:"+strconv.Itoa(i), func(t *testing.T) {
 			width, height, err := img.GetImageSize(c.url)
-			assert.NoError(t, err)
-			assert.Equal(t, c.width, width)
-			assert.Equal(t, c.height, height)
+			require.NoError(t, err)
+			require.Equal(t, c.width, width)
+			require.Equal(t, c.height, height)
 		})
 	}
 }
@@ -171,15 +173,15 @@ func TestGetImageSizeFromBase64(t *testing.T) {
 	for i, c := range cases {
 		t.Run("Decode:"+strconv.Itoa(i), func(t *testing.T) {
 			resp, err := http.Get(c.url)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			defer resp.Body.Close()
 			data, err := io.ReadAll(resp.Body)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			encoded := base64.StdEncoding.EncodeToString(data)
 			width, height, err := img.GetImageSizeFromBase64(encoded)
-			assert.NoError(t, err)
-			assert.Equal(t, c.width, width)
-			assert.Equal(t, c.height, height)
+			require.NoError(t, err)
+			require.Equal(t, c.width, width)
+			require.Equal(t, c.height, height)
 		})
 	}
 }
@@ -234,32 +236,32 @@ func TestGetImageFromUrl(t *testing.T) {
 			mimeType, data, err := img.GetImageFromUrl(tt.input)
 
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 				if tt.errMessage != "" {
-					assert.Contains(t, err.Error(), tt.errMessage)
+					require.Contains(t, err.Error(), tt.errMessage)
 				}
 				return
 			}
 
-			assert.NoError(t, err)
-			assert.NotEmpty(t, data)
+			require.NoError(t, err)
+			require.NotEmpty(t, data)
 
 			// For data URLs, we should verify the mime type matches the input
 			if strings.HasPrefix(tt.input, "data:image/") {
-				assert.Equal(t, tt.wantMime, mimeType)
+				require.Equal(t, tt.wantMime, mimeType)
 				return
 			}
 
 			// For regular URLs, verify the base64 data is valid and can be decoded
 			decoded, err := base64.StdEncoding.DecodeString(data)
-			assert.NoError(t, err)
-			assert.NotEmpty(t, decoded)
+			require.NoError(t, err)
+			require.NotEmpty(t, decoded)
 
 			// Verify the decoded data is a valid image
 			reader := bytes.NewReader(decoded)
 			_, format, err := image.DecodeConfig(reader)
-			assert.NoError(t, err)
-			assert.Equal(t, strings.TrimPrefix(tt.wantMime, "image/"), format)
+			require.NoError(t, err)
+			require.Equal(t, strings.TrimPrefix(tt.wantMime, "image/"), format)
 		})
 	}
 }

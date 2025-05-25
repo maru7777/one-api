@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/relay/meta"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSetupCommonRequestHeader(t *testing.T) {
@@ -31,7 +31,7 @@ func TestSetupCommonRequestHeader(t *testing.T) {
 	SetupCommonRequestHeader(c, req, m)
 
 	// 验证结果
-	assert.Equal(t, "application/json", req.Header.Get("Content-Type"))
-	assert.Equal(t, "application/json", req.Header.Get("Accept"))
-	assert.Equal(t, "test-value", req.Header.Get("x-test-header"))
+	require.Equal(t, "application/json", req.Header.Get("Content-Type"))
+	require.Equal(t, "application/json", req.Header.Get("Accept"))
+	require.Equal(t, "test-value", req.Header.Get("x-test-header"))
 }
