@@ -112,7 +112,7 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *ChatRequest {
 	}
 
 	if geminiRequest.GenerationConfig.TopP != nil &&
-		*geminiRequest.GenerationConfig.TopP < 0 || *geminiRequest.GenerationConfig.TopP > 1 {
+		(*geminiRequest.GenerationConfig.TopP < 0 || *geminiRequest.GenerationConfig.TopP > 1) {
 		geminiRequest.GenerationConfig.TopP = nil
 	}
 
