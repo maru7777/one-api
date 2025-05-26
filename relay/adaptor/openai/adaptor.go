@@ -134,6 +134,7 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 		temperature := float64(1)
 		request.Temperature = &temperature // Only the default (1) value is supported
 		request.MaxTokens = 0
+		request.TopP = nil
 		if request.ReasoningEffort == nil {
 			effortHigh := "high"
 			request.ReasoningEffort = &effortHigh
