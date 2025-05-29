@@ -65,11 +65,11 @@ func TestDecode(t *testing.T) {
 			resp, err := http.Get(c.url)
 			require.NoError(t, err)
 			defer resp.Body.Close()
-			require.Equal(t, http.StatusOK, resp.StatusCode)
+			require.Equalf(t, http.StatusOK, resp.StatusCode, "status code from %s", c.url)
 
 			reader := &CountingReader{reader: resp.Body}
 			img, format, err := image.Decode(reader)
-			require.Errorf(t, err, "decode image from %s", c.url)
+			require.NoErrorf(t, err, "decode image from %s", c.url)
 			size := img.Bounds().Size()
 			require.Equal(t, c.format, format)
 			require.Equal(t, c.width, size.X)
@@ -89,6 +89,8 @@ func TestDecode(t *testing.T) {
 			resp, err := http.Get(c.url)
 			require.NoError(t, err)
 			defer resp.Body.Close()
+			require.Equalf(t, http.StatusOK, resp.StatusCode, "status code from %s", c.url)
+
 			reader := &CountingReader{reader: resp.Body}
 			config, format, err := image.DecodeConfig(reader)
 			require.NoError(t, err)
@@ -114,6 +116,10 @@ func TestBase64(t *testing.T) {
 			resp, err := http.Get(c.url)
 			require.NoError(t, err)
 			defer resp.Body.Close()
+			require.Equalf(t, http.StatusOK, resp.StatusCode, "status code from %s", c.url)
+
+			require.Equalf(t, http.StatusOK, resp.StatusCode, "status code from %s", c.url)
+
 			data, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
 			encoded := base64.StdEncoding.EncodeToString(data)
@@ -140,6 +146,8 @@ func TestBase64(t *testing.T) {
 			resp, err := http.Get(c.url)
 			require.NoError(t, err)
 			defer resp.Body.Close()
+			require.Equalf(t, http.StatusOK, resp.StatusCode, "status code from %s", c.url)
+
 			data, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
 			encoded := base64.StdEncoding.EncodeToString(data)
@@ -176,6 +184,8 @@ func TestGetImageSizeFromBase64(t *testing.T) {
 			resp, err := http.Get(c.url)
 			require.NoErrorf(t, err, "get %s", c.url)
 			defer resp.Body.Close()
+			require.Equalf(t, http.StatusOK, resp.StatusCode, "status code from %s", c.url)
+
 			data, err := io.ReadAll(resp.Body)
 			require.NoErrorf(t, err, "read body from %s", c.url)
 			encoded := base64.StdEncoding.EncodeToString(data)
