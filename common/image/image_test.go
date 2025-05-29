@@ -61,6 +61,7 @@ func TestDecode(t *testing.T) {
 	// jpeg#01: 32805
 	for _, c := range cases {
 		t.Run("Decode:"+c.format, func(t *testing.T) {
+			t.Logf("testing %s", c.url)
 			resp, err := http.Get(c.url)
 			require.NoError(t, err)
 			defer resp.Body.Close()
@@ -68,7 +69,7 @@ func TestDecode(t *testing.T) {
 
 			reader := &CountingReader{reader: resp.Body}
 			img, format, err := image.Decode(reader)
-			require.NoError(t, err)
+			require.Errorf(t, err, "decode image from %s", c.url)
 			size := img.Bounds().Size()
 			require.Equal(t, c.format, format)
 			require.Equal(t, c.width, size.X)
@@ -173,10 +174,10 @@ func TestGetImageSizeFromBase64(t *testing.T) {
 	for i, c := range cases {
 		t.Run("Decode:"+strconv.Itoa(i), func(t *testing.T) {
 			resp, err := http.Get(c.url)
-			require.NoError(t, err)
+			require.NoErrorf(t, err, "get %s", c.url)
 			defer resp.Body.Close()
 			data, err := io.ReadAll(resp.Body)
-			require.NoError(t, err)
+			require.NoErrorf(t, err, "read body from %s", c.url)
 			encoded := base64.StdEncoding.EncodeToString(data)
 			width, height, err := img.GetImageSizeFromBase64(encoded)
 			require.NoError(t, err)
