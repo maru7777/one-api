@@ -3,7 +3,6 @@ package middleware
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 
 	gutils "github.com/Laisky/go-utils/v5"
@@ -28,14 +27,10 @@ func Distribute() func(c *gin.Context) {
 		c.Set(ctxkey.Group, userGroup)
 		var requestModel string
 		var channel *model.Channel
-		channelId, ok := c.Get(ctxkey.SpecificChannelId)
-		if ok {
-			id, err := strconv.Atoi(channelId.(string))
-			if err != nil {
-				AbortWithError(c, http.StatusBadRequest, errors.New("Invalid Channel Id"))
-				return
-			}
-			channel, err = model.GetChannelById(id, true)
+		channelId := c.GetInt(ctxkey.SpecificChannelId)
+		if channelId != 0 {
+			var err error
+			channel, err = model.GetChannelById(channelId, true)
 			if err != nil {
 				AbortWithError(c, http.StatusBadRequest, errors.New("Invalid Channel Id"))
 				return

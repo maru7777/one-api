@@ -106,21 +106,11 @@ func Relay(c *gin.Context) {
 
 // shouldRetry returns nil if should retry, otherwise returns error
 func shouldRetry(c *gin.Context, statusCode int) error {
-	if v, ok := c.Get(ctxkey.SpecificChannelId); ok { // Check if specific channel ID is set
-		specificChannelId, isInt := v.(int)
-		if isInt {
-			// Value is an int. Now check if it's non-zero.
-			if specificChannelId != 0 {
-				return errors.Errorf("specific channel ID (%d) was provided, retry is disabled", specificChannelId)
-			}
-			// If specificChannelId is 0, retry is allowed (fall through to return nil at the end of the function).
-		} else {
-
-			// Value is present but not an int - this is a type error.
-			// Log this unexpected situation and disable retry.
-			logger.Warnf(c.Request.Context(), "Context value for '%s' is not an int: got %T, value %v. Disabling retry.", ctxkey.SpecificChannelId, v, v)
-			return errors.Errorf("specific channel ID was set with an invalid type (%T), retry is disabled", v)
-		}
+	if specificChannelId := c.GetInt(ctxkey.SpecificChannelId); specificChannelId != 0 {
+		// Check if specific channel ID is set
+		return errors.Errorf(
+			"specific channel ID (%d) was provided, retry is unvailable",
+			specificChannelId)
 	}
 
 	if statusCode == http.StatusTooManyRequests {
