@@ -73,10 +73,10 @@ const Home = () => {
                     <p>
                       源码：
                       <a
-                        href='https://github.com/songquanpeng/one-api'
+                        href='https://github.com/Laisky/one-api'
                         target='_blank' rel='noreferrer'
                       >
-                        https://github.com/songquanpeng/one-api
+                        https://github.com/Laisky/one-api
                       </a>
                     </p>
                     <p>启动时间：{getStartTimeString()}</p>

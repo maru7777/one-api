@@ -208,7 +208,7 @@ const EditChannel = () => {
         showInfo(t('channel.edit.messages.oauth_config_invalid_format'));
         return;
       }
-      
+
       try {
         const oauthConfig = JSON.parse(inputs.key);
         const requiredFields = [
@@ -219,7 +219,7 @@ const EditChannel = () => {
           'private_key',
           'public_key_id'
         ];
-        
+
         for (const field of requiredFields) {
           if (!oauthConfig.hasOwnProperty(field)) {
             showInfo(t('channel.edit.messages.oauth_config_missing_field', { field }));
@@ -231,7 +231,7 @@ const EditChannel = () => {
         return;
       }
     }
-    
+
     let localInputs = { ...inputs };
     if (localInputs.key === 'undefined|undefined|undefined') {
       localInputs.key = ''; // prevent potential bug
@@ -610,7 +610,7 @@ const EditChannel = () => {
                 )}
               </>
             )}
-            
+
             {inputs.type === 33 && (
               <Form.Field>
                 <Form.Input

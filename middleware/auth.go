@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-contrib/sessions"
@@ -139,7 +140,13 @@ func TokenAuth() func(c *gin.Context) {
 
 		if len(parts) > 1 {
 			if model.IsAdmin(token.UserId) {
-				c.Set(ctxkey.SpecificChannelId, parts[1])
+				cid, err := strconv.Atoi(parts[1])
+				if err != nil {
+					AbortWithError(c, http.StatusBadRequest, errors.Errorf("Invalid Channel Id: %s", parts[1]))
+					return
+				}
+
+				c.Set(ctxkey.SpecificChannelId, cid)
 			} else {
 				AbortWithError(c, http.StatusForbidden, errors.New("Ordinary users do not support specifying channels"))
 				return
@@ -148,7 +155,13 @@ func TokenAuth() func(c *gin.Context) {
 
 		// set channel id for proxy relay
 		if channelId := c.Param("channelid"); channelId != "" {
-			c.Set(ctxkey.SpecificChannelId, channelId)
+			cid, err := strconv.Atoi(channelId)
+			if err != nil {
+				AbortWithError(c, http.StatusBadRequest, errors.Errorf("Invalid Channel Id: %s", channelId))
+				return
+			}
+
+			c.Set(ctxkey.SpecificChannelId, cid)
 		}
 
 		c.Next()
