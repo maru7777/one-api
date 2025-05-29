@@ -8,6 +8,7 @@ import (
 	claude "github.com/songquanpeng/one-api/relay/adaptor/vertexai/claude"
 	gemini "github.com/songquanpeng/one-api/relay/adaptor/vertexai/gemini"
 	"github.com/songquanpeng/one-api/relay/adaptor/vertexai/imagen"
+	"github.com/songquanpeng/one-api/relay/adaptor/vertexai/veo"
 	"github.com/songquanpeng/one-api/relay/meta"
 	"github.com/songquanpeng/one-api/relay/model"
 )
@@ -18,25 +19,35 @@ const (
 	VertexAIClaude VertexAIModelType = iota + 1
 	VertexAIGemini
 	VertexAIImagen
+	VertexAIVeo
 )
 
 var modelMapping = map[string]VertexAIModelType{}
 var modelList = []string{}
 
 func init() {
+	// register vertex claude models
 	modelList = append(modelList, claude.ModelList...)
 	for _, model := range claude.ModelList {
 		modelMapping[model] = VertexAIClaude
 	}
 
+	// register vertex gemini models
 	modelList = append(modelList, geminiv2.ModelList...)
 	for _, model := range geminiv2.ModelList {
 		modelMapping[model] = VertexAIGemini
 	}
 
+	// register vertex imagen models
 	modelList = append(modelList, imagen.ModelList...)
 	for _, model := range imagen.ModelList {
 		modelMapping[model] = VertexAIImagen
+	}
+
+	// register vertex veo models
+	modelList = append(modelList, veo.ModelList...)
+	for _, model := range veo.ModelList {
+		modelMapping[model] = VertexAIVeo
 	}
 }
 
@@ -55,6 +66,8 @@ func GetAdaptor(model string) innerAIAdapter {
 		return &gemini.Adaptor{}
 	case VertexAIImagen:
 		return &imagen.Adaptor{}
+	case VertexAIVeo:
+		return &veo.Adaptor{}
 	default:
 		return nil
 	}

@@ -83,6 +83,8 @@ type GeneralOpenAIRequest struct {
 	// Others
 	Instruction string `json:"instruction,omitempty"`
 	NumCtx      int    `json:"num_ctx,omitempty"`
+	// Duration is the length of the audio/video in seconds
+	Duration *int `json:"duration,omitempty"`
 	// -------------------------------------
 	// Openrouter
 	// -------------------------------------

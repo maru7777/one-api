@@ -23,6 +23,9 @@ const (
 	// MilliRmb multiply by the RMB price per 1 million tokens to get the quota cost per token
 	MilliRmb       float64 = MilliTokensUsd / USD2RMB
 	ImageUsdPerPic float64 = QuotaPerUsd / 1000
+	TokensPerSec           = 1000
+	// VideoUsdPerSec 1000 tokens per second, used for video processing
+	VideoUsdPerSec float64 = QuotaPerUsd / TokensPerSec
 )
 
 var modelRatioLock sync.RWMutex
@@ -416,6 +419,9 @@ var ModelRatio = map[string]float64{
 	"imagen-3.0-generate-002":      0.04 * ImageUsdPerPic,
 	"imagen-3.0-fast-generate-001": 0.02 * ImageUsdPerPic,
 	"imagen-3.0-capability-001":    0.04 * ImageUsdPerPic,
+	// https://cloud.google.com/vertex-ai/generative-ai/pricing#veo
+	"veo-2.0-generate-001":     0.5 * VideoUsdPerSec,
+	"veo-3.0-generate-preview": 0.75 * VideoUsdPerSec,
 	// -------------------------------------
 	// replicate charges based on the number of generated images
 	// https://replicate.com/pricing
@@ -960,19 +966,21 @@ func UpdateModelRatioByJSONString(jsonStr string) error {
 	return nil
 }
 
-func GetModelRatio(name string, channelType int) float64 {
+// GetModelRatio is used to get the model ratio for a given model name and channel type.
+func GetModelRatio(actualModelName string, channelType int) float64 {
 	modelRatioLock.RLock()
 	defer modelRatioLock.RUnlock()
-	if strings.HasPrefix(name, "qwen-") && strings.HasSuffix(name, "-internet") {
-		name = strings.TrimSuffix(name, "-internet")
+	if strings.HasPrefix(actualModelName, "qwen-") &&
+		strings.HasSuffix(actualModelName, "-internet") {
+		actualModelName = strings.TrimSuffix(actualModelName, "-internet")
 	}
-	if strings.HasPrefix(name, "command-") && strings.HasSuffix(name, "-internet") {
-		name = strings.TrimSuffix(name, "-internet")
+	if strings.HasPrefix(actualModelName, "command-") &&
+		strings.HasSuffix(actualModelName, "-internet") {
+		actualModelName = strings.TrimSuffix(actualModelName, "-internet")
 	}
 
-	model := fmt.Sprintf("%s(%d)", name, channelType)
-
-	for _, targetName := range []string{model, name} {
+	nameWithChannel := fmt.Sprintf("%s(%d)", actualModelName, channelType)
+	for _, targetName := range []string{nameWithChannel, actualModelName} {
 		for _, ratioMap := range []map[string]float64{
 			ModelRatio,
 			DefaultModelRatio,
@@ -984,7 +992,7 @@ func GetModelRatio(name string, channelType int) float64 {
 		}
 	}
 
-	logger.SysError("model ratio not found: " + name)
+	logger.SysError("model ratio not found: " + actualModelName)
 	return 2.5 * MilliTokensUsd
 }
 
