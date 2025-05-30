@@ -50,7 +50,7 @@ func ConvertImageRequest(c *gin.Context, request *model.ImageRequest) (any, erro
 }
 
 func convertImageCreateRequest(request *model.ImageRequest) (any, error) {
-	return DrawImageRequest{
+	convertedReq := DrawImageRequest{
 		Input: ImageInput{
 			Steps:           25,
 			Prompt:          request.Prompt,
@@ -62,7 +62,15 @@ func convertImageCreateRequest(request *model.ImageRequest) (any, error) {
 			Height:          1440,
 			AspectRatio:     "1:1",
 		},
-	}, nil
+	}
+
+	if strings.Contains(request.Model, "flux-kontext") {
+		convertedReq.Input.InputImage = request.ImagePrompt
+	} else {
+		convertedReq.Input.ImagePrompt = request.ImagePrompt
+	}
+
+	return convertedReq, nil
 }
 
 func convertImageRemixRequest(c *gin.Context) (any, error) {
