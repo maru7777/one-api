@@ -426,6 +426,7 @@ var ModelRatio = map[string]float64{
 	// replicate charges based on the number of generated images
 	// https://replicate.com/pricing
 	// -------------------------------------
+	"black-forest-labs/flux-kontext-pro":            0.04 * ImageUsdPerPic,
 	"black-forest-labs/flux-1.1-pro":                0.04 * ImageUsdPerPic,
 	"black-forest-labs/flux-1.1-pro-ultra":          0.06 * ImageUsdPerPic,
 	"black-forest-labs/flux-canny-dev":              0.025 * ImageUsdPerPic,
