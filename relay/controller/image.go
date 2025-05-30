@@ -159,7 +159,7 @@ func getImageCostRatio(imageRequest *relaymodel.ImageRequest) (float64, error) {
 				return 0, errors.New("invalid size for gpt-image-1, should be 1024x1024/1024x1536/1536x1024")
 			}
 		}
-	case "high", "auto":
+	case "high", "auto", "":
 		switch imageRequest.Model {
 		case "gpt-image-1":
 			switch imageRequest.Size {
@@ -174,7 +174,7 @@ func getImageCostRatio(imageRequest *relaymodel.ImageRequest) (float64, error) {
 			}
 		}
 	default:
-		return 0, errors.New("invalid quality, should be hd/low/medium/high")
+		return 0, errors.New("invalid quality, should be hd/low/medium/high/auto")
 	}
 
 	if imageCostRatio <= 0 {
