@@ -165,7 +165,19 @@ func SuspendAbility(ctx context.Context, group string, modelName string, channel
 		return errors.New("group, modelName, and channelId must be specified for suspending ability")
 	}
 	suspendTime := time.Now().Add(duration)
+
+	// Handle database-specific identifier quoting like other functions
+	groupCol := "`group`"
+	modelCol := "`model`"
+	channelCol := "`channel_id`"
+	if common.UsingPostgreSQL {
+		groupCol = `"group"`
+		modelCol = `"model"`
+		channelCol = `"channel_id"`
+	}
+
 	return DB.Model(&Ability{}).
-		Where("group = ? AND model = ? AND channel_id = ?", group, modelName, channelId).
+		Where(groupCol+" = ? AND "+modelCol+" = ? AND "+channelCol+" = ?",
+			group, modelName, channelId).
 		Update("suspend_until", suspendTime).Error
 }
