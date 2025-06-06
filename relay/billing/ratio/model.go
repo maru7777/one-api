@@ -193,6 +193,7 @@ var ModelRatio = map[string]float64{
 	"gemini-2.0-pro-exp-02-05":              1.25 * MilliTokensUsd,
 	"gemini-2.5-pro-exp-03-25":              1.25 * MilliTokensUsd,
 	"gemini-2.5-pro-preview-05-06":          1.25 * MilliTokensUsd,
+	"gemini-2.5-pro-preview-06-05":          1.25 * MilliTokensUsd,
 	"aqa":                                   1,
 	// https://open.bigmodel.cn/pricing
 	"glm-zero-preview": 0.01 * KiloRmb,
