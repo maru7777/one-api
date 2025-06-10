@@ -25,6 +25,7 @@ var ModelList = []string{
 	"o1-mini", "o1-mini-2024-09-12",
 	"o3", "o3-2025-04-16",
 	"o3-mini", "o3-mini-2025-01-31",
+	"o3-pro", "o3-pro-2025-06-10",
 	"o4-mini", "o4-mini-2025-04-16",
 	// "computer-use-preview", "computer-use-preview-2025-03-11", // TODO: not implemented
 	// -------------------------------------

@@ -98,6 +98,8 @@ var ModelRatio = map[string]float64{
 	"o3-mini-2025-01-31":                   1.1 * MilliTokensUsd,
 	"o3":                                   2 * MilliTokensUsd,
 	"o3-2025-04-16":                        2 * MilliTokensUsd,
+	"o3-pro":                               20 * MilliTokensUsd,
+	"o3-pro-2025-06-10":                    20 * MilliTokensUsd,
 	"o4-mini":                              1.1 * MilliTokensUsd,
 	"o4-mini-2025-04-16":                   1.1 * MilliTokensUsd,
 	"davinci-002":                          2 * MilliTokensUsd,
