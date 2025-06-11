@@ -497,14 +497,25 @@ func ResponseAPIStreamHandler(c *gin.Context, resp *http.Response, relayMode int
 			usage = chatCompletionChunk.Usage
 		}
 
-		// Send the converted chunk to the client
-		jsonStr, err := json.Marshal(chatCompletionChunk)
-		if err != nil {
-			logger.SysError("error marshalling stream chunk: " + err.Error())
-			continue
-		}
+		// IMPORTANT: Only send ChatCompletion chunks to client for delta events ONLY
+		// Completely discard ALL other events including completion events to prevent client-side duplication
+		if streamEvent != nil {
+			eventType := streamEvent.Type
 
-		c.Render(-1, common.CustomEvent{Data: "data: " + string(jsonStr)})
+			// Only send chunks for delta events (incremental content)
+			if strings.Contains(eventType, "delta") {
+				// Send the converted chunk to the client
+				jsonStr, err := json.Marshal(chatCompletionChunk)
+				if err != nil {
+					logger.SysError("error marshalling stream chunk: " + err.Error())
+					continue
+				}
+
+				c.Render(-1, common.CustomEvent{Data: "data: " + string(jsonStr)})
+			}
+			// ALL other events (done events, completion events, created, in_progress, etc.) are completely discarded
+			// This prevents ANY duplicate content from reaching the client
+		}
 	}
 
 	if err := scanner.Err(); err != nil {
