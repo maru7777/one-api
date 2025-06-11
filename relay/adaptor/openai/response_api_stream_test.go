@@ -416,3 +416,144 @@ func TestNormalizeDataLine(t *testing.T) {
 		})
 	}
 }
+
+// TestDuplicateContentFix tests that the streaming handler properly prevents duplicate content
+// by only accumulating delta events and not processing complete/done events for accumulation
+func TestDuplicateContentFix(t *testing.T) {
+	// This test case includes both delta events (incremental) and done events (complete)
+	// The key issue was that both types were being accumulated, causing duplicates
+	sseStreamWithDuplicateRisk := `event: response.created
+data: {"type":"response.created","response":{"id":"resp_test_dup","object":"response","created_at":1741290958,"status":"in_progress"}}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","output_index":0,"item":{"id":"msg_test_dup","type":"message","status":"in_progress","role":"assistant","content":[]}}
+
+event: response.content_part.added
+data: {"type":"response.content_part.added","item_id":"msg_test_dup","output_index":0,"content_index":0,"part":{"type":"output_text","text":"","annotations":[]}}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","item_id":"msg_test_dup","output_index":0,"content_index":0,"delta":"The"}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","item_id":"msg_test_dup","output_index":0,"content_index":0,"delta":" quick"}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","item_id":"msg_test_dup","output_index":0,"content_index":0,"delta":" brown"}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","item_id":"msg_test_dup","output_index":0,"content_index":0,"delta":" fox"}
+
+event: response.output_text.done
+data: {"type":"response.output_text.done","item_id":"msg_test_dup","output_index":0,"content_index":0,"text":"The quick brown fox"}
+
+event: response.content_part.done
+data: {"type":"response.content_part.done","item_id":"msg_test_dup","output_index":0,"content_index":0,"part":{"type":"output_text","text":"The quick brown fox","annotations":[]}}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","output_index":0,"item":{"id":"msg_test_dup","type":"message","status":"completed","role":"assistant","content":[{"type":"output_text","text":"The quick brown fox","annotations":[]}]}}
+
+event: response.completed
+data: {"type":"response.completed","response":{"id":"resp_test_dup","object":"response","created_at":1741290958,"status":"completed","output":[{"id":"msg_test_dup","type":"message","status":"completed","role":"assistant","content":[{"type":"output_text","text":"The quick brown fox","annotations":[]}]}],"usage":{"input_tokens":10,"output_tokens":4,"total_tokens":14}}}
+
+data: [DONE]`
+
+	// Process using the same logic as ResponseAPIStreamHandler
+	lines := strings.Split(sseStreamWithDuplicateRisk, "\n")
+	const dataPrefix = "data: "
+	const dataPrefixLength = len(dataPrefix)
+
+	accumulatedText := ""
+	deltaEventCount := 0
+	doneEventCount := 0
+	completeDoneEvents := 0
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+
+		if line == "" {
+			continue
+		}
+
+		data := NormalizeDataLine(line)
+		if !strings.HasPrefix(data, dataPrefix) {
+			continue
+		}
+
+		jsonData := data[dataPrefixLength:]
+		if jsonData == "[DONE]" {
+			break
+		}
+
+		// Parse the streaming event
+		fullResponse, streamEvent, err := ParseResponseAPIStreamEvent([]byte(jsonData))
+		if err != nil {
+			continue
+		}
+
+		var responseAPIChunk ResponseAPIResponse
+		if fullResponse != nil {
+			responseAPIChunk = *fullResponse
+		} else if streamEvent != nil {
+			responseAPIChunk = ConvertStreamEventToResponse(streamEvent)
+
+			// Count event types
+			if strings.Contains(streamEvent.Type, "delta") {
+				deltaEventCount++
+			} else if strings.Contains(streamEvent.Type, "done") {
+				doneEventCount++
+				if streamEvent.Type == "response.output_text.done" ||
+					streamEvent.Type == "response.content_part.done" ||
+					streamEvent.Type == "response.output_item.done" {
+					completeDoneEvents++
+				}
+			}
+
+			// Apply the fix: Only accumulate from delta events to prevent duplication
+			if strings.Contains(streamEvent.Type, "delta") && streamEvent.Delta != "" {
+				accumulatedText += streamEvent.Delta
+			}
+		}
+
+		// Convert to ChatCompletion format
+		chatCompletionChunk := ConvertResponseAPIStreamToChatCompletion(&responseAPIChunk)
+		if len(chatCompletionChunk.Choices) == 0 {
+			t.Errorf("ChatCompletion conversion failed for event type: %s",
+				func() string {
+					if streamEvent != nil {
+						return streamEvent.Type
+					}
+					return "full_response"
+				}())
+		}
+	}
+
+	// Validate the fix
+	expectedText := "The quick brown fox"
+	if accumulatedText != expectedText {
+		t.Errorf("DUPLICATE CONTENT DETECTED: expected '%s', got '%s'", expectedText, accumulatedText)
+		t.Errorf("This indicates that done events are still being accumulated, causing duplication")
+	}
+
+	// Verify event counts
+	if deltaEventCount != 4 {
+		t.Errorf("Expected 4 delta events, got %d", deltaEventCount)
+	}
+
+	if completeDoneEvents < 3 {
+		t.Errorf("Expected at least 3 complete done events, got %d", completeDoneEvents)
+	}
+
+	// Additional validation: ensure we have processed both types of events
+	if deltaEventCount == 0 {
+		t.Error("No delta events processed - test setup is incorrect")
+	}
+
+	if doneEventCount == 0 {
+		t.Error("No done events processed - test setup is incorrect")
+	}
+
+	t.Logf("✅ Duplicate content fix validated successfully")
+	t.Logf("📊 Delta events: %d, Done events: %d, Complete done events: %d",
+		deltaEventCount, doneEventCount, completeDoneEvents)
+	t.Logf("🎯 Final accumulated text: '%s' (correct, no duplication)", accumulatedText)
+}

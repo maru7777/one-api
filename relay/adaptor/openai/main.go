@@ -470,15 +470,25 @@ func ResponseAPIStreamHandler(c *gin.Context, resp *http.Response, relayMode int
 		// Convert Response API chunk to ChatCompletion streaming format
 		chatCompletionChunk := ConvertResponseAPIStreamToChatCompletion(&responseAPIChunk)
 
-		// Accumulate response text for token counting
-		if len(chatCompletionChunk.Choices) > 0 {
-			if content, ok := chatCompletionChunk.Choices[0].Delta.Content.(string); ok {
-				responseText += content
-			}
+		// IMPORTANT: Accumulate response text for token counting - but only from delta events to avoid duplicates
+		//
+		// The Response API emits both:
+		// 1. Delta events (response.output_text.delta) - contain incremental content: "Hi", " there!", " How..."
+		// 2. Done events (response.output_text.done, response.content_part.done, etc.) - contain complete content: "Hi there! How..."
+		//
+		// If we accumulate both types, we get duplicate content in the final response text.
+		// Solution: Only accumulate delta events for final response text counting.
+		if len(chatCompletionChunk.Choices) > 0 && streamEvent != nil {
+			// Only accumulate content from delta events to prevent duplication
+			if strings.Contains(streamEvent.Type, "delta") {
+				if content, ok := chatCompletionChunk.Choices[0].Delta.Content.(string); ok {
+					responseText += content
+				}
 
-			// Handle reasoning content
-			if chatCompletionChunk.Choices[0].Delta.Reasoning != nil {
-				reasoningText += *chatCompletionChunk.Choices[0].Delta.Reasoning
+				// Handle reasoning content from delta events
+				if chatCompletionChunk.Choices[0].Delta.Reasoning != nil {
+					reasoningText += *chatCompletionChunk.Choices[0].Delta.Reasoning
+				}
 			}
 		}
 
