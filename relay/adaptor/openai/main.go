@@ -322,3 +322,193 @@ func calculateAudioTokens(response *SlimTextResponse, modelName string) {
 	// Calculate total tokens
 	response.Usage.TotalTokens = response.Usage.PromptTokens + response.Usage.CompletionTokens
 }
+
+// ResponseAPIHandler processes non-streaming responses from Response API format and converts them back to ChatCompletion format
+// This function follows the same pattern as Handler but converts Response API responses to ChatCompletion format
+// Returns error (if any) and token usage information
+func ResponseAPIHandler(c *gin.Context, resp *http.Response, promptTokens int, modelName string) (*model.ErrorWithStatusCode, *model.Usage) {
+	// Read the entire response body
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return ErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError), nil
+	}
+
+	// Log the response body for debugging
+	logger.Debugf(c.Request.Context(),
+		"response api handler response: %s", string(responseBody))
+
+	// Close the original response body
+	if err = resp.Body.Close(); err != nil {
+		return ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), nil
+	}
+
+	// Parse the Response API response JSON
+	var responseAPIResp ResponseAPIResponse
+	if err = json.Unmarshal(responseBody, &responseAPIResp); err != nil {
+		return ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError), nil
+	}
+
+	// Check for API errors
+	if responseAPIResp.Error != nil {
+		return &model.ErrorWithStatusCode{
+			Error:      *responseAPIResp.Error,
+			StatusCode: resp.StatusCode,
+		}, nil
+	}
+
+	// Convert Response API response to ChatCompletion format
+	chatCompletionResp := ConvertResponseAPIToChatCompletion(&responseAPIResp)
+	chatCompletionResp.Model = modelName
+
+	// Handle reasoning content in the choice
+	if len(chatCompletionResp.Choices) > 0 {
+		choice := &chatCompletionResp.Choices[0]
+		if choice.Message.Reasoning != nil && *choice.Message.Reasoning != "" {
+			choice.Message.SetReasoningContent(c.Query("reasoning_format"), *choice.Message.Reasoning)
+		}
+	}
+
+	// Set usage if not provided
+	if responseAPIResp.Usage != nil {
+		chatCompletionResp.Usage = *responseAPIResp.Usage
+	} else {
+		// Calculate token usage from the response text
+		var responseText string
+		if len(chatCompletionResp.Choices) > 0 {
+			if content, ok := chatCompletionResp.Choices[0].Message.Content.(string); ok {
+				responseText = content
+			}
+		}
+		usage := ResponseText2Usage(responseText, modelName, promptTokens)
+		chatCompletionResp.Usage = *usage
+	}
+
+	// Convert the ChatCompletion response back to JSON
+	jsonResponse, err := json.Marshal(chatCompletionResp)
+	if err != nil {
+		return ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError), nil
+	}
+
+	logger.Debugf(c.Request.Context(), "response api handler response: %s", string(jsonResponse))
+
+	// Forward all response headers
+	for k, values := range resp.Header {
+		for _, v := range values {
+			c.Writer.Header().Add(k, v)
+		}
+	}
+
+	// Set response status and send the converted response to client
+	c.Writer.Header().Set("Content-Type", "application/json")
+	c.Writer.WriteHeader(resp.StatusCode)
+	if _, err = c.Writer.Write(jsonResponse); err != nil {
+		return ErrorWrapper(err, "write_response_body_failed", http.StatusInternalServerError), nil
+	}
+
+	return nil, &chatCompletionResp.Usage
+}
+
+// ResponseAPIStreamHandler processes streaming responses from Response API format and converts them back to ChatCompletion format
+// This function follows the same pattern as StreamHandler but handles Response API streaming responses
+// Returns error (if any), accumulated response text, and token usage information
+func ResponseAPIStreamHandler(c *gin.Context, resp *http.Response, relayMode int) (*model.ErrorWithStatusCode, string, *model.Usage) {
+	// Initialize accumulators for the response
+	responseText := ""
+	reasoningText := ""
+	var usage *model.Usage
+
+	// Set up scanner for reading the stream line by line
+	scanner := bufio.NewScanner(resp.Body)
+	buffer := make([]byte, 1024*1024) // 1MB buffer for large messages
+	scanner.Buffer(buffer, len(buffer))
+	scanner.Split(bufio.ScanLines)
+
+	// Set response headers for SSE
+	common.SetEventStreamHeaders(c)
+
+	doneRendered := false
+
+	// Process each line from the stream
+	for scanner.Scan() {
+		data := NormalizeDataLine(scanner.Text())
+
+		logger.Debugf(c.Request.Context(), "response api stream response: %s", data)
+
+		if !strings.HasPrefix(data, dataPrefix) {
+			continue
+		}
+		data = data[dataPrefixLength:]
+
+		if data == done {
+			if !doneRendered {
+				c.Render(-1, common.CustomEvent{Data: "data: " + done})
+				doneRendered = true
+			}
+			break
+		}
+
+		// Parse the Response API streaming chunk using flexible parsing
+		fullResponse, streamEvent, err := ParseResponseAPIStreamEvent([]byte(data))
+		if err != nil {
+			// Log the error with more context but continue processing
+			logger.Debugf(c.Request.Context(), "skipping unparseable stream chunk: %s, error: %s", data, err.Error())
+			continue
+		}
+
+		// Handle full response events (like response.completed)
+		var responseAPIChunk ResponseAPIResponse
+		if fullResponse != nil {
+			responseAPIChunk = *fullResponse
+		} else if streamEvent != nil {
+			// Convert streaming event to ResponseAPIResponse for processing
+			responseAPIChunk = ConvertStreamEventToResponse(streamEvent)
+		} else {
+			// Skip this chunk if we can't parse it
+			continue
+		}
+
+		// Convert Response API chunk to ChatCompletion streaming format
+		chatCompletionChunk := ConvertResponseAPIStreamToChatCompletion(&responseAPIChunk)
+
+		// Accumulate response text for token counting
+		if len(chatCompletionChunk.Choices) > 0 {
+			if content, ok := chatCompletionChunk.Choices[0].Delta.Content.(string); ok {
+				responseText += content
+			}
+
+			// Handle reasoning content
+			if chatCompletionChunk.Choices[0].Delta.Reasoning != nil {
+				reasoningText += *chatCompletionChunk.Choices[0].Delta.Reasoning
+			}
+		}
+
+		// Accumulate usage information
+		if chatCompletionChunk.Usage != nil {
+			usage = chatCompletionChunk.Usage
+		}
+
+		// Send the converted chunk to the client
+		jsonStr, err := json.Marshal(chatCompletionChunk)
+		if err != nil {
+			logger.SysError("error marshalling stream chunk: " + err.Error())
+			continue
+		}
+
+		c.Render(-1, common.CustomEvent{Data: "data: " + string(jsonStr)})
+	}
+
+	if err := scanner.Err(); err != nil {
+		logger.SysError("error reading stream: " + err.Error())
+		return ErrorWrapper(err, "read_stream_failed", http.StatusInternalServerError), responseText, usage
+	}
+
+	if !doneRendered {
+		c.Render(-1, common.CustomEvent{Data: "data: " + done})
+	}
+
+	if err := resp.Body.Close(); err != nil {
+		return ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), responseText, usage
+	}
+
+	return nil, responseText, usage
+}

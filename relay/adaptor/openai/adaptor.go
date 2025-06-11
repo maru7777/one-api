@@ -1,6 +1,7 @@
 package openai
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"math"
@@ -77,6 +78,11 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	case channeltype.GeminiOpenAICompatible:
 		return geminiv2.GetRequestURL(meta)
 	default:
+		// Convert chat completions to responses API for OpenAI
+		if meta.Mode == relaymode.ChatCompletions {
+			responseAPIPath := "/v1/responses"
+			return GetFullRequestURL(meta.BaseURL, responseAPIPath, meta.ChannelType), nil
+		}
 		return GetFullRequestURL(meta.BaseURL, meta.RequestURLPath, meta.ChannelType), nil
 	}
 }
@@ -101,6 +107,33 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 	}
 
 	meta := meta.GetByContext(c)
+
+	// Convert ChatCompletion requests to Response API format
+	if relayMode == relaymode.ChatCompletions {
+		// Apply existing transformations first
+		if err := a.applyRequestTransformations(meta, request); err != nil {
+			return nil, err
+		}
+
+		// Convert to Response API format
+		responseAPIRequest := ConvertChatCompletionToResponseAPI(request)
+
+		// Store the converted request in context to detect it later in DoResponse
+		c.Set(ctxkey.ConvertedRequest, responseAPIRequest)
+
+		return responseAPIRequest, nil
+	}
+
+	// Apply existing transformations for other modes
+	if err := a.applyRequestTransformations(meta, request); err != nil {
+		return nil, err
+	}
+
+	return request, nil
+}
+
+// applyRequestTransformations applies the existing request transformations
+func (a *Adaptor) applyRequestTransformations(meta *meta.Meta, request *model.GeneralOpenAIRequest) error {
 	switch meta.ChannelType {
 	case channeltype.OpenRouter:
 		includeReasoning := true
@@ -117,7 +150,7 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 	}
 
 	if request.Stream && !config.EnforceIncludeUsage {
-		logger.Warn(c.Request.Context(),
+		logger.Warn(context.Background(),
 			"please set ENFORCE_INCLUDE_USAGE=true to ensure accurate billing in stream mode")
 	}
 
@@ -164,10 +197,10 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 		strings.HasSuffix(request.Model, "-audio") {
 		// TODO: Since it is not clear how to implement billing in stream mode,
 		// it is temporarily not supported
-		return nil, errors.New("set ENFORCE_INCLUDE_USAGE=true to enable stream mode for gpt-4o-audio")
+		return errors.New("set ENFORCE_INCLUDE_USAGE=true to enable stream mode for gpt-4o-audio")
 	}
 
-	return request, nil
+	return nil
 }
 
 func (a *Adaptor) ConvertImageRequest(_ *gin.Context, request *model.ImageRequest) (any, error) {
@@ -189,7 +222,20 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 	err *model.ErrorWithStatusCode) {
 	if meta.IsStream {
 		var responseText string
-		err, responseText, usage = StreamHandler(c, resp, meta.Mode)
+		// Check if we need to handle Response API streaming response
+		if vi, ok := c.Get(ctxkey.ConvertedRequest); ok {
+			if _, ok := vi.(*ResponseAPIRequest); ok {
+				// This is a Response API streaming response that needs conversion
+				err, responseText, usage = ResponseAPIStreamHandler(c, resp, meta.Mode)
+			} else {
+				// Regular streaming response
+				err, responseText, usage = StreamHandler(c, resp, meta.Mode)
+			}
+		} else {
+			// Regular streaming response
+			err, responseText, usage = StreamHandler(c, resp, meta.Mode)
+		}
+
 		if usage == nil || usage.TotalTokens == 0 {
 			usage = ResponseText2Usage(responseText, meta.ActualModelName, meta.PromptTokens)
 		}
@@ -204,6 +250,20 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 			err, usage = ImageHandler(c, resp)
 		// case relaymode.ImagesEdits:
 		// err, usage = ImagesEditsHandler(c, resp)
+		case relaymode.ChatCompletions:
+			// Check if we need to convert Response API response back to ChatCompletion format
+			if vi, ok := c.Get(ctxkey.ConvertedRequest); ok {
+				if _, ok := vi.(*ResponseAPIRequest); ok {
+					// This is a Response API response that needs conversion
+					err, usage = ResponseAPIHandler(c, resp, meta.PromptTokens, meta.ActualModelName)
+				} else {
+					// Regular ChatCompletion request
+					err, usage = Handler(c, resp, meta.PromptTokens, meta.ActualModelName)
+				}
+			} else {
+				// Regular ChatCompletion request
+				err, usage = Handler(c, resp, meta.PromptTokens, meta.ActualModelName)
+			}
 		default:
 			err, usage = Handler(c, resp, meta.PromptTokens, meta.ActualModelName)
 		}
