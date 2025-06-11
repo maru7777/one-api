@@ -1,6 +1,6 @@
 # * for amd64: docker build -t ppcelery/one-api:arm64-latest .
 # * for arm64: DOCKER_BUILDKIT=1 docker build --platform linux/arm64 --build-arg TARGETARCH=arm64 -t ppcelery/one-api:arm64-latest .
-FROM node:24-bookwork AS builder
+FROM node:24-bookworm AS builder
 
 RUN npm install -g npm react-scripts
 
@@ -22,7 +22,7 @@ RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run buil
 RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/berry
 RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/air
 
-FROM golang:1.24.4-bookwork AS builder2
+FROM golang:1.24.4-bookworm AS builder2
 
 # Make sure to use ARG with a default value
 ARG TARGETARCH=amd64
