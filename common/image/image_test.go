@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/songquanpeng/one-api/common/client"
 	img "github.com/songquanpeng/one-api/common/image"
@@ -28,6 +29,25 @@ func (r *CountingReader) Read(p []byte) (n int, err error) {
 	n, err = r.reader.Read(p)
 	r.BytesRead += n
 	return n, err
+}
+
+// retryHTTPGet retries HTTP GET requests with exponential backoff to handle network issues in CI
+func retryHTTPGet(url string, maxRetries int) (*http.Response, error) {
+	var lastErr error
+	for i := 0; i < maxRetries; i++ {
+		resp, err := http.Get(url)
+		if err == nil && resp.StatusCode == http.StatusOK {
+			return resp, nil
+		}
+		if resp != nil {
+			resp.Body.Close()
+		}
+		lastErr = err
+		if i < maxRetries-1 {
+			time.Sleep(time.Duration(1<<uint(i)) * time.Second) // exponential backoff
+		}
+	}
+	return nil, lastErr
 }
 
 var (
@@ -62,7 +82,7 @@ func TestDecode(t *testing.T) {
 	for _, c := range cases {
 		t.Run("Decode:"+c.format, func(t *testing.T) {
 			t.Logf("testing %s", c.url)
-			resp, err := http.Get(c.url)
+			resp, err := retryHTTPGet(c.url, 3)
 			require.NoError(t, err)
 			defer resp.Body.Close()
 			require.Equalf(t, http.StatusOK, resp.StatusCode, "status code from %s", c.url)
@@ -86,7 +106,7 @@ func TestDecode(t *testing.T) {
 	// jpeg#01: 4096
 	for _, c := range cases {
 		t.Run("DecodeConfig:"+c.format, func(t *testing.T) {
-			resp, err := http.Get(c.url)
+			resp, err := retryHTTPGet(c.url, 3)
 			require.NoError(t, err)
 			defer resp.Body.Close()
 			require.Equalf(t, http.StatusOK, resp.StatusCode, "status code from %s", c.url)
@@ -113,7 +133,7 @@ func TestBase64(t *testing.T) {
 	// jpeg#01: 32805
 	for _, c := range cases {
 		t.Run("Decode:"+c.format, func(t *testing.T) {
-			resp, err := http.Get(c.url)
+			resp, err := retryHTTPGet(c.url, 3)
 			require.NoError(t, err)
 			defer resp.Body.Close()
 			require.Equalf(t, http.StatusOK, resp.StatusCode, "status code from %s", c.url)
@@ -143,7 +163,7 @@ func TestBase64(t *testing.T) {
 	// jpeg#01: 3840
 	for _, c := range cases {
 		t.Run("DecodeConfig:"+c.format, func(t *testing.T) {
-			resp, err := http.Get(c.url)
+			resp, err := retryHTTPGet(c.url, 3)
 			require.NoError(t, err)
 			defer resp.Body.Close()
 			require.Equalf(t, http.StatusOK, resp.StatusCode, "status code from %s", c.url)
@@ -181,7 +201,7 @@ func TestGetImageSizeFromBase64(t *testing.T) {
 
 	for i, c := range cases {
 		t.Run("Decode:"+strconv.Itoa(i), func(t *testing.T) {
-			resp, err := http.Get(c.url)
+			resp, err := retryHTTPGet(c.url, 3)
 			require.NoErrorf(t, err, "get %s", c.url)
 			defer resp.Body.Close()
 			require.Equalf(t, http.StatusOK, resp.StatusCode, "status code from %s", c.url)

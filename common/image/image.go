@@ -93,7 +93,7 @@ func GetImageFromUrl(url string) (mimeType string, data string, err error) {
 		return mimeType, data, errors.New("not an image URL")
 	}
 
-	resp, err := http.Get(url)
+	resp, err := client.UserContentRequestHTTPClient.Get(url)
 	if err != nil {
 		return mimeType, data, errors.Wrap(err, "failed to get image from URL")
 	}
