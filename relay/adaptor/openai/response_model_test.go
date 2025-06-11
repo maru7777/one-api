@@ -960,3 +960,295 @@ func TestLegacyFunctionCallWorkflow(t *testing.T) {
 	t.Logf("Response API request tools: %d", len(responseAPIRequest.Tools))
 	t.Logf("Final response tool calls: %d", len(choice.Message.ToolCalls))
 }
+
+// TestParseResponseAPIStreamEvent tests the flexible parsing of Response API streaming events
+func TestParseResponseAPIStreamEvent(t *testing.T) {
+	t.Run("Parse response.output_text.done event", func(t *testing.T) {
+		// This is the problematic event that was causing parsing failures
+		eventData := `{"type":"response.output_text.done","sequence_number":22,"item_id":"msg_6849865110908191a4809c86e082ff710008bd3c6060334b","output_index":1,"content_index":0,"text":"Why don't skeletons fight each other?\n\nThey don't have the guts."}`
+
+		fullResponse, streamEvent, err := ParseResponseAPIStreamEvent([]byte(eventData))
+		if err != nil {
+			t.Fatalf("Failed to parse streaming event: %v", err)
+		}
+
+		// Should parse as streaming event, not full response
+		if fullResponse != nil {
+			t.Error("Expected fullResponse to be nil for streaming event")
+		}
+
+		if streamEvent == nil {
+			t.Fatal("Expected streamEvent to be non-nil")
+		}
+
+		// Verify event fields
+		if streamEvent.Type != "response.output_text.done" {
+			t.Errorf("Expected type 'response.output_text.done', got '%s'", streamEvent.Type)
+		}
+
+		if streamEvent.SequenceNumber != 22 {
+			t.Errorf("Expected sequence_number 22, got %d", streamEvent.SequenceNumber)
+		}
+
+		if streamEvent.ItemId != "msg_6849865110908191a4809c86e082ff710008bd3c6060334b" {
+			t.Errorf("Expected item_id 'msg_6849865110908191a4809c86e082ff710008bd3c6060334b', got '%s'", streamEvent.ItemId)
+		}
+
+		expectedText := "Why don't skeletons fight each other?\n\nThey don't have the guts."
+		if streamEvent.Text != expectedText {
+			t.Errorf("Expected text '%s', got '%s'", expectedText, streamEvent.Text)
+		}
+	})
+
+	t.Run("Parse response.output_text.delta event", func(t *testing.T) {
+		eventData := `{"type":"response.output_text.delta","sequence_number":6,"item_id":"msg_6849865110908191a4809c86e082ff710008bd3c6060334b","output_index":1,"content_index":0,"delta":"Why"}`
+
+		_, streamEvent, err := ParseResponseAPIStreamEvent([]byte(eventData))
+		if err != nil {
+			t.Fatalf("Failed to parse delta event: %v", err)
+		}
+
+		if streamEvent == nil {
+			t.Fatal("Expected streamEvent to be non-nil")
+		}
+
+		// Verify event fields
+		if streamEvent.Type != "response.output_text.delta" {
+			t.Errorf("Expected type 'response.output_text.delta', got '%s'", streamEvent.Type)
+		}
+
+		if streamEvent.Delta != "Why" {
+			t.Errorf("Expected delta 'Why', got '%s'", streamEvent.Delta)
+		}
+	})
+
+	t.Run("Parse full response event", func(t *testing.T) {
+		eventData := `{"id":"resp_123","object":"response","created_at":1749648976,"status":"completed","model":"o3-2025-04-16","output":[{"type":"message","id":"msg_123","status":"completed","role":"assistant","content":[{"type":"output_text","text":"Hello world"}]}],"usage":{"input_tokens":9,"output_tokens":22,"total_tokens":31}}`
+
+		fullResponse, streamEvent, err := ParseResponseAPIStreamEvent([]byte(eventData))
+		if err != nil {
+			t.Fatalf("Failed to parse full response event: %v", err)
+		}
+
+		// Should parse as full response, not streaming event
+		if streamEvent != nil {
+			t.Error("Expected streamEvent to be nil for full response")
+		}
+
+		if fullResponse == nil {
+			t.Fatal("Expected fullResponse to be non-nil")
+		}
+
+		// Verify response fields
+		if fullResponse.Id != "resp_123" {
+			t.Errorf("Expected id 'resp_123', got '%s'", fullResponse.Id)
+		}
+
+		if fullResponse.Status != "completed" {
+			t.Errorf("Expected status 'completed', got '%s'", fullResponse.Status)
+		}
+
+		if fullResponse.Usage == nil || fullResponse.Usage.TotalTokens != 31 {
+			t.Errorf("Expected total_tokens 31, got %v", fullResponse.Usage)
+		}
+	})
+
+	t.Run("Parse invalid JSON", func(t *testing.T) {
+		eventData := `{"invalid": json}`
+
+		_, _, err := ParseResponseAPIStreamEvent([]byte(eventData))
+		if err == nil {
+			t.Error("Expected error for invalid JSON")
+		}
+	})
+}
+
+// TestConvertStreamEventToResponse tests the conversion of streaming events to ResponseAPIResponse format
+func TestConvertStreamEventToResponse(t *testing.T) {
+	t.Run("Convert response.output_text.done event", func(t *testing.T) {
+		streamEvent := &ResponseAPIStreamEvent{
+			Type:           "response.output_text.done",
+			SequenceNumber: 22,
+			ItemId:         "msg_123",
+			OutputIndex:    1,
+			ContentIndex:   0,
+			Text:           "Hello, world!",
+		}
+
+		response := ConvertStreamEventToResponse(streamEvent)
+
+		// Verify basic fields
+		if response.Object != "response" {
+			t.Errorf("Expected object 'response', got '%s'", response.Object)
+		}
+
+		if response.Status != "in_progress" {
+			t.Errorf("Expected status 'in_progress', got '%s'", response.Status)
+		}
+
+		// Verify output
+		if len(response.Output) != 1 {
+			t.Fatalf("Expected 1 output item, got %d", len(response.Output))
+		}
+
+		output := response.Output[0]
+		if output.Type != "message" {
+			t.Errorf("Expected output type 'message', got '%s'", output.Type)
+		}
+
+		if output.Role != "assistant" {
+			t.Errorf("Expected output role 'assistant', got '%s'", output.Role)
+		}
+
+		if len(output.Content) != 1 {
+			t.Fatalf("Expected 1 content item, got %d", len(output.Content))
+		}
+
+		content := output.Content[0]
+		if content.Type != "output_text" {
+			t.Errorf("Expected content type 'output_text', got '%s'", content.Type)
+		}
+
+		if content.Text != "Hello, world!" {
+			t.Errorf("Expected content text 'Hello, world!', got '%s'", content.Text)
+		}
+	})
+
+	t.Run("Convert response.output_text.delta event", func(t *testing.T) {
+		streamEvent := &ResponseAPIStreamEvent{
+			Type:           "response.output_text.delta",
+			SequenceNumber: 6,
+			ItemId:         "msg_123",
+			OutputIndex:    1,
+			ContentIndex:   0,
+			Delta:          "Hello",
+		}
+
+		response := ConvertStreamEventToResponse(streamEvent)
+
+		// Verify basic fields
+		if response.Object != "response" {
+			t.Errorf("Expected object 'response', got '%s'", response.Object)
+		}
+
+		if response.Status != "in_progress" {
+			t.Errorf("Expected status 'in_progress', got '%s'", response.Status)
+		}
+
+		// Verify output
+		if len(response.Output) != 1 {
+			t.Fatalf("Expected 1 output item, got %d", len(response.Output))
+		}
+
+		output := response.Output[0]
+		if output.Type != "message" {
+			t.Errorf("Expected output type 'message', got '%s'", output.Type)
+		}
+
+		if output.Role != "assistant" {
+			t.Errorf("Expected output role 'assistant', got '%s'", output.Role)
+		}
+
+		if len(output.Content) != 1 {
+			t.Fatalf("Expected 1 content item, got %d", len(output.Content))
+		}
+
+		content := output.Content[0]
+		if content.Type != "output_text" {
+			t.Errorf("Expected content type 'output_text', got '%s'", content.Type)
+		}
+
+		if content.Text != "Hello" {
+			t.Errorf("Expected content text 'Hello', got '%s'", content.Text)
+		}
+	})
+
+	t.Run("Convert unknown event type", func(t *testing.T) {
+		streamEvent := &ResponseAPIStreamEvent{
+			Type:           "response.unknown.event",
+			SequenceNumber: 1,
+			ItemId:         "msg_123",
+		}
+
+		response := ConvertStreamEventToResponse(streamEvent)
+
+		// Should still create a basic response structure
+		if response.Object != "response" {
+			t.Errorf("Expected object 'response', got '%s'", response.Object)
+		}
+
+		if response.Status != "in_progress" {
+			t.Errorf("Expected status 'in_progress', got '%s'", response.Status)
+		}
+
+		// Output should be empty for unknown event types
+		if len(response.Output) != 0 {
+			t.Errorf("Expected 0 output items for unknown event, got %d", len(response.Output))
+		}
+	})
+}
+
+// TestStreamEventIntegration tests the complete integration of streaming event parsing with ChatCompletion conversion
+func TestStreamEventIntegration(t *testing.T) {
+	t.Run("End-to-end streaming event processing", func(t *testing.T) {
+		// Test the problematic event that was causing the original bug
+		eventData := `{"type":"response.output_text.done","sequence_number":22,"item_id":"msg_6849865110908191a4809c86e082ff710008bd3c6060334b","output_index":1,"content_index":0,"text":"Why don't skeletons fight each other?\n\nThey don't have the guts."}`
+
+		// Step 1: Parse the streaming event
+		_, streamEvent, err := ParseResponseAPIStreamEvent([]byte(eventData))
+		if err != nil {
+			t.Fatalf("Failed to parse streaming event: %v", err)
+		}
+
+		if streamEvent == nil {
+			t.Fatal("Expected streamEvent to be non-nil")
+		}
+
+		// Step 2: Convert to ResponseAPIResponse format
+		responseAPIChunk := ConvertStreamEventToResponse(streamEvent)
+
+		// Step 3: Convert to ChatCompletion streaming format
+		chatCompletionChunk := ConvertResponseAPIStreamToChatCompletion(&responseAPIChunk)
+
+		// Verify the final result
+		if len(chatCompletionChunk.Choices) != 1 {
+			t.Fatalf("Expected 1 choice, got %d", len(chatCompletionChunk.Choices))
+		}
+
+		choice := chatCompletionChunk.Choices[0]
+		expectedContent := "Why don't skeletons fight each other?\n\nThey don't have the guts."
+		if content, ok := choice.Delta.Content.(string); !ok || content != expectedContent {
+			t.Errorf("Expected delta content '%s', got '%v'", expectedContent, choice.Delta.Content)
+		}
+	})
+
+	t.Run("Delta event processing", func(t *testing.T) {
+		eventData := `{"type":"response.output_text.delta","sequence_number":6,"item_id":"msg_6849865110908191a4809c86e082ff710008bd3c6060334b","output_index":1,"content_index":0,"delta":"Why"}`
+
+		// Step 1: Parse the streaming event
+		_, streamEvent, err := ParseResponseAPIStreamEvent([]byte(eventData))
+		if err != nil {
+			t.Fatalf("Failed to parse delta event: %v", err)
+		}
+
+		if streamEvent == nil {
+			t.Fatal("Expected streamEvent to be non-nil")
+		}
+
+		// Step 2: Convert to ResponseAPIResponse format
+		responseAPIChunk := ConvertStreamEventToResponse(streamEvent)
+
+		// Step 3: Convert to ChatCompletion streaming format
+		chatCompletionChunk := ConvertResponseAPIStreamToChatCompletion(&responseAPIChunk)
+
+		// Verify the final result
+		if len(chatCompletionChunk.Choices) != 1 {
+			t.Fatalf("Expected 1 choice, got %d", len(chatCompletionChunk.Choices))
+		}
+
+		choice := chatCompletionChunk.Choices[0]
+		if content, ok := choice.Delta.Content.(string); !ok || content != "Why" {
+			t.Errorf("Expected delta content 'Why', got '%v'", choice.Delta.Content)
+		}
+	})
+}

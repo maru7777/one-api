@@ -431,6 +431,9 @@ func ResponseAPIStreamHandler(c *gin.Context, resp *http.Response, relayMode int
 	// Process each line from the stream
 	for scanner.Scan() {
 		data := NormalizeDataLine(scanner.Text())
+
+		logger.Debugf(c.Request.Context(), "response api stream response: %s", data)
+
 		if !strings.HasPrefix(data, dataPrefix) {
 			continue
 		}
@@ -444,11 +447,23 @@ func ResponseAPIStreamHandler(c *gin.Context, resp *http.Response, relayMode int
 			break
 		}
 
-		// Parse the Response API streaming chunk
-		var responseAPIChunk ResponseAPIResponse
-		err := json.Unmarshal([]byte(data), &responseAPIChunk)
+		// Parse the Response API streaming chunk using flexible parsing
+		fullResponse, streamEvent, err := ParseResponseAPIStreamEvent([]byte(data))
 		if err != nil {
-			logger.SysError("error unmarshalling stream chunk: " + err.Error())
+			// Log the error with more context but continue processing
+			logger.Debugf(c.Request.Context(), "skipping unparseable stream chunk: %s, error: %s", data, err.Error())
+			continue
+		}
+
+		// Handle full response events (like response.completed)
+		var responseAPIChunk ResponseAPIResponse
+		if fullResponse != nil {
+			responseAPIChunk = *fullResponse
+		} else if streamEvent != nil {
+			// Convert streaming event to ResponseAPIResponse for processing
+			responseAPIChunk = ConvertStreamEventToResponse(streamEvent)
+		} else {
+			// Skip this chunk if we can't parse it
 			continue
 		}
 
