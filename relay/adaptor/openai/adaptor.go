@@ -117,6 +117,10 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 
 		// Convert to Response API format
 		responseAPIRequest := ConvertChatCompletionToResponseAPI(request)
+
+		// Store the converted request in context to detect it later in DoResponse
+		c.Set(ctxkey.ConvertedRequest, responseAPIRequest)
+
 		return responseAPIRequest, nil
 	}
 
@@ -218,7 +222,20 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 	err *model.ErrorWithStatusCode) {
 	if meta.IsStream {
 		var responseText string
-		err, responseText, usage = StreamHandler(c, resp, meta.Mode)
+		// Check if we need to handle Response API streaming response
+		if vi, ok := c.Get(ctxkey.ConvertedRequest); ok {
+			if _, ok := vi.(*ResponseAPIRequest); ok {
+				// This is a Response API streaming response that needs conversion
+				err, responseText, usage = ResponseAPIStreamHandler(c, resp, meta.Mode)
+			} else {
+				// Regular streaming response
+				err, responseText, usage = StreamHandler(c, resp, meta.Mode)
+			}
+		} else {
+			// Regular streaming response
+			err, responseText, usage = StreamHandler(c, resp, meta.Mode)
+		}
+
 		if usage == nil || usage.TotalTokens == 0 {
 			usage = ResponseText2Usage(responseText, meta.ActualModelName, meta.PromptTokens)
 		}
@@ -233,6 +250,20 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 			err, usage = ImageHandler(c, resp)
 		// case relaymode.ImagesEdits:
 		// err, usage = ImagesEditsHandler(c, resp)
+		case relaymode.ChatCompletions:
+			// Check if we need to convert Response API response back to ChatCompletion format
+			if vi, ok := c.Get(ctxkey.ConvertedRequest); ok {
+				if _, ok := vi.(*ResponseAPIRequest); ok {
+					// This is a Response API response that needs conversion
+					err, usage = ResponseAPIHandler(c, resp, meta.PromptTokens, meta.ActualModelName)
+				} else {
+					// Regular ChatCompletion request
+					err, usage = Handler(c, resp, meta.PromptTokens, meta.ActualModelName)
+				}
+			} else {
+				// Regular ChatCompletion request
+				err, usage = Handler(c, resp, meta.PromptTokens, meta.ActualModelName)
+			}
 		default:
 			err, usage = Handler(c, resp, meta.PromptTokens, meta.ActualModelName)
 		}
