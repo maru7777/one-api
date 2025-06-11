@@ -42,6 +42,7 @@ Also welcome to register and use my deployed one-api gateway, which supports var
     - [Support o3 \& o4-mini \& gpt-4.1](#support-o3--o4-mini--gpt-41)
     - [Support gpt-image-1's image generation \& edits](#support-gpt-image-1s-image-generation--edits)
     - [Support black-forest-labs/flux-kontext-pro](#support-black-forest-labsflux-kontext-pro)
+    - [Support o3-pro \& reasoning content](#support-o3-pro--reasoning-content)
   - [Bug fix](#bug-fix)
 
 ## Turtorial
@@ -268,6 +269,10 @@ support `gpt-4o-search-preview` & `gpt-4o-mini-search-preview`
 ### Support black-forest-labs/flux-kontext-pro
 
 ![](https://s3.laisky.com/uploads/2025/05/flux-kontext-pro.png)
+
+### Support o3-pro & reasoning content
+
+![](https://s3.laisky.com/uploads/2025/06/o3-pro.png)
 
 ## Bug fix
 
