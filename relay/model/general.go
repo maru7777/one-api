@@ -94,6 +94,17 @@ type GeneralOpenAIRequest struct {
 	// Anthropic
 	// -------------------------------------
 	Thinking *Thinking `json:"thinking,omitempty"`
+	// -------------------------------------
+	// Response API
+	// -------------------------------------
+	Reasoning *OpenAIResponseReasoning `json:"reasoning,omitempty" binding:"omitempty,oneof=auto concise detailed"`
+}
+
+type OpenAIResponseReasoning struct {
+	// Effort defines the reasoning effort level
+	Effort *string `json:"effort,omitempty" binding:"omitempty,oneof=low medium high"`
+	// Summary defines whether to include a summary of the reasoning
+	Summary *string `json:"summary,omitempty" binding:"omitempty,oneof=auto concise detailed"`
 }
 
 // WebSearchOptions is the tool searches the web for relevant results to use in a response.
