@@ -23,10 +23,19 @@ type ResponseAPIRequest struct {
 	Temperature        *float64                       `json:"temperature,omitempty"`          // Optional: Sampling temperature
 	Text               *ResponseTextConfig            `json:"text,omitempty"`                 // Optional: Configuration options for a text response
 	ToolChoice         any                            `json:"tool_choice,omitempty"`          // Optional: How the model should select tools
-	Tools              []model.Tool                   `json:"tools,omitempty"`                // Optional: Array of tools the model may call
+	Tools              []ResponseAPITool              `json:"tools,omitempty"`                // Optional: Array of tools the model may call
 	TopP               *float64                       `json:"top_p,omitempty"`                // Optional: Alternative to sampling with temperature
 	Truncation         *string                        `json:"truncation,omitempty"`           // Optional: Truncation strategy
 	User               *string                        `json:"user,omitempty"`                 // Optional: Stable identifier for end-users
+}
+
+// ResponseAPITool represents the tool format for Response API requests
+// This differs from the ChatCompletion tool format where function properties are nested
+type ResponseAPITool struct {
+	Type        string                 `json:"type"`                  // Required: "function"
+	Name        string                 `json:"name"`                  // Required: Function name
+	Description string                 `json:"description,omitempty"` // Optional: Function description
+	Parameters  map[string]interface{} `json:"parameters,omitempty"`  // Optional: Function parameters schema
 }
 
 // ResponseTextConfig represents the text configuration for Response API
@@ -70,10 +79,35 @@ func ConvertChatCompletionToResponseAPI(request *model.GeneralOpenAIRequest) *Re
 		responseReq.ParallelToolCalls = request.ParallelTooCalls
 	}
 
-	// Handle tools
+	// Handle tools (modern format)
 	if len(request.Tools) > 0 {
-		responseReq.Tools = request.Tools
+		// Convert ChatCompletion tools to Response API tool format
+		responseAPITools := make([]ResponseAPITool, 0, len(request.Tools))
+		for _, tool := range request.Tools {
+			responseAPITool := ResponseAPITool{
+				Type:        tool.Type,
+				Name:        tool.Function.Name,
+				Description: tool.Function.Description,
+				Parameters:  tool.Function.Parameters,
+			}
+			responseAPITools = append(responseAPITools, responseAPITool)
+		}
+		responseReq.Tools = responseAPITools
 		responseReq.ToolChoice = request.ToolChoice
+	} else if len(request.Functions) > 0 {
+		// Handle legacy functions format by converting to Response API tool format
+		responseAPITools := make([]ResponseAPITool, 0, len(request.Functions))
+		for _, function := range request.Functions {
+			responseAPITool := ResponseAPITool{
+				Type:        "function",
+				Name:        function.Name,
+				Description: function.Description,
+				Parameters:  function.Parameters,
+			}
+			responseAPITools = append(responseAPITools, responseAPITool)
+		}
+		responseReq.Tools = responseAPITools
+		responseReq.ToolChoice = request.FunctionCall
 	}
 
 	// Handle thinking/reasoning
@@ -146,12 +180,16 @@ type ResponseAPIResponse struct {
 
 // OutputItem represents an item in the response output array
 type OutputItem struct {
-	Type    string          `json:"type"`              // Type of output item (e.g., "message", "reasoning")
+	Type    string          `json:"type"`              // Type of output item (e.g., "message", "reasoning", "function_call")
 	Id      string          `json:"id,omitempty"`      // Unique identifier for this item
 	Status  string          `json:"status,omitempty"`  // Status of this item (e.g., "completed")
 	Role    string          `json:"role,omitempty"`    // Role of the message (e.g., "assistant")
 	Content []OutputContent `json:"content,omitempty"` // Array of content items
 	Summary []OutputContent `json:"summary,omitempty"` // Array of summary items (for reasoning)
+	// Function call fields
+	CallId    string `json:"call_id,omitempty"`   // Call ID for function calls
+	Name      string `json:"name,omitempty"`      // Function name for function calls
+	Arguments string `json:"arguments,omitempty"` // Function arguments for function calls
 }
 
 // OutputContent represents content within an output item
@@ -175,23 +213,39 @@ func ConvertResponseAPIToChatCompletion(responseAPIResp *ResponseAPIResponse) *T
 
 	// Extract content from output array
 	for _, outputItem := range responseAPIResp.Output {
-		if outputItem.Type == "message" && outputItem.Role == "assistant" {
-			for _, content := range outputItem.Content {
-				switch content.Type {
-				case "output_text":
-					responseText += content.Text
-				case "reasoning":
-					reasoningText += content.Text
-				default:
-					// Handle other content types if needed
+		switch outputItem.Type {
+		case "message":
+			if outputItem.Role == "assistant" {
+				for _, content := range outputItem.Content {
+					switch content.Type {
+					case "output_text":
+						responseText += content.Text
+					case "reasoning":
+						reasoningText += content.Text
+					default:
+						// Handle other content types if needed
+					}
 				}
 			}
-		} else if outputItem.Type == "reasoning" {
+		case "reasoning":
 			// Handle reasoning items separately
 			for _, summaryContent := range outputItem.Summary {
 				if summaryContent.Type == "summary_text" {
 					reasoningText += summaryContent.Text
 				}
+			}
+		case "function_call":
+			// Handle function call items
+			if outputItem.CallId != "" && outputItem.Name != "" {
+				tool := model.Tool{
+					Id:   outputItem.CallId,
+					Type: "function",
+					Function: model.Function{
+						Name:      outputItem.Name,
+						Arguments: outputItem.Arguments,
+					},
+				}
+				tools = append(tools, tool)
 			}
 		}
 	}
@@ -221,11 +275,14 @@ func ConvertResponseAPIToChatCompletion(responseAPIResp *ResponseAPIResponse) *T
 		Message: model.Message{
 			Role:      "assistant",
 			Content:   responseText,
-			Reasoning: &reasoningText,
 			Name:      nil,
 			ToolCalls: tools,
 		},
 		FinishReason: finishReason,
+	}
+
+	if reasoningText != "" {
+		choice.Message.Reasoning = &reasoningText
 	}
 
 	// Create the chat completion response
@@ -251,26 +308,43 @@ func ConvertResponseAPIStreamToChatCompletion(responseAPIChunk *ResponseAPIRespo
 	var deltaContent string
 	var reasoningText string
 	var finishReason *string
+	var toolCalls []model.Tool
 
 	// Extract content from output array
 	for _, outputItem := range responseAPIChunk.Output {
-		if outputItem.Type == "message" && outputItem.Role == "assistant" {
-			for _, content := range outputItem.Content {
-				switch content.Type {
-				case "output_text":
-					deltaContent += content.Text
-				case "reasoning":
-					reasoningText += content.Text
-				default:
-					// Handle other content types if needed
+		switch outputItem.Type {
+		case "message":
+			if outputItem.Role == "assistant" {
+				for _, content := range outputItem.Content {
+					switch content.Type {
+					case "output_text":
+						deltaContent += content.Text
+					case "reasoning":
+						reasoningText += content.Text
+					default:
+						// Handle other content types if needed
+					}
 				}
 			}
-		} else if outputItem.Type == "reasoning" {
+		case "reasoning":
 			// Handle reasoning items separately
 			for _, summaryContent := range outputItem.Summary {
 				if summaryContent.Type == "summary_text" {
 					reasoningText += summaryContent.Text
 				}
+			}
+		case "function_call":
+			// Handle function call items
+			if outputItem.CallId != "" && outputItem.Name != "" {
+				tool := model.Tool{
+					Id:   outputItem.CallId,
+					Type: "function",
+					Function: model.Function{
+						Name:      outputItem.Name,
+						Arguments: outputItem.Arguments,
+					},
+				}
+				toolCalls = append(toolCalls, tool)
 			}
 		}
 	}
@@ -295,6 +369,11 @@ func ConvertResponseAPIStreamToChatCompletion(responseAPIChunk *ResponseAPIRespo
 			Content: deltaContent,
 		},
 		FinishReason: finishReason,
+	}
+
+	// Set tool calls if present
+	if len(toolCalls) > 0 {
+		choice.Delta.ToolCalls = toolCalls
 	}
 
 	// Set reasoning content if present

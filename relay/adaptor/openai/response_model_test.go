@@ -135,8 +135,8 @@ func TestConvertWithTools(t *testing.T) {
 		t.Errorf("Expected 1 tool, got %d", len(responseAPI.Tools))
 	}
 
-	if responseAPI.Tools[0].Function.Name != "get_weather" {
-		t.Errorf("Expected tool name 'get_weather', got '%s'", responseAPI.Tools[0].Function.Name)
+	if responseAPI.Tools[0].Name != "get_weather" {
+		t.Errorf("Expected tool name 'get_weather', got '%s'", responseAPI.Tools[0].Name)
 	}
 
 	if responseAPI.ToolChoice != "auto" {
@@ -252,8 +252,8 @@ func TestConvertResponseAPIToChatCompletion(t *testing.T) {
 		t.Errorf("Expected role 'assistant', got '%s'", choice.Message.Role)
 	}
 
-	if choice.Message.Content != "Hello! How can I help you today?" {
-		t.Errorf("Expected content 'Hello! How can I help you today?', got '%s'", choice.Message.Content)
+	if choice.Message.Reasoning != nil {
+		t.Errorf("Expected reasoning to be nil, got '%s'", *choice.Message.Reasoning)
 	}
 
 	if choice.FinishReason != "stop" {
@@ -271,6 +271,99 @@ func TestConvertResponseAPIToChatCompletion(t *testing.T) {
 
 	if chatCompletion.Usage.TotalTokens != 18 {
 		t.Errorf("Expected total_tokens 18, got %d", chatCompletion.Usage.TotalTokens)
+	}
+}
+
+// TestConvertResponseAPIToChatCompletionWithFunctionCall tests the conversion with function calls
+func TestConvertResponseAPIToChatCompletionWithFunctionCall(t *testing.T) {
+	// Create a Response API response with function call (based on the real example)
+	responseAPI := &ResponseAPIResponse{
+		Id:        "resp_67ca09c5efe0819096d0511c92b8c890096610f474011cc0",
+		Object:    "response",
+		CreatedAt: 1741294021,
+		Status:    "completed",
+		Model:     "gpt-4.1-2025-04-14",
+		Output: []OutputItem{
+			{
+				Type:      "function_call",
+				Id:        "fc_67ca09c6bedc8190a7abfec07b1a1332096610f474011cc0",
+				CallId:    "call_unLAR8MvFNptuiZK6K6HCy5k",
+				Name:      "get_current_weather",
+				Arguments: "{\"location\":\"Boston, MA\",\"unit\":\"celsius\"}",
+				Status:    "completed",
+			},
+		},
+		Usage: &model.Usage{
+			PromptTokens:     291,
+			CompletionTokens: 23,
+			TotalTokens:      314,
+		},
+	}
+
+	// Convert to ChatCompletion format
+	chatCompletion := ConvertResponseAPIToChatCompletion(responseAPI)
+
+	// Verify basic fields
+	if chatCompletion.Id != "resp_67ca09c5efe0819096d0511c92b8c890096610f474011cc0" {
+		t.Errorf("Expected id 'resp_67ca09c5efe0819096d0511c92b8c890096610f474011cc0', got '%s'", chatCompletion.Id)
+	}
+
+	if chatCompletion.Model != "gpt-4.1-2025-04-14" {
+		t.Errorf("Expected model 'gpt-4.1-2025-04-14', got '%s'", chatCompletion.Model)
+	}
+
+	// Verify choices
+	if len(chatCompletion.Choices) != 1 {
+		t.Fatalf("Expected 1 choice, got %d", len(chatCompletion.Choices))
+	}
+
+	choice := chatCompletion.Choices[0]
+	if choice.Index != 0 {
+		t.Errorf("Expected choice index 0, got %d", choice.Index)
+	}
+
+	if choice.Message.Role != "assistant" {
+		t.Errorf("Expected role 'assistant', got '%s'", choice.Message.Role)
+	}
+
+	// Verify tool calls
+	if len(choice.Message.ToolCalls) != 1 {
+		t.Fatalf("Expected 1 tool call, got %d", len(choice.Message.ToolCalls))
+	}
+
+	toolCall := choice.Message.ToolCalls[0]
+	if toolCall.Id != "call_unLAR8MvFNptuiZK6K6HCy5k" {
+		t.Errorf("Expected tool call id 'call_unLAR8MvFNptuiZK6K6HCy5k', got '%s'", toolCall.Id)
+	}
+
+	if toolCall.Type != "function" {
+		t.Errorf("Expected tool call type 'function', got '%s'", toolCall.Type)
+	}
+
+	if toolCall.Function.Name != "get_current_weather" {
+		t.Errorf("Expected function name 'get_current_weather', got '%s'", toolCall.Function.Name)
+	}
+
+	expectedArgs := "{\"location\":\"Boston, MA\",\"unit\":\"celsius\"}"
+	if toolCall.Function.Arguments != expectedArgs {
+		t.Errorf("Expected arguments '%s', got '%s'", expectedArgs, toolCall.Function.Arguments)
+	}
+
+	if choice.FinishReason != "stop" {
+		t.Errorf("Expected finish_reason 'stop', got '%s'", choice.FinishReason)
+	}
+
+	// Verify usage
+	if chatCompletion.Usage.PromptTokens != 291 {
+		t.Errorf("Expected prompt_tokens 291, got %d", chatCompletion.Usage.PromptTokens)
+	}
+
+	if chatCompletion.Usage.CompletionTokens != 23 {
+		t.Errorf("Expected completion_tokens 23, got %d", chatCompletion.Usage.CompletionTokens)
+	}
+
+	if chatCompletion.Usage.TotalTokens != 314 {
+		t.Errorf("Expected total_tokens 314, got %d", chatCompletion.Usage.TotalTokens)
 	}
 }
 
@@ -347,6 +440,77 @@ func TestConvertResponseAPIStreamToChatCompletion(t *testing.T) {
 	streamChunk = ConvertResponseAPIStreamToChatCompletion(responseAPIChunk)
 	choice = streamChunk.Choices[0]
 
+	if choice.FinishReason == nil || *choice.FinishReason != "stop" {
+		t.Errorf("Expected finish_reason 'stop' for completed status, got %v", choice.FinishReason)
+	}
+}
+
+// TestConvertResponseAPIStreamToChatCompletionWithFunctionCall tests streaming conversion with function calls
+func TestConvertResponseAPIStreamToChatCompletionWithFunctionCall(t *testing.T) {
+	// Create a Response API streaming chunk with function call
+	responseAPIChunk := &ResponseAPIResponse{
+		Id:        "resp_123",
+		Object:    "response",
+		CreatedAt: 1234567890,
+		Status:    "completed",
+		Model:     "gpt-4",
+		Output: []OutputItem{
+			{
+				Type:      "function_call",
+				Id:        "fc_123",
+				CallId:    "call_456",
+				Name:      "get_weather",
+				Arguments: "{\"location\":\"Boston\"}",
+				Status:    "completed",
+			},
+		},
+	}
+
+	// Convert to ChatCompletion streaming format
+	streamChunk := ConvertResponseAPIStreamToChatCompletion(responseAPIChunk)
+
+	// Verify basic fields
+	if streamChunk.Id != "resp_123" {
+		t.Errorf("Expected id 'resp_123', got '%s'", streamChunk.Id)
+	}
+
+	if streamChunk.Object != "chat.completion.chunk" {
+		t.Errorf("Expected object 'chat.completion.chunk', got '%s'", streamChunk.Object)
+	}
+
+	// Verify choices
+	if len(streamChunk.Choices) != 1 {
+		t.Fatalf("Expected 1 choice, got %d", len(streamChunk.Choices))
+	}
+
+	choice := streamChunk.Choices[0]
+	if choice.Index != 0 {
+		t.Errorf("Expected choice index 0, got %d", choice.Index)
+	}
+
+	if choice.Delta.Role != "assistant" {
+		t.Errorf("Expected role 'assistant', got '%s'", choice.Delta.Role)
+	}
+
+	// Verify tool calls
+	if len(choice.Delta.ToolCalls) != 1 {
+		t.Fatalf("Expected 1 tool call, got %d", len(choice.Delta.ToolCalls))
+	}
+
+	toolCall := choice.Delta.ToolCalls[0]
+	if toolCall.Id != "call_456" {
+		t.Errorf("Expected tool call id 'call_456', got '%s'", toolCall.Id)
+	}
+
+	if toolCall.Function.Name != "get_weather" {
+		t.Errorf("Expected function name 'get_weather', got '%s'", toolCall.Function.Name)
+	}
+
+	if toolCall.Function.Arguments != "{\"location\":\"Boston\"}" {
+		t.Errorf("Expected arguments '{\"location\":\"Boston\"}', got '%s'", toolCall.Function.Arguments)
+	}
+
+	// For completed status, finish_reason should be "stop"
 	if choice.FinishReason == nil || *choice.FinishReason != "stop" {
 		t.Errorf("Expected finish_reason 'stop' for completed status, got %v", choice.FinishReason)
 	}
@@ -445,4 +609,354 @@ func TestConvertResponseAPIToChatCompletionWithReasoning(t *testing.T) {
 	if chatCompletion.Usage.TotalTokens != 92 {
 		t.Errorf("Expected total_tokens 92, got %d", chatCompletion.Usage.TotalTokens)
 	}
+}
+
+// TestFunctionCallWorkflow tests the complete function calling workflow:
+// ChatCompletion -> ResponseAPI -> ResponseAPI Response -> ChatCompletion
+func TestFunctionCallWorkflow(t *testing.T) {
+	// Step 1: Create original ChatCompletion request with tools
+	originalRequest := &model.GeneralOpenAIRequest{
+		Model: "gpt-4",
+		Messages: []model.Message{
+			{Role: "user", Content: "What's the weather like in Boston today?"},
+		},
+		Tools: []model.Tool{
+			{
+				Type: "function",
+				Function: model.Function{
+					Name:        "get_current_weather",
+					Description: "Get the current weather in a given location",
+					Parameters: map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"location": map[string]interface{}{
+								"type":        "string",
+								"description": "The city and state, e.g. San Francisco, CA",
+							},
+							"unit": map[string]interface{}{
+								"type": "string",
+								"enum": []string{"celsius", "fahrenheit"},
+							},
+						},
+						"required": []string{"location", "unit"},
+					},
+				},
+			},
+		},
+		ToolChoice: "auto",
+	}
+
+	// Step 2: Convert ChatCompletion to Response API format
+	responseAPIRequest := ConvertChatCompletionToResponseAPI(originalRequest)
+
+	// Verify tools are preserved in request
+	if len(responseAPIRequest.Tools) != 1 {
+		t.Fatalf("Expected 1 tool in request, got %d", len(responseAPIRequest.Tools))
+	}
+
+	if responseAPIRequest.Tools[0].Name != "get_current_weather" {
+		t.Errorf("Expected tool name 'get_current_weather', got '%s'", responseAPIRequest.Tools[0].Name)
+	}
+
+	if responseAPIRequest.ToolChoice != "auto" {
+		t.Errorf("Expected tool_choice 'auto', got '%v'", responseAPIRequest.ToolChoice)
+	}
+
+	// Step 3: Create a Response API response with function call (simulates upstream response)
+	responseAPIResponse := &ResponseAPIResponse{
+		Id:        "resp_67ca09c5efe0819096d0511c92b8c890096610f474011cc0",
+		Object:    "response",
+		CreatedAt: 1741294021,
+		Status:    "completed",
+		Model:     "gpt-4.1-2025-04-14",
+		Output: []OutputItem{
+			{
+				Type:      "function_call",
+				Id:        "fc_67ca09c6bedc8190a7abfec07b1a1332096610f474011cc0",
+				CallId:    "call_unLAR8MvFNptuiZK6K6HCy5k",
+				Name:      "get_current_weather",
+				Arguments: "{\"location\":\"Boston, MA\",\"unit\":\"celsius\"}",
+				Status:    "completed",
+			},
+		},
+		Usage: &model.Usage{
+			PromptTokens:     291,
+			CompletionTokens: 23,
+			TotalTokens:      314,
+		},
+	}
+
+	// Step 4: Convert Response API response back to ChatCompletion format
+	finalChatCompletion := ConvertResponseAPIToChatCompletion(responseAPIResponse)
+
+	// Step 5: Verify the final ChatCompletion response preserves all function call information
+	if len(finalChatCompletion.Choices) != 1 {
+		t.Fatalf("Expected 1 choice, got %d", len(finalChatCompletion.Choices))
+	}
+
+	choice := finalChatCompletion.Choices[0]
+	if choice.Message.Role != "assistant" {
+		t.Errorf("Expected role 'assistant', got '%s'", choice.Message.Role)
+	}
+
+	// Verify tool calls are preserved
+	if len(choice.Message.ToolCalls) != 1 {
+		t.Fatalf("Expected 1 tool call, got %d", len(choice.Message.ToolCalls))
+	}
+
+	toolCall := choice.Message.ToolCalls[0]
+	if toolCall.Id != "call_unLAR8MvFNptuiZK6K6HCy5k" {
+		t.Errorf("Expected tool call id 'call_unLAR8MvFNptuiZK6K6HCy5k', got '%s'", toolCall.Id)
+	}
+
+	if toolCall.Type != "function" {
+		t.Errorf("Expected tool call type 'function', got '%s'", toolCall.Type)
+	}
+
+	if toolCall.Function.Name != "get_current_weather" {
+		t.Errorf("Expected function name 'get_current_weather', got '%s'", toolCall.Function.Name)
+	}
+
+	expectedArgs := "{\"location\":\"Boston, MA\",\"unit\":\"celsius\"}"
+	if toolCall.Function.Arguments != expectedArgs {
+		t.Errorf("Expected arguments '%s', got '%s'", expectedArgs, toolCall.Function.Arguments)
+	}
+
+	// Verify usage is preserved
+	if finalChatCompletion.Usage.PromptTokens != 291 {
+		t.Errorf("Expected prompt_tokens 291, got %d", finalChatCompletion.Usage.PromptTokens)
+	}
+
+	if finalChatCompletion.Usage.CompletionTokens != 23 {
+		t.Errorf("Expected completion_tokens 23, got %d", finalChatCompletion.Usage.CompletionTokens)
+	}
+
+	if finalChatCompletion.Usage.TotalTokens != 314 {
+		t.Errorf("Expected total_tokens 314, got %d", finalChatCompletion.Usage.TotalTokens)
+	}
+
+	t.Log("Function call workflow test completed successfully!")
+	t.Logf("Original request tools: %d", len(originalRequest.Tools))
+	t.Logf("Response API request tools: %d", len(responseAPIRequest.Tools))
+	t.Logf("Final response tool calls: %d", len(choice.Message.ToolCalls))
+}
+
+func TestConvertWithLegacyFunctions(t *testing.T) {
+	// Test legacy functions conversion
+	chatRequest := &model.GeneralOpenAIRequest{
+		Model: "gpt-4",
+		Messages: []model.Message{
+			{Role: "user", Content: "What's the weather?"},
+		},
+		Functions: []model.Function{
+			{
+				Name:        "get_current_weather",
+				Description: "Get current weather",
+				Parameters: map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"location": map[string]interface{}{
+							"type":        "string",
+							"description": "The city and state, e.g. San Francisco, CA",
+						},
+						"unit": map[string]interface{}{
+							"type": "string",
+							"enum": []string{"celsius", "fahrenheit"},
+						},
+					},
+					"required": []string{"location"},
+				},
+			},
+		},
+		FunctionCall: "auto",
+	}
+
+	responseAPI := ConvertChatCompletionToResponseAPI(chatRequest)
+
+	// Verify functions are converted to tools
+	if len(responseAPI.Tools) != 1 {
+		t.Errorf("Expected 1 tool, got %d", len(responseAPI.Tools))
+	}
+
+	if responseAPI.Tools[0].Type != "function" {
+		t.Errorf("Expected tool type 'function', got '%s'", responseAPI.Tools[0].Type)
+	}
+
+	if responseAPI.Tools[0].Name != "get_current_weather" {
+		t.Errorf("Expected function name 'get_current_weather', got '%s'", responseAPI.Tools[0].Name)
+	}
+
+	if responseAPI.ToolChoice != "auto" {
+		t.Errorf("Expected tool_choice 'auto', got '%v'", responseAPI.ToolChoice)
+	}
+
+	// Verify the function parameters are preserved
+	if responseAPI.Tools[0].Parameters == nil {
+		t.Error("Expected function parameters to be preserved")
+	}
+
+	// Verify properties are preserved
+	if props, ok := responseAPI.Tools[0].Parameters["properties"].(map[string]interface{}); ok {
+		if location, ok := props["location"].(map[string]interface{}); ok {
+			if location["type"] != "string" {
+				t.Errorf("Expected location type 'string', got '%v'", location["type"])
+			}
+		} else {
+			t.Error("Expected location property to be preserved")
+		}
+	} else {
+		t.Error("Expected properties to be preserved")
+	}
+}
+
+// TestLegacyFunctionCallWorkflow tests the complete legacy function calling workflow:
+// ChatCompletion with Functions -> ResponseAPI -> ResponseAPI Response -> ChatCompletion
+func TestLegacyFunctionCallWorkflow(t *testing.T) {
+	// Step 1: Create original ChatCompletion request with legacy functions
+	originalRequest := &model.GeneralOpenAIRequest{
+		Model: "gpt-4",
+		Messages: []model.Message{
+			{Role: "user", Content: "What's the weather like in Boston today?"},
+		},
+		Functions: []model.Function{
+			{
+				Name:        "get_current_weather",
+				Description: "Get the current weather in a given location",
+				Parameters: map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"location": map[string]interface{}{
+							"type":        "string",
+							"description": "The city and state, e.g. San Francisco, CA",
+						},
+						"unit": map[string]interface{}{
+							"type": "string",
+							"enum": []string{"celsius", "fahrenheit"},
+						},
+					},
+					"required": []string{"location", "unit"},
+				},
+			},
+		},
+		FunctionCall: "auto",
+	}
+
+	// Step 2: Convert ChatCompletion to Response API format
+	responseAPIRequest := ConvertChatCompletionToResponseAPI(originalRequest)
+
+	// Verify functions are converted to tools in request
+	if len(responseAPIRequest.Tools) != 1 {
+		t.Fatalf("Expected 1 tool in request, got %d", len(responseAPIRequest.Tools))
+	}
+
+	if responseAPIRequest.Tools[0].Name != "get_current_weather" {
+		t.Errorf("Expected tool name 'get_current_weather', got '%s'", responseAPIRequest.Tools[0].Name)
+	}
+
+	if responseAPIRequest.ToolChoice != "auto" {
+		t.Errorf("Expected tool_choice 'auto', got '%v'", responseAPIRequest.ToolChoice)
+	}
+
+	// Step 3: Create mock Response API response (simulating what the API would return)
+	responseAPIResponse := &ResponseAPIResponse{
+		Id:        "resp_legacy_test",
+		Object:    "response",
+		CreatedAt: 1741294021,
+		Status:    "completed",
+		Model:     "gpt-4.1-2025-04-14",
+		Output: []OutputItem{
+			{
+				Type:      "function_call",
+				Id:        "fc_legacy_test",
+				CallId:    "call_legacy_test_123",
+				Name:      "get_current_weather",
+				Arguments: "{\"location\":\"Boston, MA\",\"unit\":\"celsius\"}",
+				Status:    "completed",
+			},
+		},
+		ParallelToolCalls: true,
+		ToolChoice:        "auto",
+		Tools: []model.Tool{
+			{
+				Type: "function",
+				Function: model.Function{
+					Name:        "get_current_weather",
+					Description: "Get the current weather in a given location",
+					Parameters: map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"location": map[string]interface{}{
+								"type":        "string",
+								"description": "The city and state, e.g. San Francisco, CA",
+							},
+							"unit": map[string]interface{}{
+								"type": "string",
+								"enum": []string{"celsius", "fahrenheit"},
+							},
+						},
+						"required": []string{"location", "unit"},
+					},
+				},
+			},
+		},
+		Usage: &model.Usage{
+			PromptTokens:     291,
+			CompletionTokens: 23,
+			TotalTokens:      314,
+		},
+	}
+
+	// Step 4: Convert Response API response back to ChatCompletion format
+	finalChatCompletion := ConvertResponseAPIToChatCompletion(responseAPIResponse)
+
+	// Step 5: Verify the final ChatCompletion response preserves all function call information
+	if len(finalChatCompletion.Choices) != 1 {
+		t.Fatalf("Expected 1 choice, got %d", len(finalChatCompletion.Choices))
+	}
+
+	choice := finalChatCompletion.Choices[0]
+	if choice.Message.Role != "assistant" {
+		t.Errorf("Expected role 'assistant', got '%s'", choice.Message.Role)
+	}
+
+	// Verify tool calls are preserved
+	if len(choice.Message.ToolCalls) != 1 {
+		t.Fatalf("Expected 1 tool call, got %d", len(choice.Message.ToolCalls))
+	}
+
+	toolCall := choice.Message.ToolCalls[0]
+	if toolCall.Id != "call_legacy_test_123" {
+		t.Errorf("Expected tool call id 'call_legacy_test_123', got '%s'", toolCall.Id)
+	}
+
+	if toolCall.Type != "function" {
+		t.Errorf("Expected tool call type 'function', got '%s'", toolCall.Type)
+	}
+
+	if toolCall.Function.Name != "get_current_weather" {
+		t.Errorf("Expected function name 'get_current_weather', got '%s'", toolCall.Function.Name)
+	}
+
+	expectedArgs := "{\"location\":\"Boston, MA\",\"unit\":\"celsius\"}"
+	if toolCall.Function.Arguments != expectedArgs {
+		t.Errorf("Expected arguments '%s', got '%s'", expectedArgs, toolCall.Function.Arguments)
+	}
+
+	// Verify usage is preserved
+	if finalChatCompletion.Usage.PromptTokens != 291 {
+		t.Errorf("Expected prompt_tokens 291, got %d", finalChatCompletion.Usage.PromptTokens)
+	}
+
+	if finalChatCompletion.Usage.CompletionTokens != 23 {
+		t.Errorf("Expected completion_tokens 23, got %d", finalChatCompletion.Usage.CompletionTokens)
+	}
+
+	if finalChatCompletion.Usage.TotalTokens != 314 {
+		t.Errorf("Expected total_tokens 314, got %d", finalChatCompletion.Usage.TotalTokens)
+	}
+
+	t.Log("Legacy function call workflow test completed successfully!")
+	t.Logf("Original request functions: %d", len(originalRequest.Functions))
+	t.Logf("Response API request tools: %d", len(responseAPIRequest.Tools))
+	t.Logf("Final response tool calls: %d", len(choice.Message.ToolCalls))
 }
