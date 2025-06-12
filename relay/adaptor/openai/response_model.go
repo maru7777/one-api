@@ -43,8 +43,16 @@ type ResponseAPITool struct {
 
 // ResponseTextConfig represents the text configuration for Response API
 type ResponseTextConfig struct {
-	Type       *string           `json:"type,omitempty"`        // Optional: Type of text response (e.g., "text")
-	JSONSchema *model.JSONSchema `json:"json_schema,omitempty"` // Optional: JSON schema for structured outputs
+	Format *ResponseTextFormat `json:"format,omitempty"` // Optional: Format configuration for structured outputs
+}
+
+// ResponseTextFormat represents the format configuration for Response API structured outputs
+type ResponseTextFormat struct {
+	Type        string                 `json:"type"`                  // Required: Format type (e.g., "text", "json_schema")
+	Name        string                 `json:"name,omitempty"`        // Optional: Schema name for json_schema type
+	Description string                 `json:"description,omitempty"` // Optional: Schema description
+	Schema      map[string]interface{} `json:"schema,omitempty"`      // Optional: JSON schema definition
+	Strict      *bool                  `json:"strict,omitempty"`      // Optional: Whether to use strict mode
 }
 
 // ConvertChatCompletionToResponseAPI converts a ChatCompletion request to Response API format
@@ -131,13 +139,20 @@ func ConvertChatCompletionToResponseAPI(request *model.GeneralOpenAIRequest) *Re
 
 	// Handle response format
 	if request.ResponseFormat != nil {
-		textConfig := &ResponseTextConfig{}
-		if request.ResponseFormat.Type != "" {
-			textConfig.Type = &request.ResponseFormat.Type
+		textConfig := &ResponseTextConfig{
+			Format: &ResponseTextFormat{
+				Type: request.ResponseFormat.Type,
+			},
 		}
+
+		// Handle structured output with JSON schema
 		if request.ResponseFormat.JsonSchema != nil {
-			textConfig.JSONSchema = request.ResponseFormat.JsonSchema
+			textConfig.Format.Name = request.ResponseFormat.JsonSchema.Name
+			textConfig.Format.Description = request.ResponseFormat.JsonSchema.Description
+			textConfig.Format.Schema = request.ResponseFormat.JsonSchema.Schema
+			textConfig.Format.Strict = request.ResponseFormat.JsonSchema.Strict
 		}
+
 		responseReq.Text = textConfig
 	}
 

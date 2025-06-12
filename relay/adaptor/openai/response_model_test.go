@@ -170,22 +170,25 @@ func TestConvertWithResponseFormat(t *testing.T) {
 		t.Error("Expected text config to be set")
 	}
 
-	if responseAPI.Text.Type == nil || *responseAPI.Text.Type != "json_object" {
-		t.Error("Expected text type to be 'json_object'")
+	if responseAPI.Text.Format == nil {
+		t.Error("Expected text format to be set")
 	}
 
-	if responseAPI.Text.JSONSchema == nil {
+	if responseAPI.Text.Format.Type != "json_object" {
+		t.Errorf("Expected text format type to be 'json_object', got '%s'", responseAPI.Text.Format.Type)
+	}
+
+	if responseAPI.Text.Format.Name != "response_schema" {
+		t.Errorf("Expected schema name 'response_schema', got '%s'", responseAPI.Text.Format.Name)
+	}
+
+	if responseAPI.Text.Format.Description != "Test schema" {
+		t.Errorf("Expected schema description 'Test schema', got '%s'", responseAPI.Text.Format.Description)
+	}
+
+	if responseAPI.Text.Format.Schema == nil {
 		t.Error("Expected JSON schema to be set")
 	}
-
-	if responseAPI.Text.JSONSchema.Name != "response_schema" {
-		t.Errorf("Expected schema name 'response_schema', got '%s'", responseAPI.Text.JSONSchema.Name)
-	}
-}
-
-// Helper function to create float64 pointers
-func floatPtr(f float64) *float64 {
-	return &f
 }
 
 // TestConvertResponseAPIToChatCompletion tests the conversion from Response API format back to ChatCompletion format
