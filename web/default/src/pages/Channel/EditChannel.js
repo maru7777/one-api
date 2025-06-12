@@ -723,7 +723,7 @@ const EditChannel = () => {
                   name='user_id'
                   required
                   placeholder={
-                    '请输入 Account ID，例如：d8d7c61dbc334c32d3ced580e4bf42b4'
+                    'Please enter Account ID, e.g.: d8d7c61dbc334c32d3ced580e4bf42b4'
                   }
                   onChange={handleConfigChange}
                   value={config.user_id}

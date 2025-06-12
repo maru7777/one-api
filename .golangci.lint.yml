@@ -1,6 +1,6 @@
 # This file contains all available configuration options
 # with their default values.
-# 配置文件教程地址  https://golangci-lint.run/usage/configuration
+# Configuration file tutorial: https://golangci-lint.run/usage/configuration
 
 # options for analysis running
 run:
@@ -467,7 +467,7 @@ issues:
   # it can be disabled by `exclude-use-default: false`. To list all
   # excluded by default patterns execute `golangci-lint run --help`
   exclude:
-    - "ineffectual assignment to `.*` (ineffassign)" #正则排除这lint 错误类型
+    - "ineffectual assignment to `.*` (ineffassign)" # Regex exclude this lint error type
     - 'shadow: declaration of ".*" shadows declaration'
     - "^exported [^ ]* .* should have comment"
     - "^comment on"
