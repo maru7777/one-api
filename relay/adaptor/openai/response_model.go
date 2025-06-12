@@ -330,7 +330,7 @@ func ConvertResponseAPIStreamToChatCompletion(responseAPIChunk *ResponseAPIRespo
 				}
 			}
 		case "reasoning":
-			// Handle reasoning items separately
+			// Handle reasoning items separately - extract from summary content
 			for _, summaryContent := range outputItem.Summary {
 				if summaryContent.Type == "summary_text" {
 					reasoningText += summaryContent.Text
@@ -468,6 +468,36 @@ func ConvertStreamEventToResponse(event *ResponseAPIStreamEvent) ResponseAPIResp
 		// Handle events that contain a full response object (response.created, response.completed, etc.)
 		return *event.Response
 
+	case strings.HasPrefix(event.Type, "response.reasoning_summary_text.delta"):
+		// Handle reasoning summary text delta events
+		if event.Delta != "" {
+			outputItem := OutputItem{
+				Type: "reasoning",
+				Summary: []OutputContent{
+					{
+						Type: "summary_text",
+						Text: event.Delta,
+					},
+				},
+			}
+			response.Output = []OutputItem{outputItem}
+		}
+
+	case strings.HasPrefix(event.Type, "response.reasoning_summary_text.done"):
+		// Handle reasoning summary text completion events
+		if event.Text != "" {
+			outputItem := OutputItem{
+				Type: "reasoning",
+				Summary: []OutputContent{
+					{
+						Type: "summary_text",
+						Text: event.Text,
+					},
+				},
+			}
+			response.Output = []OutputItem{outputItem}
+		}
+
 	case strings.HasPrefix(event.Type, "response.output_text.delta"):
 		// Handle text delta events
 		if event.Delta != "" {
@@ -513,6 +543,16 @@ func ConvertStreamEventToResponse(event *ResponseAPIStreamEvent) ResponseAPIResp
 				Type:    "message",
 				Role:    "assistant",
 				Content: []OutputContent{*event.Part},
+			}
+			response.Output = []OutputItem{outputItem}
+		}
+
+	case strings.HasPrefix(event.Type, "response.reasoning_summary_part"):
+		// Handle reasoning summary part events (added, done)
+		if event.Part != nil {
+			outputItem := OutputItem{
+				Type:    "reasoning",
+				Summary: []OutputContent{*event.Part},
 			}
 			response.Output = []OutputItem{outputItem}
 		}

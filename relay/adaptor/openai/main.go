@@ -478,19 +478,18 @@ func ResponseAPIStreamHandler(c *gin.Context, resp *http.Response, relayMode int
 		if streamEvent != nil && strings.Contains(streamEvent.Type, "delta") {
 			// Only accumulate content from delta events to prevent duplication
 			if streamEvent.Delta != "" {
-				responseText += streamEvent.Delta
+				if strings.Contains(streamEvent.Type, "reasoning_summary_text") {
+					// This is reasoning content
+					reasoningText += streamEvent.Delta
+				} else {
+					// This is regular content
+					responseText += streamEvent.Delta
+				}
 			}
 		}
 
 		// Convert Response API chunk to ChatCompletion streaming format
 		chatCompletionChunk := ConvertResponseAPIStreamToChatCompletion(&responseAPIChunk)
-
-		// Handle reasoning content accumulation from delta events only
-		if len(chatCompletionChunk.Choices) > 0 && streamEvent != nil && strings.Contains(streamEvent.Type, "delta") {
-			if chatCompletionChunk.Choices[0].Delta.Reasoning != nil {
-				reasoningText += *chatCompletionChunk.Choices[0].Delta.Reasoning
-			}
-		}
 
 		// Accumulate usage information
 		if chatCompletionChunk.Usage != nil {
