@@ -335,7 +335,7 @@ func ResponseAPIHandler(c *gin.Context, resp *http.Response, promptTokens int, m
 
 	// Log the response body for debugging
 	logger.Debugf(c.Request.Context(),
-		"response api handler response: %s", string(responseBody))
+		"got response from upstream: %s", string(responseBody))
 
 	// Close the original response body
 	if err = resp.Body.Close(); err != nil {
@@ -389,7 +389,7 @@ func ResponseAPIHandler(c *gin.Context, resp *http.Response, promptTokens int, m
 		return ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError), nil
 	}
 
-	logger.Debugf(c.Request.Context(), "response api handler response: %s", string(jsonResponse))
+	logger.Debugf(c.Request.Context(), "generate response to user: %s", string(jsonResponse))
 
 	// Forward all response headers
 	for k, values := range resp.Header {
