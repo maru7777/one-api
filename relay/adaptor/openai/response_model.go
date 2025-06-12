@@ -2,6 +2,7 @@ package openai
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/songquanpeng/one-api/relay/model"
@@ -55,6 +56,51 @@ type ResponseTextFormat struct {
 	Strict      *bool                  `json:"strict,omitempty"`      // Optional: Whether to use strict mode
 }
 
+// convertResponseAPIIDToToolCall converts Response API function call IDs back to ChatCompletion format
+// Removes the "fc_" and "call_" prefixes to get the original ID
+func convertResponseAPIIDToToolCall(fcID, callID string) string {
+	if fcID != "" && strings.HasPrefix(fcID, "fc_") {
+		return strings.TrimPrefix(fcID, "fc_")
+	}
+	if callID != "" && strings.HasPrefix(callID, "call_") {
+		return strings.TrimPrefix(callID, "call_")
+	}
+	// Fallback to using the ID as-is
+	if fcID != "" {
+		return fcID
+	}
+	return callID
+}
+
+// convertToolCallIDToResponseAPI converts a ChatCompletion tool call ID to Response API format
+// The Response API expects IDs with "fc_" prefix for function calls and "call_" prefix for call_id
+func convertToolCallIDToResponseAPI(originalID string) (fcID, callID string) {
+	if originalID == "" {
+		return "", ""
+	}
+
+	// If the ID already has the correct prefix, use it as-is
+	if strings.HasPrefix(originalID, "fc_") {
+		return originalID, strings.Replace(originalID, "fc_", "call_", 1)
+	}
+	if strings.HasPrefix(originalID, "call_") {
+		return strings.Replace(originalID, "call_", "fc_", 1), originalID
+	}
+
+	// Otherwise, generate appropriate prefixes
+	return "fc_" + originalID, "call_" + originalID
+}
+
+// findToolCallName finds the function name for a given tool call ID
+func findToolCallName(toolCalls []model.Tool, toolCallId string) string {
+	for _, toolCall := range toolCalls {
+		if toolCall.Id == toolCallId {
+			return toolCall.Function.Name
+		}
+	}
+	return "unknown_function"
+}
+
 // ConvertChatCompletionToResponseAPI converts a ChatCompletion request to Response API format
 func ConvertChatCompletionToResponseAPI(request *model.GeneralOpenAIRequest) *ResponseAPIRequest {
 	responseReq := &ResponseAPIRequest{
@@ -63,8 +109,77 @@ func ConvertChatCompletionToResponseAPI(request *model.GeneralOpenAIRequest) *Re
 	}
 
 	// Convert messages to input - Response API expects messages directly in the input array
+	// IMPORTANT: Response API doesn't support ChatCompletion function call history format
+	// We'll convert function call history to text summaries to preserve context
+	var pendingToolCalls []model.Tool
+	var pendingToolResults []string
+
 	for _, message := range request.Messages {
-		responseReq.Input = append(responseReq.Input, message)
+		if message.Role == "tool" {
+			// Collect tool results to summarize
+			pendingToolResults = append(pendingToolResults, fmt.Sprintf("Function %s returned: %s", 
+				findToolCallName(pendingToolCalls, message.ToolCallId), message.StringContent()))
+			continue
+		} else if message.Role == "assistant" && len(message.ToolCalls) > 0 {
+			// Collect tool calls for summarization
+			pendingToolCalls = append(pendingToolCalls, message.ToolCalls...)
+			
+			// If assistant has text content, include it
+			if message.Content != "" {
+				assistantMsg := model.Message{
+					Role:             message.Role,
+					Content:          message.Content,
+					Name:             message.Name,
+					Reasoning:        message.Reasoning,
+					ReasoningContent: message.ReasoningContent,
+				}
+				responseReq.Input = append(responseReq.Input, assistantMsg)
+			}
+		} else {
+			// For regular messages, add any pending function call summary first
+			if len(pendingToolCalls) > 0 && len(pendingToolResults) > 0 {
+				// Create a summary message for the function call interactions
+				summary := "Previous function calls:\n"
+				for i, toolCall := range pendingToolCalls {
+					summary += fmt.Sprintf("- Called %s(%s)", toolCall.Function.Name, toolCall.Function.Arguments)
+					if i < len(pendingToolResults) {
+						summary += fmt.Sprintf(" → %s", pendingToolResults[i])
+					}
+					summary += "\n"
+				}
+				
+				summaryMsg := model.Message{
+					Role:    "assistant",
+					Content: summary,
+				}
+				responseReq.Input = append(responseReq.Input, summaryMsg)
+				
+				// Clear pending calls and results
+				pendingToolCalls = nil
+				pendingToolResults = nil
+			}
+			
+			// Add the regular message
+			responseReq.Input = append(responseReq.Input, message)
+		}
+	}
+
+	// Add any remaining pending function call summary at the end
+	if len(pendingToolCalls) > 0 && len(pendingToolResults) > 0 {
+		summary := "Previous function calls:\n"
+		for i, toolCall := range pendingToolCalls {
+			summary += fmt.Sprintf("- Called %s(%s)", toolCall.Function.Name, toolCall.Function.Arguments)
+			if i < len(pendingToolResults) {
+				summary += fmt.Sprintf(" → %s", pendingToolResults[i])
+			}
+			summary += "\n"
+		}
+		
+		summaryMsg := model.Message{
+			Role:    "assistant",
+			Content: summary,
+		}
+		responseReq.Input = append(responseReq.Input, summaryMsg)
 	}
 
 	// Map other fields

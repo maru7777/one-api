@@ -1,6 +1,7 @@
 package openai
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/songquanpeng/one-api/relay/model"
@@ -1254,4 +1255,96 @@ func TestStreamEventIntegration(t *testing.T) {
 			t.Errorf("Expected delta content 'Why', got '%v'", choice.Delta.Content)
 		}
 	})
+}
+
+// TestConvertChatCompletionToResponseAPIWithToolResults tests that tool result messages
+// are properly converted to function_call_output format for Response API
+func TestConvertChatCompletionToResponseAPIWithToolResults(t *testing.T) {
+	chatRequest := &model.GeneralOpenAIRequest{
+		Model: "gpt-4o",
+		Messages: []model.Message{
+			{Role: "system", Content: "You are a helpful assistant."},
+			{Role: "user", Content: "What's the current time?"},
+			{
+				Role:    "assistant",
+				Content: "",
+				ToolCalls: []model.Tool{
+					{
+						Id:   "initial_datetime_call",
+						Type: "function",
+						Function: model.Function{
+							Name:      "get_current_datetime",
+							Arguments: `{}`,
+						},
+					},
+				},
+			},
+			{
+				Role:       "tool",
+				ToolCallId: "initial_datetime_call",
+				Content:    `{"year":2025,"month":6,"day":12,"hour":11,"minute":43,"second":7}`,
+			},
+		},
+		Tools: []model.Tool{
+			{
+				Type: "function",
+				Function: model.Function{
+					Name:        "get_current_datetime",
+					Description: "Get current date and time",
+					Parameters: map[string]any{
+						"type":       "object",
+						"properties": map[string]any{},
+					},
+				},
+			},
+		},
+	}
+
+	responseAPI := ConvertChatCompletionToResponseAPI(chatRequest)
+
+	// Verify system message was moved to instructions
+	if responseAPI.Instructions == nil || *responseAPI.Instructions != "You are a helpful assistant." {
+		t.Errorf("Expected system message to be moved to instructions, got %v", responseAPI.Instructions)
+	}
+
+	// Verify input array structure  
+	expectedInputs := 2 // user message, assistant summary
+	if len(responseAPI.Input) != expectedInputs {
+		t.Fatalf("Expected %d inputs, got %d", expectedInputs, len(responseAPI.Input))
+	}
+
+	// Verify first message (user)
+	if msg, ok := responseAPI.Input[0].(model.Message); !ok || msg.Role != "user" || msg.StringContent() != "What's the current time?" {
+		t.Errorf("Expected first input to be user message, got %v", responseAPI.Input[0])
+	}
+
+	// Verify second message (assistant summary of function calls)
+	if msg, ok := responseAPI.Input[1].(model.Message); !ok || msg.Role != "assistant" {
+		t.Fatalf("Expected second input to be assistant summary message, got %T", responseAPI.Input[1])
+	} else {
+		content := msg.StringContent()
+		if !strings.Contains(content, "Previous function calls") {
+			t.Errorf("Expected assistant message to contain function call summary, got '%s'", content)
+		}
+		if !strings.Contains(content, "get_current_datetime") {
+			t.Errorf("Expected assistant message to mention get_current_datetime, got '%s'", content)
+		}
+		if !strings.Contains(content, "year\":2025") {
+			t.Errorf("Expected assistant message to contain function result, got '%s'", content)
+		}
+	}
+
+	// Verify tools were converted properly
+	if len(responseAPI.Tools) != 1 {
+		t.Fatalf("Expected 1 tool, got %d", len(responseAPI.Tools))
+	}
+
+	tool := responseAPI.Tools[0]
+	if tool.Name != "get_current_datetime" {
+		t.Errorf("Expected tool name 'get_current_datetime', got '%s'", tool.Name)
+	}
+
+	if tool.Type != "function" {
+		t.Errorf("Expected tool type 'function', got '%s'", tool.Type)
+	}
 }
