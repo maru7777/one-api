@@ -117,13 +117,13 @@ func ConvertChatCompletionToResponseAPI(request *model.GeneralOpenAIRequest) *Re
 	for _, message := range request.Messages {
 		if message.Role == "tool" {
 			// Collect tool results to summarize
-			pendingToolResults = append(pendingToolResults, fmt.Sprintf("Function %s returned: %s", 
+			pendingToolResults = append(pendingToolResults, fmt.Sprintf("Function %s returned: %s",
 				findToolCallName(pendingToolCalls, message.ToolCallId), message.StringContent()))
 			continue
 		} else if message.Role == "assistant" && len(message.ToolCalls) > 0 {
 			// Collect tool calls for summarization
 			pendingToolCalls = append(pendingToolCalls, message.ToolCalls...)
-			
+
 			// If assistant has text content, include it
 			if message.Content != "" {
 				assistantMsg := model.Message{
@@ -147,18 +147,18 @@ func ConvertChatCompletionToResponseAPI(request *model.GeneralOpenAIRequest) *Re
 					}
 					summary += "\n"
 				}
-				
+
 				summaryMsg := model.Message{
 					Role:    "assistant",
 					Content: summary,
 				}
 				responseReq.Input = append(responseReq.Input, summaryMsg)
-				
+
 				// Clear pending calls and results
 				pendingToolCalls = nil
 				pendingToolResults = nil
 			}
-			
+
 			// Add the regular message
 			responseReq.Input = append(responseReq.Input, message)
 		}
@@ -174,7 +174,7 @@ func ConvertChatCompletionToResponseAPI(request *model.GeneralOpenAIRequest) *Re
 			}
 			summary += "\n"
 		}
-		
+
 		summaryMsg := model.Message{
 			Role:    "assistant",
 			Content: summary,

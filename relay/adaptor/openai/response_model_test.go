@@ -1307,7 +1307,7 @@ func TestConvertChatCompletionToResponseAPIWithToolResults(t *testing.T) {
 		t.Errorf("Expected system message to be moved to instructions, got %v", responseAPI.Instructions)
 	}
 
-	// Verify input array structure  
+	// Verify input array structure
 	expectedInputs := 2 // user message, assistant summary
 	if len(responseAPI.Input) != expectedInputs {
 		t.Fatalf("Expected %d inputs, got %d", expectedInputs, len(responseAPI.Input))
