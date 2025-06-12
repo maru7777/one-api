@@ -45,3 +45,117 @@ func ToAPIType(channelType int) int {
 
 	return apiType
 }
+
+// IdToName converts channel type ID to readable name
+func IdToName(channelType int) string {
+	switch channelType {
+	case Unknown:
+		return "unknown"
+	case OpenAI:
+		return "openai"
+	case API2D:
+		return "api2d"
+	case Azure:
+		return "azure"
+	case CloseAI:
+		return "closeai"
+	case OpenAISB:
+		return "openaisb"
+	case OpenAIMax:
+		return "openaimax"
+	case OhMyGPT:
+		return "ohmygpt"
+	case Custom:
+		return "custom"
+	case Ails:
+		return "ails"
+	case AIProxy:
+		return "aiproxy"
+	case PaLM:
+		return "palm"
+	case API2GPT:
+		return "api2gpt"
+	case AIGC2D:
+		return "aigc2d"
+	case Anthropic:
+		return "anthropic"
+	case Baidu:
+		return "baidu"
+	case Zhipu:
+		return "zhipu"
+	case Ali:
+		return "ali"
+	case Xunfei:
+		return "xunfei"
+	case AI360:
+		return "ai360"
+	case OpenRouter:
+		return "openrouter"
+	case AIProxyLibrary:
+		return "aiproxylibrary"
+	case FastGPT:
+		return "fastgpt"
+	case Tencent:
+		return "tencent"
+	case Gemini:
+		return "gemini"
+	case Moonshot:
+		return "moonshot"
+	case Baichuan:
+		return "baichuan"
+	case Minimax:
+		return "minimax"
+	case Mistral:
+		return "mistral"
+	case Groq:
+		return "groq"
+	case Ollama:
+		return "ollama"
+	case LingYiWanWu:
+		return "lingyiwanwu"
+	case StepFun:
+		return "stepfun"
+	case AwsClaude:
+		return "awsclaude"
+	case Coze:
+		return "coze"
+	case Cohere:
+		return "cohere"
+	case DeepSeek:
+		return "deepseek"
+	case Cloudflare:
+		return "cloudflare"
+	case DeepL:
+		return "deepl"
+	case TogetherAI:
+		return "togetherai"
+	case Doubao:
+		return "doubao"
+	case Novita:
+		return "novita"
+	case VertextAI:
+		return "vertextai"
+	case Proxy:
+		return "proxy"
+	case SiliconFlow:
+		return "siliconflow"
+	case XAI:
+		return "xai"
+	case Replicate:
+		return "replicate"
+	case BaiduV2:
+		return "baiduv2"
+	case XunfeiV2:
+		return "xunfeiv2"
+	case AliBailian:
+		return "alibailian"
+	case OpenAICompatible:
+		return "openaicompatible"
+	case GeminiOpenAICompatible:
+		return "geminiopenaicompatible"
+	case Dummy:
+		return "dummy"
+	default:
+		return "unknown"
+	}
+}

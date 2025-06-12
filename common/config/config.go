@@ -177,6 +177,7 @@ var (
 var RateLimitKeyExpirationDuration = 20 * time.Minute
 
 var EnableMetric = env.Bool("ENABLE_METRIC", false)
+var EnablePrometheusMetrics = env.Bool("ENABLE_PROMETHEUS_METRICS", true)
 var MetricQueueSize = env.Int("METRIC_QUEUE_SIZE", 10)
 var MetricSuccessRateThreshold = env.Float64("METRIC_SUCCESS_RATE_THRESHOLD", 0.8)
 var MetricSuccessChanSize = env.Int("METRIC_SUCCESS_CHAN_SIZE", 1024)

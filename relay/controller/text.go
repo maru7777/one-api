@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,6 +14,7 @@ import (
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/common/metrics"
 	"github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/relay"
 	"github.com/songquanpeng/one-api/relay/adaptor"
@@ -99,6 +101,49 @@ func RelayTextHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 	// post-consume quota
 	quotaId := c.GetInt(ctxkey.Id)
 	requestId := c.GetString(ctxkey.RequestId)
+
+	// Record detailed Prometheus metrics
+	if usage != nil {
+		// Get user information for metrics
+		userId := strconv.Itoa(meta.UserId)
+		username := c.GetString(ctxkey.Username)
+		if username == "" {
+			username = "unknown"
+		}
+		group := meta.Group
+		if group == "" {
+			group = "default"
+		}
+
+		// Record relay request metrics with actual usage
+		metrics.GlobalRecorder.RecordRelayRequest(
+			meta.StartTime,
+			meta.ChannelId,
+			channeltype.IdToName(meta.ChannelType),
+			meta.ActualModelName,
+			userId,
+			true,
+			usage.PromptTokens,
+			usage.CompletionTokens,
+			0, // Will be calculated in postConsumeQuota
+		)
+
+		// Record user metrics
+		userBalance := float64(c.GetInt64(ctxkey.UserQuota))
+		metrics.GlobalRecorder.RecordUserMetrics(
+			userId,
+			username,
+			group,
+			0, // Will be calculated in postConsumeQuota
+			usage.PromptTokens,
+			usage.CompletionTokens,
+			userBalance,
+		)
+
+		// Record model usage metrics
+		metrics.GlobalRecorder.RecordModelUsage(meta.ActualModelName, channeltype.IdToName(meta.ChannelType), time.Since(meta.StartTime))
+	}
+
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()

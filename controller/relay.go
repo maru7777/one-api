@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
@@ -18,6 +19,7 @@ import (
 	dbmodel "github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/monitor"
 	"github.com/songquanpeng/one-api/relay/controller"
+	"github.com/songquanpeng/one-api/relay/meta"
 	"github.com/songquanpeng/one-api/relay/model"
 	"github.com/songquanpeng/one-api/relay/relaymode"
 )
@@ -49,9 +51,22 @@ func Relay(c *gin.Context) {
 	relayMode := relaymode.GetByPath(c.Request.URL.Path)
 	channelId := c.GetInt(ctxkey.ChannelId)
 	userId := c.GetInt(ctxkey.Id)
+
+	// Start timing for Prometheus metrics
+	startTime := time.Now()
+
+	// Get metadata for monitoring
+	relayMeta := meta.GetByContext(c)
+
+	// Track channel request in flight
+	PrometheusMonitor.RecordChannelRequest(relayMeta, startTime)
+
 	bizErr := relayHelper(c, relayMode)
 	if bizErr == nil {
 		monitor.Emit(channelId, true)
+
+		// Record successful relay request metrics
+		PrometheusMonitor.RecordRelayRequest(c, relayMeta, startTime, true, 0, 0, 0)
 		return
 	}
 	lastFailedChannelId := channelId
@@ -59,6 +74,10 @@ func Relay(c *gin.Context) {
 	group := c.GetString(ctxkey.Group)
 	originalModel := c.GetString(ctxkey.OriginalModel)
 	go processChannelRelayError(ctx, userId, channelId, channelName, group, originalModel, *bizErr)
+
+	// Record failed relay request metrics
+	PrometheusMonitor.RecordRelayRequest(c, relayMeta, startTime, false, 0, 0, 0)
+
 	requestId := c.GetString(helper.RequestIdKey)
 	retryTimes := config.RetryTimes
 	if err := shouldRetry(c, bizErr.StatusCode); err != nil {
@@ -78,10 +97,21 @@ func Relay(c *gin.Context) {
 		middleware.SetupContextForSelectedChannel(c, channel, originalModel)
 		requestBody, err := common.GetRequestBody(c)
 		c.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody))
+
+		// Record retry attempt
+		retryStartTime := time.Now()
+		retryMeta := meta.GetByContext(c)
+
 		bizErr = relayHelper(c, relayMode)
 		if bizErr == nil {
+			// Record successful retry
+			PrometheusMonitor.RecordRelayRequest(c, retryMeta, retryStartTime, true, 0, 0, 0)
 			return
 		}
+
+		// Record failed retry
+		PrometheusMonitor.RecordRelayRequest(c, retryMeta, retryStartTime, false, 0, 0, 0)
+
 		channelId := c.GetInt(ctxkey.ChannelId)
 		lastFailedChannelId = channelId
 		channelName := c.GetString(ctxkey.ChannelName)
