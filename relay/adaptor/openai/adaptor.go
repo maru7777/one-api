@@ -79,8 +79,8 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	case channeltype.GeminiOpenAICompatible:
 		return geminiv2.GetRequestURL(meta)
 	default:
-		// Convert chat completions to responses API for OpenAI
-		if meta.Mode == relaymode.ChatCompletions {
+		// Convert chat completions to responses API for OpenAI only
+		if meta.Mode == relaymode.ChatCompletions && meta.ChannelType == channeltype.OpenAI {
 			responseAPIPath := "/v1/responses"
 			return GetFullRequestURL(meta.BaseURL, responseAPIPath, meta.ChannelType), nil
 		}
@@ -109,8 +109,8 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 
 	meta := meta.GetByContext(c)
 
-	// Convert ChatCompletion requests to Response API format
-	if relayMode == relaymode.ChatCompletions {
+	// Convert ChatCompletion requests to Response API format only for OpenAI
+	if relayMode == relaymode.ChatCompletions && meta.ChannelType == channeltype.OpenAI {
 		// Apply existing transformations first
 		if err := a.applyRequestTransformations(meta, request); err != nil {
 			return nil, err
