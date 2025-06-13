@@ -314,6 +314,44 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 							http.StatusBadRequest)
 					}
 				}
+
+				// -------------------------------------
+				// calculate structured output cost
+				// -------------------------------------
+				// Structured output with json_schema incurs additional costs
+				// Based on OpenAI's pricing, structured output typically has a multiplier applied
+				if req.ResponseFormat != nil &&
+					req.ResponseFormat.Type == "json_schema" &&
+					req.ResponseFormat.JsonSchema != nil {
+					// Apply structured output cost multiplier
+					// For structured output, there's typically an additional cost based on completion tokens
+					// Using a conservative estimate of 25% additional cost for structured output
+					structuredOutputCost := int64(math.Ceil(float64(usage.CompletionTokens) * 0.25 * ratio.GetModelRatio(meta.ActualModelName, meta.ChannelType)))
+					usage.ToolsCost += structuredOutputCost
+
+					// Log structured output cost application for debugging
+					logger.Debugf(c.Request.Context(), "Applied structured output cost: %d (completion tokens: %d, model: %s)",
+						structuredOutputCost, usage.CompletionTokens, meta.ActualModelName)
+				}
+			}
+		}
+
+		// Also check the original request in case it wasn't converted
+		if req == nil {
+			if vi, ok := c.Get(ctxkey.RequestModel); ok {
+				if req, ok = vi.(*model.GeneralOpenAIRequest); ok && req != nil {
+					if req.ResponseFormat != nil &&
+						req.ResponseFormat.Type == "json_schema" &&
+						req.ResponseFormat.JsonSchema != nil {
+						// Apply structured output cost multiplier
+						structuredOutputCost := int64(math.Ceil(float64(usage.CompletionTokens) * 0.25 * ratio.GetModelRatio(meta.ActualModelName, meta.ChannelType)))
+						usage.ToolsCost += structuredOutputCost
+
+						// Log structured output cost application for debugging
+						logger.Debugf(c.Request.Context(), "Applied structured output cost from original request: %d (completion tokens: %d, model: %s)",
+							structuredOutputCost, usage.CompletionTokens, meta.ActualModelName)
+					}
+				}
 			}
 		}
 	}
