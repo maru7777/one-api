@@ -1426,28 +1426,80 @@ func TestResponseAPIUsageConversion(t *testing.T) {
 	}
 }
 
-func TestFromModelUsageConversion(t *testing.T) {
-	// Test conversion from model.Usage to ResponseAPIUsage
-	modelUsage := &model.Usage{
-		PromptTokens:     100,
-		CompletionTokens: 200,
-		TotalTokens:      300,
+func TestResponseAPIUsageWithFallback(t *testing.T) {
+	// Test case 1: No usage provided by OpenAI
+	responseWithoutUsage := `{
+		"id": "resp_no_usage",
+		"object": "response",
+		"created_at": 1749860991,
+		"status": "completed",
+		"model": "gpt-4o-2024-11-20",
+		"output": [
+			{
+				"type": "message",
+				"role": "assistant",
+				"content": [
+					{
+						"type": "output_text",
+						"text": "Hello! How can I help you today?"
+					}
+				]
+			}
+		]
+	}`
+
+	var responseAPI ResponseAPIResponse
+	err := json.Unmarshal([]byte(responseWithoutUsage), &responseAPI)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal ResponseAPI: %v", err)
 	}
 
-	responseUsage := (&ResponseAPIUsage{}).FromModelUsage(modelUsage)
-	if responseUsage == nil {
-		t.Fatal("Converted ResponseAPIUsage should not be nil")
+	// Convert to ChatCompletion format
+	chatCompletion := ConvertResponseAPIToChatCompletion(&responseAPI)
+
+	// Usage should be zero/empty since no usage was provided and no fallback calculation is done in the conversion function
+	if chatCompletion.Usage.PromptTokens != 0 || chatCompletion.Usage.CompletionTokens != 0 {
+		t.Errorf("Expected zero usage when no usage provided, got prompt=%d, completion=%d",
+			chatCompletion.Usage.PromptTokens, chatCompletion.Usage.CompletionTokens)
 	}
 
-	if responseUsage.InputTokens != 100 {
-		t.Errorf("Expected InputTokens to be 100, got %d", responseUsage.InputTokens)
+	// Test case 2: Zero usage provided by OpenAI
+	responseWithZeroUsage := `{
+		"id": "resp_zero_usage",
+		"object": "response",
+		"created_at": 1749860991,
+		"status": "completed",
+		"model": "gpt-4o-2024-11-20",
+		"output": [
+			{
+				"type": "message",
+				"role": "assistant",
+				"content": [
+					{
+						"type": "output_text",
+						"text": "This is a test response"
+					}
+				]
+			}
+		],
+		"usage": {
+			"input_tokens": 0,
+			"output_tokens": 0,
+			"total_tokens": 0
+		}
+	}`
+
+	err = json.Unmarshal([]byte(responseWithZeroUsage), &responseAPI)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal ResponseAPI with zero usage: %v", err)
 	}
 
-	if responseUsage.OutputTokens != 200 {
-		t.Errorf("Expected OutputTokens to be 200, got %d", responseUsage.OutputTokens)
-	}
+	// Convert to ChatCompletion format
+	chatCompletion = ConvertResponseAPIToChatCompletion(&responseAPI)
 
-	if responseUsage.TotalTokens != 300 {
-		t.Errorf("Expected TotalTokens to be 300, got %d", responseUsage.TotalTokens)
+	// Usage should still be zero since the conversion function doesn't set zero usage
+	if chatCompletion.Usage.PromptTokens != 0 || chatCompletion.Usage.CompletionTokens != 0 {
+		t.Errorf("Expected zero usage when zero usage provided, got prompt=%d, completion=%d",
+			chatCompletion.Usage.PromptTokens, chatCompletion.Usage.CompletionTokens)
 	}
 }

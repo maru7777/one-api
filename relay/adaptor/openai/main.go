@@ -368,22 +368,30 @@ func ResponseAPIHandler(c *gin.Context, resp *http.Response, promptTokens int, m
 		}
 	}
 
-	// Set usage if not provided
+	// Set usage - prioritize API-provided usage, but fallback to calculation if needed
+	var finalUsage *model.Usage
+
 	if responseAPIResp.Usage != nil {
 		if convertedUsage := responseAPIResp.Usage.ToModelUsage(); convertedUsage != nil {
-			chatCompletionResp.Usage = *convertedUsage
+			// Check if the converted usage has meaningful token counts
+			if convertedUsage.PromptTokens > 0 || convertedUsage.CompletionTokens > 0 {
+				finalUsage = convertedUsage
+			}
 		}
-	} else {
-		// Calculate token usage from the response text
+	}
+
+	// If we don't have valid usage data, calculate it from the response content
+	if finalUsage == nil {
 		var responseText string
 		if len(chatCompletionResp.Choices) > 0 {
 			if content, ok := chatCompletionResp.Choices[0].Message.Content.(string); ok {
 				responseText = content
 			}
 		}
-		usage := ResponseText2Usage(responseText, modelName, promptTokens)
-		chatCompletionResp.Usage = *usage
+		finalUsage = ResponseText2Usage(responseText, modelName, promptTokens)
 	}
+
+	chatCompletionResp.Usage = *finalUsage
 
 	// Convert the ChatCompletion response back to JSON
 	jsonResponse, err := json.Marshal(chatCompletionResp)

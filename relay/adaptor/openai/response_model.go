@@ -467,14 +467,16 @@ func ConvertResponseAPIToChatCompletion(responseAPIResp *ResponseAPIResponse) *T
 		Choices: []TextResponseChoice{choice},
 	}
 
-	// Set usage if available - convert Response API usage fields to Chat Completion format
+	// Set usage if available and valid - convert Response API usage fields to Chat Completion format
 	if responseAPIResp.Usage != nil {
-		// Response API uses different field names than Chat Completions API
-		// input_tokens -> prompt_tokens, output_tokens -> completion_tokens
 		if convertedUsage := responseAPIResp.Usage.ToModelUsage(); convertedUsage != nil {
-			fullTextResponse.Usage = *convertedUsage
+			// Only set usage if it contains meaningful data
+			if convertedUsage.PromptTokens > 0 || convertedUsage.CompletionTokens > 0 || convertedUsage.TotalTokens > 0 {
+				fullTextResponse.Usage = *convertedUsage
+			}
 		}
 	}
+	// Note: If usage is nil or contains no meaningful data, the caller should calculate tokens
 
 	return &fullTextResponse
 }
