@@ -3,7 +3,7 @@ package message
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/pkg/errors"
+	"github.com/Laisky/errors/v2"
 	"github.com/songquanpeng/one-api/common/config"
 	"net/http"
 )

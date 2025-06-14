@@ -57,8 +57,8 @@ github.com/Laisky/go-chaining v0.0.0-20180507092046-43dcdc5a21be h1:7Rxhm6IjOtDA
 github.com/Laisky/go-chaining v0.0.0-20180507092046-43dcdc5a21be/go.mod h1:1mdzaETo0kjvCQICPSePsoaatJN4l7JvEA1200lyevo=
 github.com/Laisky/go-gin-prometheus v1.0.1 h1:0xxZ0SeuycO65sQyZpwVCr19blGtkbwv39pQrw+hrWo=
 github.com/Laisky/go-gin-prometheus v1.0.1/go.mod h1:3yC0gDd4f79ikEM1eGHLTWSRG0tluOV2mmx/liYLtIA=
-github.com/Laisky/go-utils/v5 v5.1.0 h1:jMUi41saFs63FSR+eTTPJAvLr/Z8bWV0qY/olvksN6w=
-github.com/Laisky/go-utils/v5 v5.1.0/go.mod h1:XEzdvwgoAFrDWM9xAinZNnDWNTwRQTtNeQg8bEAR9VA=
+github.com/Laisky/go-utils/v5 v5.1.1-0.20250613174600-5ba5e296fc72 h1:wRXjwajUQGuSkOq9fgEMJ4dAh8Nem5iyOeuwzFo1rHg=
+github.com/Laisky/go-utils/v5 v5.1.1-0.20250613174600-5ba5e296fc72/go.mod h1:XEzdvwgoAFrDWM9xAinZNnDWNTwRQTtNeQg8bEAR9VA=
 github.com/Laisky/golang-fifo v1.0.1-0.20240403092208-1d90c6c33e11 h1:floHhmC3CTMGzxG0pagDMNLIWchPpbJocYKL5DtphGg=
 github.com/Laisky/golang-fifo v1.0.1-0.20240403092208-1d90c6c33e11/go.mod h1:j90tUqwBaEncIzpAd6ZGPZHWjclgAyMY8fdOqsewitE=
 github.com/Laisky/graphql v1.0.6 h1:NEULGxfxo+wbsW2OmqBXOMNUGgqo8uFjWNabwuNK10g=
@@ -346,6 +346,8 @@ github.com/modern-go/reflect2 v0.0.0-20180701023420-4b7aa43c6742/go.mod h1:bx2lN
 github.com/modern-go/reflect2 v1.0.1/go.mod h1:bx2lNnkwVCuqBIxFjflWJWanXIb3RllmbCylyMrvgv0=
 github.com/modern-go/reflect2 v1.0.2 h1:xBagoLtFs94CBntxluKeaWgTMpvLxC4ur3nMaC9Gz0M=
 github.com/modern-go/reflect2 v1.0.2/go.mod h1:yWuevngMOJpCy52FWWMvUC8ws7m/LJsjYzDa0/r8luk=
+github.com/monnand/dhkx v0.0.0-20180522003156-9e5b033f1ac4 h1:UsjqpfLSsCM5SVN5OGhiWJnxDokyT74E6Ahj6kVZxh8=
+github.com/monnand/dhkx v0.0.0-20180522003156-9e5b033f1ac4/go.mod h1:/cxRiYq8L/bpGLJJJ7mN66Qv2nj915TfJdujDVyYVGA=
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq1c1nUAm88MOHcQC9l5mIlSMApZMrHA=
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
@@ -443,9 +445,13 @@ github.com/ugorji/go v1.2.7/go.mod h1:nF9osbDWLy6bDVv/Rtoh6QgnvNDpmCalQV5urGCCS6
 github.com/ugorji/go/codec v1.2.7/go.mod h1:WGN1fab3R1fzQlVQTkfxVtIBhWDRqOviHU95kRgeqEY=
 github.com/ugorji/go/codec v1.2.12 h1:9LC83zGrHhuUA9l16C9AHXAqEV/2wBQ4nkvumAE65EE=
 github.com/ugorji/go/codec v1.2.12/go.mod h1:UNopzCgEMSXjBc6AOMqYvWC1ktqTAfzJZUZgYf6w6lg=
+github.com/xlzd/gotp v0.1.0 h1:37blvlKCh38s+fkem+fFh7sMnceltoIEBYTVXyoa5Po=
+github.com/xlzd/gotp v0.1.0/go.mod h1:ndLJ3JKzi3xLmUProq4LLxCuECL93dG9WASNLpHz8qg=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.32/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
+go.dedis.ch/kyber/v3 v3.1.0 h1:ghu+kiRgM5JyD9TJ0hTIxTLQlJBR/ehjWvWwYW3XsC0=
+go.dedis.ch/kyber/v3 v3.1.0/go.mod h1:kXy7p3STAurkADD+/aZcsznZGKVHEqbtmdIzvPfrs1U=
 go.opencensus.io v0.21.0/go.mod h1:mSImk1erAIZhrmZN+AvHh14ztQfjbGwt4TtuofqLduU=
 go.opencensus.io v0.22.0/go.mod h1:+kGneAE2xo2IficOXnaByMWTGM9T73dGwxeWcUqIpI8=
 go.opencensus.io v0.22.2/go.mod h1:yxeiOL68Rb0Xd1ddK5vPZ/oVn4vY4Ynel7k9FzqtOIw=

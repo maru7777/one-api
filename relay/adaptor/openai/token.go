@@ -8,7 +8,7 @@ import (
 	"math"
 	"strings"
 
-	"github.com/pkg/errors"
+	"github.com/Laisky/errors/v2"
 	"github.com/pkoukk/tiktoken-go"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/helper"

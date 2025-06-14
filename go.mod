@@ -6,8 +6,9 @@ toolchain go1.24.0
 
 require (
 	cloud.google.com/go/iam v1.5.2
+	github.com/Laisky/errors/v2 v2.0.1
 	github.com/Laisky/gin-middlewares/v6 v6.1.0
-	github.com/Laisky/go-utils/v5 v5.1.0
+	github.com/Laisky/go-utils/v5 v5.1.1-0.20250613174600-5ba5e296fc72
 	github.com/Laisky/zap v1.27.1-0.20241010063010-3154c45f2a1f
 	github.com/aws/aws-sdk-go-v2 v1.36.4
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.69
@@ -26,7 +27,6 @@ require (
 	github.com/jinzhu/copier v0.4.0
 	github.com/joho/godotenv v1.5.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
-	github.com/pkg/errors v0.9.1
 	github.com/pkoukk/tiktoken-go v0.1.7
 	github.com/prometheus/client_golang v1.22.0
 	github.com/smartystreets/goconvey v1.8.1
@@ -48,7 +48,6 @@ require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/GoWebProd/gip v0.0.0-20250128132225-ceacf0ef6eca // indirect
 	github.com/GoWebProd/uuid7 v0.0.0-20241216131732-fdbee3a1a883 // indirect
-	github.com/Laisky/errors/v2 v2.0.1 // indirect
 	github.com/Laisky/fast-skiplist/v2 v2.0.1 // indirect
 	github.com/Laisky/go-chaining v0.0.0-20180507092046-43dcdc5a21be // indirect
 	github.com/Laisky/go-gin-prometheus v1.0.1 // indirect
@@ -104,6 +103,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.63.0 // indirect

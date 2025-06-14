@@ -12,7 +12,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/pkg/errors"
+	"github.com/Laisky/errors/v2"
 	"github.com/songquanpeng/one-api/common/client"
 	_ "golang.org/x/image/webp"
 )

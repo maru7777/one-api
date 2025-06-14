@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Laisky/errors/v2"
 	gutils "github.com/Laisky/go-utils/v5"
-	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/utils"
 	"gorm.io/gorm"

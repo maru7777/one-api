@@ -8,7 +8,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/Laisky/errors/v2"
 	"github.com/songquanpeng/one-api/relay/model"
 )
 

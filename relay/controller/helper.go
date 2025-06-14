@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/ctxkey"
@@ -69,13 +69,13 @@ func getPreConsumedQuota(textRequest *relaymodel.GeneralOpenAIRequest, promptTok
 	if textRequest.MaxTokens != 0 {
 		preConsumedTokens += int64(textRequest.MaxTokens)
 	}
-	
+
 	baseQuota := int64(float64(preConsumedTokens) * ratio)
-	
+
 	// Add estimated structured output cost if using JSON schema
 	// This ensures pre-consumption quota accounts for the additional structured output costs
-	if textRequest.ResponseFormat != nil && 
-		textRequest.ResponseFormat.Type == "json_schema" && 
+	if textRequest.ResponseFormat != nil &&
+		textRequest.ResponseFormat.Type == "json_schema" &&
 		textRequest.ResponseFormat.JsonSchema != nil {
 		// Estimate structured output cost based on max tokens (conservative approach)
 		estimatedCompletionTokens := textRequest.MaxTokens
@@ -83,15 +83,15 @@ func getPreConsumedQuota(textRequest *relaymodel.GeneralOpenAIRequest, promptTok
 			// If no max tokens specified, use a conservative estimate
 			estimatedCompletionTokens = 1000
 		}
-		
+
 		// Apply the same 25% multiplier used in post-consumption
 		// Note: We can't get exact model ratio here easily, so use the base ratio as approximation
 		estimatedStructuredCost := int64(float64(estimatedCompletionTokens) * 0.25 * ratio)
 		baseQuota += estimatedStructuredCost
-		
+
 		logger.Debugf(context.Background(), "Pre-consumption: added estimated structured output cost %d for JSON schema request", estimatedStructuredCost)
 	}
-	
+
 	return baseQuota
 }
 

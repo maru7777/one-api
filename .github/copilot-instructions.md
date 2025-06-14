@@ -20,7 +20,7 @@ All errors should be handled, and the error handling should be as close to the s
 
 Never use `err == nil` to avoid shadowing the error variable.
 
-Use `github.com/Laisky/errors/v2`, its interface is as same as `github.com/pkg/errors`. Never return bare error, always wrap it by `errors.Wrap`/`errors.Wrapf`/`errors.WithStack`, check all files
+Use `github.com/Laisky/errors/v2`, its interface is as same as `github.com/Laisky/errors/v2`. Never return bare error, always wrap it by `errors.Wrap`/`errors.Wrapf`/`errors.WithStack`, check all files
 
 ### Golang ORM
 
