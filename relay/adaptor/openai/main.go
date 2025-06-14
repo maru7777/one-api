@@ -370,7 +370,9 @@ func ResponseAPIHandler(c *gin.Context, resp *http.Response, promptTokens int, m
 
 	// Set usage if not provided
 	if responseAPIResp.Usage != nil {
-		chatCompletionResp.Usage = *responseAPIResp.Usage
+		if convertedUsage := responseAPIResp.Usage.ToModelUsage(); convertedUsage != nil {
+			chatCompletionResp.Usage = *convertedUsage
+		}
 	} else {
 		// Calculate token usage from the response text
 		var responseText string

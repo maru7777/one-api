@@ -128,10 +128,10 @@ func TestBidirectionalStructuredOutputConversion(t *testing.T) {
 			},
 		},
 		Text: responseAPI.Text, // Preserve the structured format info
-		Usage: &model.Usage{
-			PromptTokens:     25,
-			CompletionTokens: 15,
-			TotalTokens:      40,
+		Usage: &ResponseAPIUsage{
+			InputTokens:  25,
+			OutputTokens: 15,
+			TotalTokens:  40,
 		},
 	}
 
@@ -232,10 +232,10 @@ func TestStructuredOutputWithReasoningAndFunctionCalls(t *testing.T) {
 				Strict: boolPtr(true),
 			},
 		},
-		Usage: &model.Usage{
-			PromptTokens:     30,
-			CompletionTokens: 45,
-			TotalTokens:      75,
+		Usage: &ResponseAPIUsage{
+			InputTokens:  30,
+			OutputTokens: 45,
+			TotalTokens:  75,
 		},
 	}
 
@@ -575,10 +575,10 @@ func TestJSONSchemaConversionDetailed(t *testing.T) {
 				},
 			},
 			Text: responseAPI.Text, // Include the structured format info
-			Usage: &model.Usage{
-				PromptTokens:     10,
-				CompletionTokens: 8,
-				TotalTokens:      18,
+			Usage: &ResponseAPIUsage{
+				InputTokens:  10,
+				OutputTokens: 8,
+				TotalTokens:  18,
 			},
 		}
 

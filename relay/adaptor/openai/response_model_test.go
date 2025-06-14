@@ -1,6 +1,7 @@
 package openai
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -215,10 +216,10 @@ func TestConvertResponseAPIToChatCompletion(t *testing.T) {
 				},
 			},
 		},
-		Usage: &model.Usage{
-			PromptTokens:     10,
-			CompletionTokens: 8,
-			TotalTokens:      18,
+		Usage: &ResponseAPIUsage{
+			InputTokens:  10,
+			OutputTokens: 8,
+			TotalTokens:  18,
 		},
 	}
 
@@ -297,10 +298,10 @@ func TestConvertResponseAPIToChatCompletionWithFunctionCall(t *testing.T) {
 				Status:    "completed",
 			},
 		},
-		Usage: &model.Usage{
-			PromptTokens:     291,
-			CompletionTokens: 23,
-			TotalTokens:      314,
+		Usage: &ResponseAPIUsage{
+			InputTokens:  291,
+			OutputTokens: 23,
+			TotalTokens:  314,
 		},
 	}
 
@@ -553,10 +554,10 @@ func TestConvertResponseAPIToChatCompletionWithReasoning(t *testing.T) {
 				},
 			},
 		},
-		Usage: &model.Usage{
-			PromptTokens:     9,
-			CompletionTokens: 83,
-			TotalTokens:      92,
+		Usage: &ResponseAPIUsage{
+			InputTokens:  9,
+			OutputTokens: 83,
+			TotalTokens:  92,
 		},
 	}
 
@@ -683,10 +684,10 @@ func TestFunctionCallWorkflow(t *testing.T) {
 				Status:    "completed",
 			},
 		},
-		Usage: &model.Usage{
-			PromptTokens:     291,
-			CompletionTokens: 23,
-			TotalTokens:      314,
+		Usage: &ResponseAPIUsage{
+			InputTokens:  291,
+			OutputTokens: 23,
+			TotalTokens:  314,
 		},
 	}
 
@@ -903,10 +904,10 @@ func TestLegacyFunctionCallWorkflow(t *testing.T) {
 				},
 			},
 		},
-		Usage: &model.Usage{
-			PromptTokens:     291,
-			CompletionTokens: 23,
-			TotalTokens:      314,
+		Usage: &ResponseAPIUsage{
+			InputTokens:  291,
+			OutputTokens: 23,
+			TotalTokens:  314,
 		},
 	}
 
@@ -1346,5 +1347,107 @@ func TestConvertChatCompletionToResponseAPIWithToolResults(t *testing.T) {
 
 	if tool.Type != "function" {
 		t.Errorf("Expected tool type 'function', got '%s'", tool.Type)
+	}
+}
+
+func TestResponseAPIUsageConversion(t *testing.T) {
+	// Test JSON containing OpenAI Response API usage format
+	responseJSON := `{
+		"id": "resp_test",
+		"object": "response",
+		"created_at": 1749860991,
+		"status": "completed",
+		"model": "gpt-4o-2024-11-20",
+		"output": [],
+		"usage": {
+			"input_tokens": 97,
+			"output_tokens": 165,
+			"total_tokens": 262
+		}
+	}`
+
+	var responseAPI ResponseAPIResponse
+	err := json.Unmarshal([]byte(responseJSON), &responseAPI)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal ResponseAPI: %v", err)
+	}
+
+	// Verify the ResponseAPIUsage fields are correctly parsed
+	if responseAPI.Usage == nil {
+		t.Fatal("Usage should not be nil")
+	}
+
+	if responseAPI.Usage.InputTokens != 97 {
+		t.Errorf("Expected InputTokens to be 97, got %d", responseAPI.Usage.InputTokens)
+	}
+
+	if responseAPI.Usage.OutputTokens != 165 {
+		t.Errorf("Expected OutputTokens to be 165, got %d", responseAPI.Usage.OutputTokens)
+	}
+
+	if responseAPI.Usage.TotalTokens != 262 {
+		t.Errorf("Expected TotalTokens to be 262, got %d", responseAPI.Usage.TotalTokens)
+	}
+
+	// Test conversion to model.Usage
+	modelUsage := responseAPI.Usage.ToModelUsage()
+	if modelUsage == nil {
+		t.Fatal("Converted usage should not be nil")
+	}
+
+	if modelUsage.PromptTokens != 97 {
+		t.Errorf("Expected PromptTokens to be 97, got %d", modelUsage.PromptTokens)
+	}
+
+	if modelUsage.CompletionTokens != 165 {
+		t.Errorf("Expected CompletionTokens to be 165, got %d", modelUsage.CompletionTokens)
+	}
+
+	if modelUsage.TotalTokens != 262 {
+		t.Errorf("Expected TotalTokens to be 262, got %d", modelUsage.TotalTokens)
+	}
+
+	// Test conversion to ChatCompletion format
+	chatCompletion := ConvertResponseAPIToChatCompletion(&responseAPI)
+	if chatCompletion == nil {
+		t.Fatal("Converted chat completion should not be nil")
+	}
+
+	if chatCompletion.Usage.PromptTokens != 97 {
+		t.Errorf("Expected PromptTokens to be 97, got %d", chatCompletion.Usage.PromptTokens)
+	}
+
+	if chatCompletion.Usage.CompletionTokens != 165 {
+		t.Errorf("Expected CompletionTokens to be 165, got %d", chatCompletion.Usage.CompletionTokens)
+	}
+
+	if chatCompletion.Usage.TotalTokens != 262 {
+		t.Errorf("Expected TotalTokens to be 262, got %d", chatCompletion.Usage.TotalTokens)
+	}
+}
+
+func TestFromModelUsageConversion(t *testing.T) {
+	// Test conversion from model.Usage to ResponseAPIUsage
+	modelUsage := &model.Usage{
+		PromptTokens:     100,
+		CompletionTokens: 200,
+		TotalTokens:      300,
+	}
+
+	responseUsage := (&ResponseAPIUsage{}).FromModelUsage(modelUsage)
+	if responseUsage == nil {
+		t.Fatal("Converted ResponseAPIUsage should not be nil")
+	}
+
+	if responseUsage.InputTokens != 100 {
+		t.Errorf("Expected InputTokens to be 100, got %d", responseUsage.InputTokens)
+	}
+
+	if responseUsage.OutputTokens != 200 {
+		t.Errorf("Expected OutputTokens to be 200, got %d", responseUsage.OutputTokens)
+	}
+
+	if responseUsage.TotalTokens != 300 {
+		t.Errorf("Expected TotalTokens to be 300, got %d", responseUsage.TotalTokens)
 	}
 }
