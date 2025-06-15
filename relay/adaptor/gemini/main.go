@@ -33,6 +33,82 @@ var mimeTypeMap = map[string]string{
 	"text":        "text/plain",
 }
 
+// cleanJsonSchemaForGemini removes unsupported fields and converts types for Gemini API compatibility
+func cleanJsonSchemaForGemini(schema interface{}) interface{} {
+	switch v := schema.(type) {
+	case map[string]interface{}:
+		cleaned := make(map[string]interface{})
+
+		// List of supported fields in Gemini (from official documentation)
+		supportedFields := map[string]bool{
+			"anyOf": true, "enum": true, "format": true, "items": true,
+			"maximum": true, "maxItems": true, "minimum": true, "minItems": true,
+			"nullable": true, "properties": true, "propertyOrdering": true,
+			"required": true, "type": true,
+		}
+
+		// Type mapping from lowercase to uppercase (Gemini requirement)
+		typeMapping := map[string]string{
+			"object":  "OBJECT",
+			"array":   "ARRAY",
+			"string":  "STRING",
+			"number":  "NUMBER",
+			"integer": "INTEGER",
+			"boolean": "BOOLEAN",
+			"null":    "NULL",
+		}
+
+		for key, value := range v {
+			// Skip unsupported fields like additionalProperties, description, strict
+			if !supportedFields[key] {
+				continue
+			}
+
+			switch key {
+			case "type":
+				// Convert type to uppercase if it's a string
+				if typeStr, ok := value.(string); ok {
+					if mappedType, exists := typeMapping[strings.ToLower(typeStr)]; exists {
+						cleaned[key] = mappedType
+					} else {
+						cleaned[key] = strings.ToUpper(typeStr)
+					}
+				} else {
+					cleaned[key] = value
+				}
+			case "properties":
+				// Handle properties object - recursively clean each property
+				if props, ok := value.(map[string]interface{}); ok {
+					cleanedProps := make(map[string]interface{})
+					for propKey, propValue := range props {
+						cleanedProps[propKey] = cleanJsonSchemaForGemini(propValue)
+					}
+					cleaned[key] = cleanedProps
+				} else {
+					cleaned[key] = value
+				}
+			case "items":
+				// Handle array items schema - recursively clean
+				cleaned[key] = cleanJsonSchemaForGemini(value)
+			default:
+				// For other supported fields, recursively clean if they're objects/arrays
+				cleaned[key] = cleanJsonSchemaForGemini(value)
+			}
+		}
+		return cleaned
+	case []interface{}:
+		// Clean arrays recursively
+		cleaned := make([]interface{}, len(v))
+		for i, item := range v {
+			cleaned[i] = cleanJsonSchemaForGemini(item)
+		}
+		return cleaned
+	default:
+		// Return primitive values as-is
+		return v
+	}
+}
+
 // Setting safety to the lowest possible values since Gemini is already powerless enough
 func ConvertRequest(textRequest model.GeneralOpenAIRequest) *ChatRequest {
 	geminiRequest := ChatRequest{
@@ -71,7 +147,9 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *ChatRequest {
 			geminiRequest.GenerationConfig.ResponseMimeType = mimeType
 		}
 		if textRequest.ResponseFormat.JsonSchema != nil {
-			geminiRequest.GenerationConfig.ResponseSchema = textRequest.ResponseFormat.JsonSchema.Schema
+			// Clean the schema to remove unsupported properties for Gemini
+			cleanedSchema := cleanJsonSchemaForGemini(textRequest.ResponseFormat.JsonSchema.Schema)
+			geminiRequest.GenerationConfig.ResponseSchema = cleanedSchema
 			geminiRequest.GenerationConfig.ResponseMimeType = mimeTypeMap["json_object"]
 		}
 	}
