@@ -11,10 +11,10 @@ import (
 
 func TestPreConsumedQuotaWithStructuredOutput(t *testing.T) {
 	tests := []struct {
-		name                     string
-		textRequest              *relaymodel.GeneralOpenAIRequest
-		promptTokens             int
-		ratio                    float64
+		name                      string
+		textRequest               *relaymodel.GeneralOpenAIRequest
+		promptTokens              int
+		ratio                     float64
 		expectStructuredSurcharge bool
 	}{
 		{
@@ -37,8 +37,8 @@ func TestPreConsumedQuotaWithStructuredOutput(t *testing.T) {
 					},
 				},
 			},
-			promptTokens:             100,
-			ratio:                    ratio.GetModelRatio("gpt-4o", channeltype.OpenAI),
+			promptTokens:              100,
+			ratio:                     ratio.GetModelRatio("gpt-4o", channeltype.OpenAI),
 			expectStructuredSurcharge: true,
 		},
 		{
@@ -47,8 +47,8 @@ func TestPreConsumedQuotaWithStructuredOutput(t *testing.T) {
 				Model:     "gpt-4o",
 				MaxTokens: 1000,
 			},
-			promptTokens:             100,
-			ratio:                    ratio.GetModelRatio("gpt-4o", channeltype.OpenAI),
+			promptTokens:              100,
+			ratio:                     ratio.GetModelRatio("gpt-4o", channeltype.OpenAI),
 			expectStructuredSurcharge: false,
 		},
 		{
@@ -60,8 +60,8 @@ func TestPreConsumedQuotaWithStructuredOutput(t *testing.T) {
 					Type: "text",
 				},
 			},
-			promptTokens:             100,
-			ratio:                    ratio.GetModelRatio("gpt-4o", channeltype.OpenAI),
+			promptTokens:              100,
+			ratio:                     ratio.GetModelRatio("gpt-4o", channeltype.OpenAI),
 			expectStructuredSurcharge: false,
 		},
 		{
@@ -78,8 +78,8 @@ func TestPreConsumedQuotaWithStructuredOutput(t *testing.T) {
 					},
 				},
 			},
-			promptTokens:             100,
-			ratio:                    ratio.GetModelRatio("gpt-4o", channeltype.OpenAI),
+			promptTokens:              100,
+			ratio:                     ratio.GetModelRatio("gpt-4o", channeltype.OpenAI),
 			expectStructuredSurcharge: true,
 		},
 	}
@@ -98,7 +98,7 @@ func TestPreConsumedQuotaWithStructuredOutput(t *testing.T) {
 			if tt.expectStructuredSurcharge {
 				// Should have additional cost for structured output
 				if preConsumedQuota <= baseQuota {
-					t.Errorf("Expected pre-consumed quota to include structured output surcharge, but got %d (base: %d)", 
+					t.Errorf("Expected pre-consumed quota to include structured output surcharge, but got %d (base: %d)",
 						preConsumedQuota, baseQuota)
 				}
 
@@ -114,7 +114,7 @@ func TestPreConsumedQuotaWithStructuredOutput(t *testing.T) {
 					t.Errorf("Expected pre-consumed quota %d, got %d", expectedTotal, preConsumedQuota)
 				}
 
-				t.Logf("Pre-consumption correctly includes structured output cost: %d (base: %d, structured: %d)", 
+				t.Logf("Pre-consumption correctly includes structured output cost: %d (base: %d, structured: %d)",
 					preConsumedQuota, baseQuota, expectedStructuredCost)
 			} else {
 				// Should not have additional cost
@@ -156,7 +156,7 @@ func TestStructuredOutputQuotaConsistency(t *testing.T) {
 
 	// Pre-consumption should be higher (conservative) but not excessively so
 	if preConsumedQuota <= actualPostQuota {
-		t.Logf("Pre-consumed quota (%d) vs actual post quota (%d) - this is acceptable as long as it's close", 
+		t.Logf("Pre-consumed quota (%d) vs actual post quota (%d) - this is acceptable as long as it's close",
 			preConsumedQuota, actualPostQuota)
 		// Allow for cases where pre-consumption is slightly lower due to conservative estimation
 		// The important thing is that it's in the right ballpark
@@ -164,10 +164,10 @@ func TestStructuredOutputQuotaConsistency(t *testing.T) {
 
 	// But it shouldn't be more than 3x the actual cost (reasonable buffer)
 	if preConsumedQuota > actualPostQuota*3 {
-		t.Errorf("Pre-consumed quota (%d) is too conservative compared to actual post quota (%d)", 
+		t.Errorf("Pre-consumed quota (%d) is too conservative compared to actual post quota (%d)",
 			preConsumedQuota, actualPostQuota)
 	}
 
-	t.Logf("Quota consistency check: pre-consumed=%d, actual-post=%d, ratio=%.2f", 
+	t.Logf("Quota consistency check: pre-consumed=%d, actual-post=%d, ratio=%.2f",
 		preConsumedQuota, actualPostQuota, float64(preConsumedQuota)/float64(actualPostQuota))
 }

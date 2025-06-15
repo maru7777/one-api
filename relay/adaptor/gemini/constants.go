@@ -1,12 +1,12 @@
 package gemini
 
 import (
-	"github.com/songquanpeng/one-api/relay/adaptor/geminiv2"
+	"github.com/songquanpeng/one-api/relay/adaptor/geminiOpenaiCompatible"
 )
 
 // https://ai.google.dev/models/gemini
 
-var ModelList = geminiv2.ModelList
+var ModelList = geminiOpenaiCompatible.ModelList
 
 // ModelsSupportSystemInstruction is the list of models that support system instruction.
 //

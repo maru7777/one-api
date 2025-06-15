@@ -18,7 +18,7 @@ import (
 	"github.com/songquanpeng/one-api/relay/adaptor/alibailian"
 	"github.com/songquanpeng/one-api/relay/adaptor/baiduv2"
 	"github.com/songquanpeng/one-api/relay/adaptor/doubao"
-	"github.com/songquanpeng/one-api/relay/adaptor/geminiv2"
+	"github.com/songquanpeng/one-api/relay/adaptor/geminiOpenaiCompatible"
 	"github.com/songquanpeng/one-api/relay/adaptor/minimax"
 	"github.com/songquanpeng/one-api/relay/adaptor/novita"
 	"github.com/songquanpeng/one-api/relay/adaptor/openrouter"
@@ -77,7 +77,7 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	case channeltype.AliBailian:
 		return alibailian.GetRequestURL(meta)
 	case channeltype.GeminiOpenAICompatible:
-		return geminiv2.GetRequestURL(meta)
+		return geminiOpenaiCompatible.GetRequestURL(meta)
 	default:
 		// Convert chat completions to responses API for OpenAI only
 		if meta.Mode == relaymode.ChatCompletions && meta.ChannelType == channeltype.OpenAI {
