@@ -3,6 +3,8 @@ package openai
 import (
 	"strings"
 	"testing"
+
+	"github.com/songquanpeng/one-api/relay/model"
 )
 
 // TestCompleteResponseAPIStream tests the complete Response API streaming workflow
@@ -556,4 +558,188 @@ data: [DONE]`
 	t.Logf("📊 Delta events: %d, Done events: %d, Complete done events: %d",
 		deltaEventCount, doneEventCount, completeDoneEvents)
 	t.Logf("🎯 Final accumulated text: '%s' (correct, no duplication)", accumulatedText)
+}
+
+// TestResponseAPIStreamUsageHandling tests that usage information from response.completed events
+// is properly captured and converted to ChatCompletion streaming format
+func TestResponseAPIStreamUsageHandling(t *testing.T) {
+	// This simulates a Response API stream with usage information in the response.completed event
+	sseStreamWithUsage := `event: response.output_text.delta
+data: {"type":"response.output_text.delta","item_id":"msg_test","output_index":0,"content_index":0,"delta":"Hello"}
+
+event: response.completed
+data: {"type":"response.completed","response":{"id":"resp_test123","object":"response","created_at":1749954928,"status":"completed","model":"gpt-4o-2024-11-20","output":[{"id":"msg_test","type":"message","status":"completed","role":"assistant","content":[{"type":"output_text","text":"Hello world!","annotations":[]}]}],"usage":{"input_tokens":97,"input_tokens_details":{"cached_tokens":0},"output_tokens":76,"output_tokens_details":{"reasoning_tokens":10},"total_tokens":173}}}
+
+data: [DONE]`
+
+	// Split into lines and process exactly like the ResponseAPIStreamHandler would
+	lines := strings.Split(sseStreamWithUsage, "\n")
+
+	const dataPrefix = "data: "
+	const dataPrefixLength = len(dataPrefix)
+
+	var deltaEvents []ChatCompletionsStreamResponse
+	var usageEvents []ChatCompletionsStreamResponse
+	responseText := ""
+
+	for i, line := range lines {
+		line = strings.TrimSpace(line)
+
+		// Skip empty lines and event lines
+		if line == "" {
+			continue
+		}
+
+		data := NormalizeDataLine(line)
+
+		if !strings.HasPrefix(data, dataPrefix) {
+			continue
+		}
+
+		// Extract JSON data
+		jsonData := data[dataPrefixLength:]
+
+		if jsonData == "[DONE]" {
+			break
+		}
+
+		// Parse using the same logic as ResponseAPIStreamHandler
+		fullResponse, streamEvent, err := ParseResponseAPIStreamEvent([]byte(jsonData))
+		if err != nil {
+			t.Errorf("Line %d: Parse error: %v", i+1, err)
+			continue
+		}
+
+		// Convert to ResponseAPIResponse (same as ResponseAPIStreamHandler)
+		var responseAPIChunk ResponseAPIResponse
+		if fullResponse != nil {
+			responseAPIChunk = *fullResponse
+		} else if streamEvent != nil {
+			responseAPIChunk = ConvertStreamEventToResponse(streamEvent)
+		}
+
+		// Simulate the logic from ResponseAPIStreamHandler for handling events
+		if streamEvent != nil {
+			eventType := streamEvent.Type
+
+			// Process delta events
+			if strings.Contains(eventType, "delta") {
+				// Accumulate response text
+				if streamEvent.Delta != "" {
+					responseText += streamEvent.Delta
+				}
+
+				// Convert and store delta event
+				chatCompletionChunk := ConvertResponseAPIStreamToChatCompletion(&responseAPIChunk)
+				deltaEvents = append(deltaEvents, *chatCompletionChunk)
+			} else if eventType == "response.completed" && responseAPIChunk.Usage != nil {
+				// This is the new logic we're testing - capture usage from response.completed
+				convertedUsage := responseAPIChunk.Usage.ToModelUsage()
+				if convertedUsage != nil {
+					// Create a usage-only streaming chunk (mimicking the new logic)
+					usageChunk := ChatCompletionsStreamResponse{
+						Id:      responseAPIChunk.Id,
+						Object:  "chat.completion.chunk",
+						Created: responseAPIChunk.CreatedAt,
+						Model:   responseAPIChunk.Model,
+						Choices: []ChatCompletionsStreamResponseChoice{
+							{
+								Index: 0,
+								Delta: model.Message{
+									Role:    "assistant",
+									Content: "", // Usage chunk should have empty content
+								},
+								FinishReason: nil, // Don't set finish reason in usage chunk
+							},
+						},
+						Usage: convertedUsage,
+					}
+					usageEvents = append(usageEvents, usageChunk)
+				}
+			}
+		}
+	}
+
+	// Verify we got the expected content from delta events
+	expectedText := "Hello"
+	if responseText != expectedText {
+		t.Errorf("Response text mismatch: expected '%s', got '%s'", expectedText, responseText)
+	}
+
+	// Verify we got delta events
+	if len(deltaEvents) == 0 {
+		t.Error("No delta events were captured")
+	}
+
+	// Verify we got exactly one usage event from response.completed
+	if len(usageEvents) != 1 {
+		t.Errorf("Expected exactly 1 usage event, got %d", len(usageEvents))
+	}
+
+	if len(usageEvents) > 0 {
+		usageEvent := usageEvents[0]
+
+		// Verify the usage event structure
+		if usageEvent.Usage == nil {
+			t.Error("Usage event missing usage information")
+		} else {
+			// Verify usage values were converted correctly from ResponseAPI format
+			if usageEvent.Usage.PromptTokens != 97 {
+				t.Errorf("Expected PromptTokens=97, got %d", usageEvent.Usage.PromptTokens)
+			}
+			if usageEvent.Usage.CompletionTokens != 76 {
+				t.Errorf("Expected CompletionTokens=76, got %d", usageEvent.Usage.CompletionTokens)
+			}
+			if usageEvent.Usage.TotalTokens != 173 {
+				t.Errorf("Expected TotalTokens=173, got %d", usageEvent.Usage.TotalTokens)
+			}
+
+			// Verify completion token details were converted correctly
+			if usageEvent.Usage.CompletionTokensDetails == nil {
+				t.Error("Expected CompletionTokensDetails to be present")
+			} else {
+				if usageEvent.Usage.CompletionTokensDetails.ReasoningTokens != 10 {
+					t.Errorf("Expected ReasoningTokens=10, got %d", usageEvent.Usage.CompletionTokensDetails.ReasoningTokens)
+				}
+			}
+		}
+
+		// Verify the structure matches ChatCompletion streaming format
+		if usageEvent.Object != "chat.completion.chunk" {
+			t.Errorf("Expected object='chat.completion.chunk', got '%s'", usageEvent.Object)
+		}
+
+		if usageEvent.Id != "resp_test123" {
+			t.Errorf("Expected id='resp_test123', got '%s'", usageEvent.Id)
+		}
+
+		if usageEvent.Model != "gpt-4o-2024-11-20" {
+			t.Errorf("Expected model='gpt-4o-2024-11-20', got '%s'", usageEvent.Model)
+		}
+
+		// Verify the choice structure
+		if len(usageEvent.Choices) != 1 {
+			t.Errorf("Expected 1 choice, got %d", len(usageEvent.Choices))
+		} else {
+			choice := usageEvent.Choices[0]
+			if choice.Delta.Role != "assistant" {
+				t.Errorf("Expected delta role='assistant', got '%s'", choice.Delta.Role)
+			}
+
+			// IMPORTANT: Verify that usage chunk has empty string content, not nil
+			if content, ok := choice.Delta.Content.(string); !ok {
+				t.Errorf("Expected delta content to be a string, got %T", choice.Delta.Content)
+			} else if content != "" {
+				t.Errorf("Expected delta content to be empty string for usage chunk, got '%s'", content)
+			}
+
+			if choice.FinishReason != nil {
+				t.Errorf("Expected FinishReason=nil for usage chunk, got '%v'", choice.FinishReason)
+			}
+		}
+	}
+
+	t.Logf("✅ Usage handling test passed")
+	t.Logf("📊 Delta events: %d, Usage events: %d", len(deltaEvents), len(usageEvents))
+	t.Logf("🎯 Accumulated text: '%s'", responseText)
 }

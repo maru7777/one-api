@@ -442,7 +442,7 @@ func ResponseAPIStreamHandler(c *gin.Context, resp *http.Response, relayMode int
 	for scanner.Scan() {
 		data := NormalizeDataLine(scanner.Text())
 
-		logger.Debugf(c.Request.Context(), "response api stream response: %s", data)
+		logger.Debugf(c.Request.Context(), "receive stream event: %s", data)
 
 		if !strings.HasPrefix(data, dataPrefix) {
 			continue
@@ -521,8 +521,41 @@ func ResponseAPIStreamHandler(c *gin.Context, resp *http.Response, relayMode int
 				}
 
 				c.Render(-1, common.CustomEvent{Data: "data: " + string(jsonStr)})
+			} else if eventType == "response.completed" && responseAPIChunk.Usage != nil {
+				// Special handling for response.completed event to send usage information
+				// Convert ResponseAPI usage to model.Usage format
+				convertedUsage := responseAPIChunk.Usage.ToModelUsage()
+				if convertedUsage != nil {
+					// Create a usage-only streaming chunk with empty delta
+					usageChunk := ChatCompletionsStreamResponse{
+						Id:      responseAPIChunk.Id,
+						Object:  "chat.completion.chunk",
+						Created: responseAPIChunk.CreatedAt,
+						Model:   responseAPIChunk.Model,
+						Choices: []ChatCompletionsStreamResponseChoice{
+							{
+								Index: 0,
+								Delta: model.Message{
+									Role:    "assistant",
+									Content: "",
+								},
+								FinishReason: nil, // Don't set finish reason in usage chunk
+							},
+						},
+						Usage: convertedUsage,
+					}
+
+					jsonStr, err := json.Marshal(usageChunk)
+					if err != nil {
+						logger.SysError("error marshalling usage chunk: " + err.Error())
+						continue
+					}
+
+					c.Render(-1, common.CustomEvent{Data: "data: " + string(jsonStr)})
+					logger.Debugf(c.Request.Context(), "sent usage chunk from response.completed: %s", string(jsonStr))
+				}
 			}
-			// ALL other events (done events, completion events, created, in_progress, etc.) are completely discarded
+			// ALL other events (done events, in_progress events, etc.) are completely discarded
 			// This prevents ANY duplicate content from reaching the client
 		}
 	}
