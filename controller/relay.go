@@ -137,57 +137,20 @@ func Relay(c *gin.Context) {
 // shouldRetry returns nil if should retry, otherwise returns error
 func shouldRetry(c *gin.Context, statusCode int) error {
 	if specificChannelId := c.GetInt(ctxkey.SpecificChannelId); specificChannelId != 0 {
-		// Check if specific channel ID is set
 		return errors.Errorf(
 			"specific channel ID (%d) was provided, retry is unvailable",
 			specificChannelId)
 	}
-
-	if statusCode == http.StatusTooManyRequests {
-		// For 429, we will suspend the channel, but we still might want to retry with a *different* channel.
-		// The original logic implies retrying unless it's a 5xx or specific channel.
-		// So, a 429 on one channel should allow retrying on another.
-		// The decision to *not* retry for 429 seems to be new here.
-		// If the goal is to retry on other channels, then 429 should not prevent retry here.
-		// The suspension handles the problematic channel.
-		// Let's keep the original retry behavior for 429 (i.e., allow retries on other channels).
-		// The problem statement says "model for that channel should be temporarily disabled".
-		// "In the next request, this model should also be skipped" - this is handled by suspension.
-		// The current request can still try other channels.
-		// Thus, removing the direct block on retry for 429 here.
-		// return errors.Errorf("status code = %d (Too Many Requests), will suspend but not retry immediately with this error type", statusCode)
-	}
-	if statusCode >= 500 && statusCode <= 599 { // Standard 5xx server errors
-		// return errors.Errorf("status code = %d (Server Error), won't retry", statusCode)
-		// Original code did not have this specific 5xx check to prevent retry. It retried on 5xx.
-		// Let's stick to the original behavior unless specified otherwise.
-		// The original code only prevented retry if SpecificChannelId was set.
-		// The prompt implies retry should happen, but the *failed* channel/model is skipped.
-	}
-
-	// The original logic for not retrying was:
-	// if statusCode == http.StatusTooManyRequests || statusCode/100 == 5 {
-	//   return false // false means should not retry in original context, here we return error if should not retry
-	// }
-	// The new logic in the user's code is:
-	// if statusCode == http.StatusTooManyRequests { return errors.Errorf("status code = %d", statusCode) }
-	// if statusCode/100 == 5 { return errors.Errorf("status code = %d", statusCode) }
-	// This means the current code *prevents* retries on 429 and 5xx.
-	// If we want to retry on other channels after a 429 or 5xx, these conditions should be removed or altered.
-	// Given the problem description focuses on suspending the failing channel and then retrying,
-	// it's likely that retries on *other* channels are desired.
-	// Let's assume for now the existing `shouldRetry` logic in the user's code reflects the desired overall retry policy.
-	// No changes here then, but it's an important consideration.
 
 	return nil
 }
 
 func processChannelRelayError(ctx context.Context, userId int, channelId int, channelName string, group string, originalModel string, err model.ErrorWithStatusCode) {
 	logger.Errorf(ctx, "relay error (channel id %d, name %s, user_id %d, group: %s, model: %s): %s", channelId, channelName, userId, group, originalModel, err.Message)
-	// https://platform.openai.com/docs/guides/error-codes/api-errors
 
 	if err.StatusCode == http.StatusTooManyRequests {
-		logger.Infof(ctx, "channel %d (%s) for model %s in group %s is rate limited (429), suspending for 60 seconds", channelId, channelName, originalModel, group)
+		// For 429, we will suspend the specific model for a while
+		logger.Infof(ctx, "suspending model %s in group %s on channel %d (%s) due to rate limit", originalModel, group, channelId, channelName)
 		if suspendErr := dbmodel.SuspendAbility(ctx,
 			group, originalModel, channelId,
 			config.ChannelSuspendSecondsFor429); suspendErr != nil {
