@@ -8,7 +8,7 @@ require (
 	cloud.google.com/go/iam v1.5.2
 	github.com/Laisky/errors/v2 v2.0.1
 	github.com/Laisky/gin-middlewares/v6 v6.1.0
-	github.com/Laisky/go-utils/v5 v5.1.1-0.20250613174600-5ba5e296fc72
+	github.com/Laisky/go-utils/v5 v5.1.2-0.20250615144910-425272b31889
 	github.com/Laisky/zap v1.27.1-0.20241010063010-3154c45f2a1f
 	github.com/aws/aws-sdk-go-v2 v1.36.4
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.69

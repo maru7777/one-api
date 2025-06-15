@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/Laisky/errors/v2"
+	gmw "github.com/Laisky/gin-middlewares/v6"
+	gutils "github.com/Laisky/go-utils/v5"
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common/client"
 	"github.com/songquanpeng/one-api/common/ctxkey"
@@ -37,7 +39,7 @@ func DoRequestHelper(a Adaptor, c *gin.Context, meta *meta.Meta, requestBody io.
 		return nil, errors.Wrap(err, "get request url failed")
 	}
 
-	req, err := http.NewRequestWithContext(c.Request.Context(),
+	req, err := gutils.NewReusableRequest(gmw.Ctx(c),
 		c.Request.Method, fullRequestURL, requestBody)
 	if err != nil {
 		return nil, errors.Wrap(err, "new request failed")
