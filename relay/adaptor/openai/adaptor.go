@@ -183,6 +183,8 @@ func (a *Adaptor) applyRequestTransformations(meta *meta.Meta, request *model.Ge
 
 			return
 		}(request.Messages)
+	} else {
+		request.ReasoningEffort = nil
 	}
 
 	// web search do not support system prompt/max_tokens/temperature
