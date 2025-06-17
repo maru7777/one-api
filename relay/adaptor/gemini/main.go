@@ -196,22 +196,47 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *ChatRequest {
 
 	shouldAddDummyModelMessage := false
 	for _, message := range textRequest.Messages {
-		content := ChatContent{
-			Role: message.Role,
-			Parts: []Part{
-				{
-					Text: message.StringContent(),
-				},
-			},
-		}
-		openaiContent := message.ParseContent()
+		// Start with initial content based on message string content
+		initialText := message.StringContent()
 		var parts []Part
+
+		// Add text content if it's not empty
+		if initialText != "" {
+			parts = append(parts, Part{
+				Text: initialText,
+			})
+		}
+
+		// Handle OpenAI tool calls - convert them to Gemini function calls
+		if len(message.ToolCalls) > 0 {
+			for _, toolCall := range message.ToolCalls {
+				// Parse the arguments from JSON string to interface{}
+				var args interface{}
+				if err := json.Unmarshal([]byte(toolCall.Function.Arguments.(string)), &args); err != nil {
+					// If parsing fails, use the raw string
+					args = toolCall.Function.Arguments
+				}
+
+				parts = append(parts, Part{
+					FunctionCall: &FunctionCall{
+						FunctionName: toolCall.Function.Name,
+						Arguments:    args,
+					},
+				})
+			}
+		}
+
+		// Parse structured content and add additional parts
+		openaiContent := message.ParseContent()
 		imageNum := 0
 		for _, part := range openaiContent {
 			if part.Type == model.ContentTypeText && part.Text != nil && *part.Text != "" {
-				parts = append(parts, Part{
-					Text: *part.Text,
-				})
+				// Only add if we haven't already added this text from StringContent()
+				if *part.Text != initialText {
+					parts = append(parts, Part{
+						Text: *part.Text,
+					})
+				}
 			} else if part.Type == model.ContentTypeImageURL {
 				imageNum += 1
 				if imageNum > VisionMaxImageNum {
@@ -226,7 +251,19 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *ChatRequest {
 				})
 			}
 		}
-		content.Parts = parts
+
+		// If we have no parts at all (empty content with tool calls), add a minimal text part
+		// to satisfy Gemini's requirement that parts cannot be empty
+		if len(parts) == 0 {
+			parts = append(parts, Part{
+				Text: " ", // Minimal non-empty text to satisfy Gemini's requirements
+			})
+		}
+
+		content := ChatContent{
+			Role:  message.Role,
+			Parts: parts,
+		}
 
 		// there's no assistant role in gemini and API shall vomit if Role is not user or model
 		if content.Role == "assistant" {
@@ -242,6 +279,14 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *ChatRequest {
 			} else {
 				content.Role = "user"
 			}
+		}
+		// Handle tool responses - convert to user role with function response format
+		if content.Role == "tool" {
+			// Tool responses in OpenAI are converted to user messages in Gemini
+			// with the function response content
+			content.Role = "user"
+			// Keep the original content as text, as Gemini expects function responses
+			// to be handled in a different format than OpenAI
 		}
 
 		geminiRequest.Contents = append(geminiRequest.Contents, content)
