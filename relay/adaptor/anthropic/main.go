@@ -128,19 +128,27 @@ func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Re
 		}
 		var content Content
 		if message.IsStringContent() {
-			content.Type = "text"
-			content.Text = message.StringContent()
+			stringContent := message.StringContent()
+
 			if message.Role == "tool" {
 				claudeMessage.Role = "user"
 				content.Type = "tool_result"
-				content.Content = content.Text
-				content.Text = ""
+				content.Content = stringContent
 				content.ToolUseId = message.ToolCallId
+				claudeMessage.Content = append(claudeMessage.Content, content)
+			} else if stringContent != "" {
+				// Only add text content if it's not empty
+				content.Type = "text"
+				content.Text = stringContent
+				claudeMessage.Content = append(claudeMessage.Content, content)
 			}
-			claudeMessage.Content = append(claudeMessage.Content, content)
+
+			// Add tool calls
 			for i := range message.ToolCalls {
 				inputParam := make(map[string]any)
-				_ = json.Unmarshal([]byte(message.ToolCalls[i].Function.Arguments.(string)), &inputParam)
+				if err := json.Unmarshal([]byte(message.ToolCalls[i].Function.Arguments.(string)), &inputParam); err != nil {
+					return nil, errors.Wrapf(err, "unmarshal tool call arguments for tool %s", message.ToolCalls[i].Function.Name)
+				}
 				claudeMessage.Content = append(claudeMessage.Content, Content{
 					Type:  "tool_use",
 					Id:    message.ToolCalls[i].Id,
@@ -148,6 +156,12 @@ func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Re
 					Input: inputParam,
 				})
 			}
+			
+			// Claude requires at least one content block per message
+			if len(claudeMessage.Content) == 0 {
+				return nil, errors.Wrap(errors.New("message must have at least one content block"), "validate message content")
+			}
+			
 			claudeRequest.Messages = append(claudeRequest.Messages, claudeMessage)
 			continue
 		}
@@ -157,8 +171,10 @@ func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Re
 			var content Content
 			if part.Type == model.ContentTypeText {
 				content.Type = "text"
-				if part.Text != nil {
+				if part.Text != nil && *part.Text != "" {
+					// Only add text content if it's not empty
 					content.Text = *part.Text
+					contents = append(contents, content)
 				}
 			} else if part.Type == model.ContentTypeImageURL {
 				content.Type = "image"
@@ -168,10 +184,30 @@ func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Re
 				mimeType, data, _ := image.GetImageFromUrl(part.ImageURL.Url)
 				content.Source.MediaType = mimeType
 				content.Source.Data = data
+				contents = append(contents, content)
 			}
-			contents = append(contents, content)
 		}
+
+		// Add tool calls for non-string content messages
+		for i := range message.ToolCalls {
+			inputParam := make(map[string]any)
+			if err := json.Unmarshal([]byte(message.ToolCalls[i].Function.Arguments.(string)), &inputParam); err != nil {
+				return nil, errors.Wrapf(err, "unmarshal tool call arguments for tool %s", message.ToolCalls[i].Function.Name)
+			}
+			contents = append(contents, Content{
+				Type:  "tool_use",
+				Id:    message.ToolCalls[i].Id,
+				Name:  message.ToolCalls[i].Function.Name,
+				Input: inputParam,
+			})
+		}		
 		claudeMessage.Content = contents
+		
+		// Claude requires at least one content block per message
+		if len(claudeMessage.Content) == 0 {
+			return nil, errors.Wrap(errors.New("message must have at least one content block"), "validate message content")
+		}
+		
 		claudeRequest.Messages = append(claudeRequest.Messages, claudeMessage)
 	}
 	return &claudeRequest, nil
