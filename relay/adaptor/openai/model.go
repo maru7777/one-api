@@ -152,6 +152,7 @@ type ChatCompletionsStreamResponseChoice struct {
 	FinishReason *string       `json:"finish_reason,omitempty"`
 }
 
+// ChatCompletionsStreamResponse is the streaming response structure for chat completions
 type ChatCompletionsStreamResponse struct {
 	Id      string                                `json:"id"`
 	Object  string                                `json:"object"`

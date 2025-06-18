@@ -72,7 +72,7 @@ func TestConvertRequest_EmptyAssistantMessageWithToolCalls(t *testing.T) {
 	// Find the assistant message (should be the one with tool_use)
 	var assistantMessage *Message
 	var toolMessage *Message
-	
+
 	for i := range claudeRequest.Messages {
 		if claudeRequest.Messages[i].Role == "assistant" && len(claudeRequest.Messages[i].Content) > 0 {
 			for _, content := range claudeRequest.Messages[i].Content {
@@ -93,7 +93,7 @@ func TestConvertRequest_EmptyAssistantMessageWithToolCalls(t *testing.T) {
 	}
 
 	require.NotNil(t, assistantMessage, "Should have assistant message with tool_use")
-	
+
 	// Find the tool_use content in the assistant message
 	var toolUseContent *Content
 	for i := range assistantMessage.Content {
@@ -102,9 +102,9 @@ func TestConvertRequest_EmptyAssistantMessageWithToolCalls(t *testing.T) {
 			break
 		}
 	}
-	
+
 	require.NotNil(t, toolUseContent, "Should have tool_use content")
-	
+
 	// Verify it's a tool_use content
 	assert.Equal(t, "tool_use", toolUseContent.Type)
 	assert.Equal(t, "call_123", toolUseContent.Id)
@@ -185,7 +185,7 @@ func TestConvertRequest_AssistantMessageWithTextAndToolCalls(t *testing.T) {
 			break
 		}
 	}
-	
+
 	require.NotNil(t, assistantMessage, "Should have assistant message")
 	require.Len(t, assistantMessage.Content, 2) // Should have both text and tool_use
 
@@ -284,7 +284,7 @@ func TestConvertRequest_ValidJSONGeneration(t *testing.T) {
 			break
 		}
 	}
-	
+
 	require.NotNil(t, assistantMessage, "Should have assistant message")
 	require.Len(t, assistantMessage.Content, 1) // Should only have tool_use
 

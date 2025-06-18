@@ -156,12 +156,12 @@ func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Re
 					Input: inputParam,
 				})
 			}
-			
+
 			// Claude requires at least one content block per message
 			if len(claudeMessage.Content) == 0 {
 				return nil, errors.Wrap(errors.New("message must have at least one content block"), "validate message content")
 			}
-			
+
 			claudeRequest.Messages = append(claudeRequest.Messages, claudeMessage)
 			continue
 		}
@@ -200,14 +200,14 @@ func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Re
 				Name:  message.ToolCalls[i].Function.Name,
 				Input: inputParam,
 			})
-		}		
+		}
 		claudeMessage.Content = contents
-		
+
 		// Claude requires at least one content block per message
 		if len(claudeMessage.Content) == 0 {
 			return nil, errors.Wrap(errors.New("message must have at least one content block"), "validate message content")
 		}
-		
+
 		claudeRequest.Messages = append(claudeRequest.Messages, claudeMessage)
 	}
 	return &claudeRequest, nil
@@ -403,6 +403,13 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 						lastArgs.Arguments = "{}"
 						response.Choices[len(response.Choices)-1].Delta.Content = nil
 						response.Choices[len(response.Choices)-1].Delta.ToolCalls = lastToolCallChoice.Delta.ToolCalls
+					}
+				}
+				// Add usage information to the final chunk
+				if usage.PromptTokens > 0 || usage.CompletionTokens > 0 {
+					usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
+					if response != nil {
+						response.Usage = &usage
 					}
 				}
 			}
