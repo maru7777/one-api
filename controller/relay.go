@@ -84,14 +84,36 @@ func Relay(c *gin.Context) {
 		logger.Errorf(ctx, "relay error happen, won't retry since of %v", err.Error())
 		retryTimes = 0
 	}
+
+	// For 429 errors, increase retry attempts to exhaust all available channels
+	// to avoid returning 429 to users when other channels might be available
+	if bizErr.StatusCode == http.StatusTooManyRequests && retryTimes > 0 {
+		// Try to get an estimate of available channels for this model/group
+		// to increase retry attempts accordingly
+		retryTimes = retryTimes * 2 // Increase retry attempts for 429 errors
+		logger.Infof(ctx, "429 error detected, increasing retry attempts to %d to exhaust alternative channels", retryTimes)
+	}
+	// Track failed channels to avoid retrying them, especially for 429 errors
+	failedChannels := make(map[int]bool)
+	failedChannels[lastFailedChannelId] = true
+
+	// For 429 errors, we should ignore first priority for all retries
+	// to try lower priority channels
+	ignoreFirstPriority := bizErr.StatusCode == http.StatusTooManyRequests
+
 	for i := retryTimes; i > 0; i-- {
-		channel, err := dbmodel.CacheGetRandomSatisfiedChannel(group, originalModel, i != retryTimes)
+		// Determine whether to ignore first priority for this retry attempt
+		shouldIgnoreFirstPriority := ignoreFirstPriority || i != retryTimes
+		channel, err := dbmodel.CacheGetRandomSatisfiedChannel(group, originalModel, shouldIgnoreFirstPriority)
 		if err != nil {
 			logger.Errorf(ctx, "CacheGetRandomSatisfiedChannel failed: %+v", err)
 			break
 		}
 		logger.Infof(ctx, "using channel #%d to retry (remain times %d)", channel.Id, i)
-		if channel.Id == lastFailedChannelId {
+
+		// Skip channels that have already failed, especially important for 429 errors
+		if failedChannels[channel.Id] {
+			logger.Infof(ctx, "skipping channel #%d as it already failed in this request", channel.Id)
 			continue
 		}
 		middleware.SetupContextForSelectedChannel(c, channel, originalModel)
@@ -113,6 +135,7 @@ func Relay(c *gin.Context) {
 		PrometheusMonitor.RecordRelayRequest(c, retryMeta, retryStartTime, false, 0, 0, 0)
 
 		channelId := c.GetInt(ctxkey.ChannelId)
+		failedChannels[channelId] = true // Track this failed channel
 		lastFailedChannelId = channelId
 		channelName := c.GetString(ctxkey.ChannelName)
 		// Update group and originalModel potentially if changed by middleware, though unlikely for these.
@@ -123,7 +146,12 @@ func Relay(c *gin.Context) {
 
 	if bizErr != nil {
 		if bizErr.StatusCode == http.StatusTooManyRequests {
-			bizErr.Error.Message = "The current group load is saturated, please try again later"
+			// Provide more specific messaging for 429 errors after exhausting retries
+			if len(failedChannels) > 1 {
+				bizErr.Error.Message = fmt.Sprintf("All available channels (%d) for this model are currently rate limited, please try again later", len(failedChannels))
+			} else {
+				bizErr.Error.Message = "The current group load is saturated, please try again later"
+			}
 		}
 
 		// BUG: bizErr is in race condition
