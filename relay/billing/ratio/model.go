@@ -190,12 +190,15 @@ var ModelRatio = map[string]float64{
 	"gemini-2.0-flash-lite-preview-02-05":   0.075 * MilliTokensUsd,
 	"gemini-2.0-flash-thinking-exp-01-21":   0.075 * MilliTokensUsd,
 	"gemini-2.0-flash-exp-image-generation": 0.075 * MilliTokensUsd,
+	"gemini-2.0-pro-exp-02-05":              1.25 * MilliTokensUsd,
+	"gemini-2.5-flash-lite-preview-06-17":   0.1 * MilliTokensUsd,
 	"gemini-2.5-flash-preview-04-17":        0.15 * MilliTokensUsd,
 	"gemini-2.5-flash-preview-05-20":        0.15 * MilliTokensUsd,
-	"gemini-2.0-pro-exp-02-05":              1.25 * MilliTokensUsd,
+	"gemini-2.5-flash":                      0.3 * MilliTokensUsd,
 	"gemini-2.5-pro-exp-03-25":              1.25 * MilliTokensUsd,
 	"gemini-2.5-pro-preview-05-06":          1.25 * MilliTokensUsd,
 	"gemini-2.5-pro-preview-06-05":          1.25 * MilliTokensUsd,
+	"gemini-2.5-pro":                        1.25 * MilliTokensUsd,
 	"aqa":                                   1,
 	// https://open.bigmodel.cn/pricing
 	"glm-zero-preview": 0.01 * KiloRmb,
@@ -1094,12 +1097,19 @@ func GetCompletionRatio(name string, channelType int) float64 {
 	if strings.HasPrefix(name, "mistral-") {
 		return 3
 	}
-	if strings.HasPrefix(name, "gemini-") {
-		if strings.HasPrefix(name, "gemini-2.5-pro") {
-			return 8
-		}
 
-		return 4
+	// https://cloud.google.com/vertex-ai/generative-ai/pricing
+	if strings.HasPrefix(name, "gemini-") {
+		switch {
+		case strings.HasPrefix(name, "gemini-2.5-pro-"):
+			return 8
+		case name == "gemini-2.5-pro":
+			return 15 / 2.5
+		case name == "gemini-2.5-flash":
+			return 2.5 / 0.3
+		default:
+			return 4
+		}
 	}
 
 	switch name {
