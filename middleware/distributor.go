@@ -42,15 +42,21 @@ func Distribute() func(c *gin.Context) {
 		} else {
 			requestModel = c.GetString(ctxkey.RequestModel)
 			var err error
+			// First try to get highest priority channels
 			channel, err = model.CacheGetRandomSatisfiedChannel(userGroup, requestModel, false)
 			if err != nil {
-				message := fmt.Sprintf("No available channels for Model %s under Group %s", requestModel, userGroup)
-				if channel != nil {
-					logger.SysError(fmt.Sprintf("Channel does not exist: %d", channel.Id))
-					message = "Database consistency has been broken, please contact the administrator"
+				// If no highest priority channels available, try lower priority channels as fallback
+				logger.Infof(ctx, "No highest priority channels available for model %s in group %s, trying lower priority channels", requestModel, userGroup)
+				channel, err = model.CacheGetRandomSatisfiedChannel(userGroup, requestModel, true)
+				if err != nil {
+					message := fmt.Sprintf("No available channels for Model %s under Group %s", requestModel, userGroup)
+					if channel != nil {
+						logger.SysError(fmt.Sprintf("Channel does not exist: %d", channel.Id))
+						message = "Database consistency has been broken, please contact the administrator"
+					}
+					AbortWithError(c, http.StatusServiceUnavailable, errors.New(message))
+					return
 				}
-				AbortWithError(c, http.StatusServiceUnavailable, errors.New(message))
-				return
 			}
 		}
 		logger.Debugf(ctx, "user id %d, user group: %s, request model: %s, using channel #%d", userId, userGroup, requestModel, channel.Id)
