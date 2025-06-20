@@ -97,25 +97,38 @@ func Relay(c *gin.Context) {
 	failedChannels := make(map[int]bool)
 	failedChannels[lastFailedChannelId] = true
 
-	// For 429 errors, we should ignore first priority for all retries
-	// to try lower priority channels
-	ignoreFirstPriority := bizErr.StatusCode == http.StatusTooManyRequests
+	// For 429 errors, we should try lower priority channels first
+	// since the highest priority channel is rate limited
+	shouldTryLowerPriorityFirst := bizErr.StatusCode == http.StatusTooManyRequests
 
 	for i := retryTimes; i > 0; i-- {
-		// Determine whether to ignore first priority for this retry attempt
-		shouldIgnoreFirstPriority := ignoreFirstPriority || i != retryTimes
-		channel, err := dbmodel.CacheGetRandomSatisfiedChannel(group, originalModel, shouldIgnoreFirstPriority)
+		var channel *dbmodel.Channel
+		var err error
+
+		// Try to find an available channel, preferring lower priority channels for 429 errors
+		if shouldTryLowerPriorityFirst {
+			// For 429 errors, first try lower priority channels while excluding failed ones
+			channel, err = dbmodel.CacheGetRandomSatisfiedChannelExcluding(group, originalModel, true, failedChannels)
+			if err != nil {
+				// If no lower priority channels available, try highest priority channels (excluding failed ones)
+				logger.Infof(ctx, "No lower priority channels available, trying highest priority channels")
+				channel, err = dbmodel.CacheGetRandomSatisfiedChannelExcluding(group, originalModel, false, failedChannels)
+			}
+		} else {
+			// For non-429 errors, try highest priority first, then lower priority (excluding failed ones)
+			channel, err = dbmodel.CacheGetRandomSatisfiedChannelExcluding(group, originalModel, false, failedChannels)
+			if err != nil {
+				logger.Infof(ctx, "No highest priority channels available, trying lower priority channels")
+				channel, err = dbmodel.CacheGetRandomSatisfiedChannelExcluding(group, originalModel, true, failedChannels)
+			}
+		}
+
 		if err != nil {
-			logger.Errorf(ctx, "CacheGetRandomSatisfiedChannel failed: %+v", err)
+			logger.Errorf(ctx, "CacheGetRandomSatisfiedChannelExcluding failed: %+v", err)
 			break
 		}
-		logger.Infof(ctx, "using channel #%d to retry (remain times %d)", channel.Id, i)
 
-		// Skip channels that have already failed, especially important for 429 errors
-		if failedChannels[channel.Id] {
-			logger.Infof(ctx, "skipping channel #%d as it already failed in this request", channel.Id)
-			continue
-		}
+		logger.Infof(ctx, "using channel #%d to retry (remain times %d)", channel.Id, i)
 		middleware.SetupContextForSelectedChannel(c, channel, originalModel)
 		requestBody, err := common.GetRequestBody(c)
 		c.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody))

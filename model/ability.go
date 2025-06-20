@@ -181,3 +181,66 @@ func SuspendAbility(ctx context.Context, group string, modelName string, channel
 			group, modelName, channelId).
 		Update("suspend_until", suspendTime).Error
 }
+
+func GetRandomSatisfiedChannelExcluding(group string, model string, ignoreFirstPriority bool, excludeChannelIds map[int]bool) (*Channel, error) {
+	ability := Ability{}
+	groupCol := "`group`"
+	trueVal := "1"
+	if common.UsingPostgreSQL {
+		groupCol = `"group"`
+		trueVal = "true"
+	}
+	now := time.Now()
+
+	var err error = nil
+	var channelQuery *gorm.DB
+
+	// Build base query with exclusions
+	baseCondition := groupCol + " = ? AND model = ? AND enabled = " + trueVal + " AND (suspend_until IS NULL OR suspend_until < ?)"
+	if len(excludeChannelIds) > 0 {
+		var excludeIds []int
+		for channelId := range excludeChannelIds {
+			excludeIds = append(excludeIds, channelId)
+		}
+		baseCondition += " AND channel_id NOT IN (?)"
+	}
+
+	if ignoreFirstPriority {
+		if len(excludeChannelIds) > 0 {
+			var excludeIds []int
+			for channelId := range excludeChannelIds {
+				excludeIds = append(excludeIds, channelId)
+			}
+			channelQuery = DB.Where(baseCondition, group, model, now, excludeIds)
+		} else {
+			channelQuery = DB.Where(groupCol+" = ? AND model = ? AND enabled = "+trueVal+" AND (suspend_until IS NULL OR suspend_until < ?)", group, model, now)
+		}
+	} else {
+		maxPrioritySubQuery := DB.Model(&Ability{}).Select("MAX(priority)").Where(groupCol+" = ? AND model = ? AND enabled = "+trueVal+" AND (suspend_until IS NULL OR suspend_until < ?)", group, model, now)
+		if len(excludeChannelIds) > 0 {
+			var excludeIds []int
+			for channelId := range excludeChannelIds {
+				excludeIds = append(excludeIds, channelId)
+			}
+			// Add exclusion to the subquery as well
+			maxPrioritySubQuery = maxPrioritySubQuery.Where("channel_id NOT IN (?)", excludeIds)
+			channelQuery = DB.Where(groupCol+" = ? AND model = ? AND enabled = "+trueVal+" AND priority = (?) AND (suspend_until IS NULL OR suspend_until < ?) AND channel_id NOT IN (?)", group, model, maxPrioritySubQuery, now, excludeIds)
+		} else {
+			channelQuery = DB.Where(groupCol+" = ? AND model = ? AND enabled = "+trueVal+" AND priority = (?) AND (suspend_until IS NULL OR suspend_until < ?)", group, model, maxPrioritySubQuery, now)
+		}
+	}
+
+	if common.UsingSQLite || common.UsingPostgreSQL {
+		err = channelQuery.Order("RANDOM()").First(&ability).Error
+	} else {
+		err = channelQuery.Order("RAND()").First(&ability).Error
+	}
+	if err != nil {
+		return nil, errors.Wrap(err, "get random satisfied channel excluding failed ones")
+	}
+
+	channel := Channel{}
+	channel.Id = ability.ChannelId
+	err = DB.First(&channel, "id = ?", ability.ChannelId).Error
+	return &channel, err
+}

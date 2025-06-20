@@ -353,3 +353,50 @@ func CacheGetRandomSatisfiedChannel(group string, model string, ignoreFirstPrior
 	}
 	return candidateChannels[idx], nil
 }
+
+// CacheGetRandomSatisfiedChannelExcluding gets a random satisfied channel while excluding specified channel IDs
+func CacheGetRandomSatisfiedChannelExcluding(group string, model string, ignoreFirstPriority bool, excludeChannelIds map[int]bool) (*Channel, error) {
+	if !config.MemoryCacheEnabled {
+		return GetRandomSatisfiedChannelExcluding(group, model, ignoreFirstPriority, excludeChannelIds)
+	}
+	channelSyncLock.RLock()
+	channelsFromCache := group2model2channels[group][model]
+
+	if len(channelsFromCache) == 0 {
+		channelSyncLock.RUnlock()
+		return nil, errors.New("channel not found in memory cache")
+	}
+
+	// Filter out excluded channels
+	var candidateChannels []*Channel
+	for _, channel := range channelsFromCache {
+		if !excludeChannelIds[channel.Id] {
+			candidateChannels = append(candidateChannels, channel)
+		}
+	}
+	channelSyncLock.RUnlock()
+
+	if len(candidateChannels) == 0 {
+		return nil, errors.New("no available channels after excluding failed channels")
+	}
+
+	endIdx := len(candidateChannels)
+	// choose by priority
+	firstChannel := candidateChannels[0]
+	if firstChannel.GetPriority() > 0 {
+		for i := range candidateChannels {
+			if candidateChannels[i].GetPriority() != firstChannel.GetPriority() {
+				endIdx = i
+				break
+			}
+		}
+	}
+
+	idx := rand.Intn(endIdx)
+	if ignoreFirstPriority {
+		if endIdx < len(candidateChannels) { // which means there are more than one priority
+			idx = random.RandRange(endIdx, len(candidateChannels))
+		}
+	}
+	return candidateChannels[idx], nil
+}
