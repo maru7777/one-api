@@ -99,3 +99,74 @@ func TestChannelSpecificConversion(t *testing.T) {
 		})
 	}
 }
+
+func TestModelSpecificConversion(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	// Test different models with OpenAI channel type
+	testCases := []struct {
+		model            string
+		expectConversion bool
+		name             string
+	}{
+		{"gpt-4", true, "GPT-4 should be converted"},
+		{"gpt-4o", true, "GPT-4o should be converted"},
+		{"gpt-3.5-turbo", true, "GPT-3.5-turbo should be converted"},
+		{"o1-preview", true, "o1-preview should be converted"},
+		// Add future models that only support ChatCompletion here
+		// {"legacy-model", false, "Legacy model should not be converted"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create a sample ChatCompletion request with specific model
+			chatRequest := &model.GeneralOpenAIRequest{
+				Model: tc.model,
+				Messages: []model.Message{
+					{Role: "user", Content: "Hello, world!"},
+				},
+				Stream: false,
+			}
+
+			// Create Gin context
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+			c.Request = &http.Request{}
+
+			// Create meta context with OpenAI channel type
+			testMeta := &meta.Meta{
+				Mode:           relaymode.ChatCompletions,
+				ChannelType:    channeltype.OpenAI, // Always OpenAI for this test
+				RequestURLPath: "/v1/chat/completions",
+				BaseURL:        "https://api.openai.com",
+			}
+			c.Set("meta", testMeta)
+
+			// Create adaptor
+			adaptor := &Adaptor{}
+			adaptor.Init(testMeta)
+
+			// Test request conversion
+			convertedReq, err := adaptor.ConvertRequest(c, relaymode.ChatCompletions, chatRequest)
+			if err != nil {
+				t.Fatalf("ConvertRequest failed: %v", err)
+			}
+
+			// Check if request was converted to ResponseAPIRequest
+			_, isResponseAPI := convertedReq.(*ResponseAPIRequest)
+
+			// Verify expectations
+			if tc.expectConversion {
+				if !isResponseAPI {
+					t.Errorf("Expected request conversion for model %s but request was not converted", tc.model)
+				}
+				t.Logf("✓ Model %s: Correctly converted to Response API", tc.model)
+			} else {
+				if isResponseAPI {
+					t.Errorf("Did not expect request conversion for model %s but request was converted", tc.model)
+				}
+				t.Logf("✓ Model %s: Correctly kept as ChatCompletion API", tc.model)
+			}
+		})
+	}
+}
