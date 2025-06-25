@@ -1105,8 +1105,10 @@ func GetCompletionRatio(name string, channelType int) float64 {
 		switch {
 		case strings.HasPrefix(name, "gemini-2.5-pro-"):
 			return 8
+		case strings.HasPrefix(name, "gemini-2.5-flash-"):
+			return 3.5 / 0.15
 		case name == "gemini-2.5-pro":
-			return 15 / 2.5
+			return 10 / 1.25
 		case name == "gemini-2.5-flash":
 			return 2.5 / 0.3
 		default:
