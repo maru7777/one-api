@@ -380,23 +380,58 @@ func CacheGetRandomSatisfiedChannelExcluding(group string, model string, ignoreF
 		return nil, errors.New("no available channels after excluding failed channels")
 	}
 
-	endIdx := len(candidateChannels)
-	// choose by priority
-	firstChannel := candidateChannels[0]
-	if firstChannel.GetPriority() > 0 {
-		for i := range candidateChannels {
-			if candidateChannels[i].GetPriority() != firstChannel.GetPriority() {
-				endIdx = i
-				break
+	// If ignoreFirstPriority is true, we want to select from lower priority channels
+	// If ignoreFirstPriority is false, we want to select from highest priority channels
+	if ignoreFirstPriority {
+		// Find the boundary where highest priority channels end
+		endIdx := len(candidateChannels)
+		firstChannel := candidateChannels[0]
+		if firstChannel.GetPriority() > 0 {
+			for i := range candidateChannels {
+				if candidateChannels[i].GetPriority() != firstChannel.GetPriority() {
+					endIdx = i
+					break
+				}
 			}
 		}
-	}
 
-	idx := rand.Intn(endIdx)
-	if ignoreFirstPriority {
-		if endIdx < len(candidateChannels) { // which means there are more than one priority
-			idx = random.RandRange(endIdx, len(candidateChannels))
+		// If there are lower priority channels available, select from them
+		if endIdx < len(candidateChannels) {
+			idx := random.RandRange(endIdx, len(candidateChannels))
+			return candidateChannels[idx], nil
+		} else {
+			// No lower priority channels available, return error to indicate we should try a different approach
+			return nil, errors.New("no lower priority channels available after excluding failed channels")
 		}
+	} else {
+		// Select from highest priority channels among the available candidates
+		// Since candidateChannels maintains the original cache order (sorted by priority desc),
+		// we need to find the highest priority among the remaining candidates
+		if len(candidateChannels) == 0 {
+			return nil, errors.New("no candidate channels available")
+		}
+
+		// Find the maximum priority among available candidates
+		maxPriority := candidateChannels[0].GetPriority()
+		for _, channel := range candidateChannels {
+			if channel.GetPriority() > maxPriority {
+				maxPriority = channel.GetPriority()
+			}
+		}
+
+		// Collect channels with the maximum priority
+		var maxPriorityChannels []*Channel
+		for _, channel := range candidateChannels {
+			if channel.GetPriority() == maxPriority {
+				maxPriorityChannels = append(maxPriorityChannels, channel)
+			}
+		}
+
+		if len(maxPriorityChannels) == 0 {
+			return nil, errors.New("no channels with maximum priority available")
+		}
+
+		idx := rand.Intn(len(maxPriorityChannels))
+		return maxPriorityChannels[idx], nil
 	}
-	return candidateChannels[idx], nil
 }

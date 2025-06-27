@@ -206,16 +206,29 @@ func GetRandomSatisfiedChannelExcluding(group string, model string, ignoreFirstP
 	}
 
 	if ignoreFirstPriority {
+		// For ignoreFirstPriority=true, we want to select from lower priority channels
+		// First, find the maximum priority among available channels (excluding failed ones)
+		maxPrioritySubQuery := DB.Model(&Ability{}).Select("MAX(priority)").Where(groupCol+" = ? AND model = ? AND enabled = "+trueVal+" AND (suspend_until IS NULL OR suspend_until < ?)", group, model, now)
 		if len(excludeChannelIds) > 0 {
 			var excludeIds []int
 			for channelId := range excludeChannelIds {
 				excludeIds = append(excludeIds, channelId)
 			}
-			channelQuery = DB.Where(baseCondition, group, model, now, excludeIds)
+			maxPrioritySubQuery = maxPrioritySubQuery.Where("channel_id NOT IN (?)", excludeIds)
+		}
+
+		// Then select channels with priority less than the maximum priority
+		if len(excludeChannelIds) > 0 {
+			var excludeIds []int
+			for channelId := range excludeChannelIds {
+				excludeIds = append(excludeIds, channelId)
+			}
+			channelQuery = DB.Where(groupCol+" = ? AND model = ? AND enabled = "+trueVal+" AND priority < (?) AND (suspend_until IS NULL OR suspend_until < ?) AND channel_id NOT IN (?)", group, model, maxPrioritySubQuery, now, excludeIds)
 		} else {
-			channelQuery = DB.Where(groupCol+" = ? AND model = ? AND enabled = "+trueVal+" AND (suspend_until IS NULL OR suspend_until < ?)", group, model, now)
+			channelQuery = DB.Where(groupCol+" = ? AND model = ? AND enabled = "+trueVal+" AND priority < (?) AND (suspend_until IS NULL OR suspend_until < ?)", group, model, maxPrioritySubQuery, now)
 		}
 	} else {
+		// For ignoreFirstPriority=false, select from highest priority channels
 		maxPrioritySubQuery := DB.Model(&Ability{}).Select("MAX(priority)").Where(groupCol+" = ? AND model = ? AND enabled = "+trueVal+" AND (suspend_until IS NULL OR suspend_until < ?)", group, model, now)
 		if len(excludeChannelIds) > 0 {
 			var excludeIds []int

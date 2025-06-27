@@ -8,10 +8,10 @@ import (
 )
 
 func TestCacheGetRandomSatisfiedChannelExcluding(t *testing.T) {
-	// Skip if not using memory cache
-	if !config.MemoryCacheEnabled {
-		t.Skip("Memory cache not enabled")
-	}
+	// Enable memory cache for this test
+	originalMemoryCacheEnabled := config.MemoryCacheEnabled
+	config.MemoryCacheEnabled = true
+	defer func() { config.MemoryCacheEnabled = originalMemoryCacheEnabled }()
 
 	// Setup test data
 	testGroup := "test-group"
@@ -66,8 +66,8 @@ func TestCacheGetRandomSatisfiedChannelExcluding(t *testing.T) {
 			name:                "Exclude all high priority channels",
 			excludeChannelIds:   map[int]bool{1: true, 2: true},
 			ignoreFirstPriority: false,
-			expectedChannelIds:  []int{}, // Should return error as no high priority channels available
-			shouldError:         true,
+			expectedChannelIds:  []int{3, 4}, // Should fallback to next highest available priority (low priority channels)
+			shouldError:         false,
 		},
 		{
 			name:                "Exclude one low priority channel",
