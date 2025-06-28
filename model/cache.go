@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/Laisky/errors/v2"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/logger"
@@ -218,25 +218,49 @@ func InitChannelCache() {
 	for _, channel := range channels {
 		newChannelId2channel[channel.Id] = channel
 	}
-	var abilities []*Ability
-	DB.Find(&abilities)
-	groups := make(map[string]bool)
-	for _, ability := range abilities {
-		groups[ability.Group] = true
+
+	var allAbilities []*Ability
+	DB.Find(&allAbilities) // Fetch all abilities
+
+	// Filter abilities: must be enabled and not currently suspended
+	// And create a quick lookup map for valid abilities
+	// key: "group:model:channelId"
+	validAbilityMap := make(map[string]bool)
+	now := time.Now()
+	for _, ability := range allAbilities {
+		// Ensure the ability corresponds to an enabled channel (via ability.Enabled flag)
+		// and is not currently suspended.
+		// The ability.Enabled should have been set correctly based on channel.Status during AddAbilities/UpdateAbilities.
+		if ability.Enabled && (ability.SuspendUntil == nil || ability.SuspendUntil.Before(now)) {
+			// Check if the channel itself is in our list of enabled channels
+			if _, channelExists := newChannelId2channel[ability.ChannelId]; channelExists {
+				key := fmt.Sprintf("%s:%s:%d", ability.Group, ability.Model, ability.ChannelId)
+				validAbilityMap[key] = true
+			}
+		}
 	}
+
 	newGroup2model2channels := make(map[string]map[string][]*Channel)
-	for group := range groups {
-		newGroup2model2channels[group] = make(map[string][]*Channel)
-	}
-	for _, channel := range channels {
-		groups := strings.Split(channel.Group, ",")
-		for _, group := range groups {
-			models := strings.Split(channel.Models, ",")
-			for _, model := range models {
-				if _, ok := newGroup2model2channels[group][model]; !ok {
-					newGroup2model2channels[group][model] = make([]*Channel, 0)
+
+	// Iterate over channels that are confirmed to be enabled
+	for _, channel := range channels { // channels are already filtered by status = ChannelStatusEnabled
+		channelGroups := strings.Split(channel.Group, ",")
+		channelModels := strings.Split(channel.Models, ",")
+
+		for _, groupName := range channelGroups {
+			if _, ok := newGroup2model2channels[groupName]; !ok {
+				newGroup2model2channels[groupName] = make(map[string][]*Channel)
+			}
+			for _, modelName := range channelModels {
+				// Check if this specific ability (group, model, channel.Id) is in our valid map
+				abilityKey := fmt.Sprintf("%s:%s:%d", groupName, modelName, channel.Id)
+				if _, isValidAbility := validAbilityMap[abilityKey]; isValidAbility {
+					if _, ok := newGroup2model2channels[groupName][modelName]; !ok {
+						newGroup2model2channels[groupName][modelName] = make([]*Channel, 0)
+					}
+					// Add the channel to the cache for this group and model
+					newGroup2model2channels[groupName][modelName] = append(newGroup2model2channels[groupName][modelName], channel)
 				}
-				newGroup2model2channels[group][model] = append(newGroup2model2channels[group][model], channel)
 			}
 		}
 	}
@@ -254,7 +278,7 @@ func InitChannelCache() {
 	channelSyncLock.Lock()
 	group2model2channels = newGroup2model2channels
 	channelSyncLock.Unlock()
-	logger.SysLog("channels synced from database")
+	logger.SysLog("channels synced from database, considering suspensions")
 }
 
 func SyncChannelCache(frequency int) {
@@ -270,17 +294,38 @@ func CacheGetRandomSatisfiedChannel(group string, model string, ignoreFirstPrior
 		return GetRandomSatisfiedChannel(group, model, ignoreFirstPriority)
 	}
 	channelSyncLock.RLock()
-	defer channelSyncLock.RUnlock()
-	channels := group2model2channels[group][model]
-	if len(channels) == 0 {
-		return nil, errors.New("channel not found")
+	// It's important to make a copy if we're going to modify or iterate outside lock,
+	// or ensure operations are safe. Here, we are just reading.
+	channelsFromCache := group2model2channels[group][model]
+
+	// Create a new slice to operate on, to avoid issues if the underlying array is changed by a concurrent Sync.
+	// And to filter out channels that might have been suspended since cache was built.
+	// However, for simplicity and given SyncChannelCache rebuilds the map,
+	// we'll rely on SyncChannelCache to clear out suspended channels periodically.
+	// A live check here would add DB calls, negating some cache benefits.
+	// The current InitChannelCache already filters by suspension.
+	// If a channel is suspended *between* syncs, this cache might serve it.
+	// The application's retry logic will then handle it.
+
+	if len(channelsFromCache) == 0 {
+		channelSyncLock.RUnlock()
+		return nil, errors.New("channel not found in memory cache")
 	}
-	endIdx := len(channels)
+
+	// Make a copy to safely work with outside the lock for selection logic
+	candidateChannels := make([]*Channel, len(channelsFromCache))
+	copy(candidateChannels, channelsFromCache)
+	channelSyncLock.RUnlock()
+
+	endIdx := len(candidateChannels)
 	// choose by priority
-	firstChannel := channels[0]
+	if endIdx == 0 { // Should be caught by earlier check, but as a safeguard
+		return nil, errors.New("no channels available after cache check")
+	}
+	firstChannel := candidateChannels[0]
 	if firstChannel.GetPriority() > 0 {
-		for i := range channels {
-			if channels[i].GetPriority() != firstChannel.GetPriority() {
+		for i := range candidateChannels {
+			if candidateChannels[i].GetPriority() != firstChannel.GetPriority() {
 				endIdx = i
 				break
 			}
@@ -288,9 +333,105 @@ func CacheGetRandomSatisfiedChannel(group string, model string, ignoreFirstPrior
 	}
 	idx := rand.Intn(endIdx)
 	if ignoreFirstPriority {
-		if endIdx < len(channels) { // which means there are more than one priority
-			idx = random.RandRange(endIdx, len(channels))
+		if endIdx < len(candidateChannels) { // which means there are more than one priority
+			idx = random.RandRange(endIdx, len(candidateChannels))
+		} else {
+			// All channels have the same highest priority, or only one priority level exists.
+			// If ignoreFirstPriority is true, and we only have one priority level,
+			// it means we cannot satisfy "ignoreFirstPriority".
+			// This case might indicate no lower-priority channels exist.
+			// Depending on desired behavior, could return error or pick from existing.
+			// For now, let's assume it means "pick any if only one priority level".
+			// If truly no other channel to pick, the random selection will pick from current set.
+			// This part of logic might need refinement based on precise meaning of ignoreFirstPriority
+			// when only one priority tier exists.
+			// The original code implies if endIdx == len(channels), it picks from 0 to endIdx-1.
+			// If endIdx < len(channels), it picks from endIdx to len(channels)-1.
+			// So if ignoreFirstPriority is true and all are same priority, it will still pick from them.
+			// This seems okay.
 		}
 	}
-	return channels[idx], nil
+	return candidateChannels[idx], nil
+}
+
+// CacheGetRandomSatisfiedChannelExcluding gets a random satisfied channel while excluding specified channel IDs
+func CacheGetRandomSatisfiedChannelExcluding(group string, model string, ignoreFirstPriority bool, excludeChannelIds map[int]bool) (*Channel, error) {
+	if !config.MemoryCacheEnabled {
+		return GetRandomSatisfiedChannelExcluding(group, model, ignoreFirstPriority, excludeChannelIds)
+	}
+	channelSyncLock.RLock()
+	channelsFromCache := group2model2channels[group][model]
+
+	if len(channelsFromCache) == 0 {
+		channelSyncLock.RUnlock()
+		return nil, errors.New("channel not found in memory cache")
+	}
+
+	// Filter out excluded channels
+	var candidateChannels []*Channel
+	for _, channel := range channelsFromCache {
+		if !excludeChannelIds[channel.Id] {
+			candidateChannels = append(candidateChannels, channel)
+		}
+	}
+	channelSyncLock.RUnlock()
+
+	if len(candidateChannels) == 0 {
+		return nil, errors.New("no available channels after excluding failed channels")
+	}
+
+	// If ignoreFirstPriority is true, we want to select from lower priority channels
+	// If ignoreFirstPriority is false, we want to select from highest priority channels
+	if ignoreFirstPriority {
+		// Find the boundary where highest priority channels end
+		endIdx := len(candidateChannels)
+		firstChannel := candidateChannels[0]
+		if firstChannel.GetPriority() > 0 {
+			for i := range candidateChannels {
+				if candidateChannels[i].GetPriority() != firstChannel.GetPriority() {
+					endIdx = i
+					break
+				}
+			}
+		}
+
+		// If there are lower priority channels available, select from them
+		if endIdx < len(candidateChannels) {
+			idx := random.RandRange(endIdx, len(candidateChannels))
+			return candidateChannels[idx], nil
+		} else {
+			// No lower priority channels available, return error to indicate we should try a different approach
+			return nil, errors.New("no lower priority channels available after excluding failed channels")
+		}
+	} else {
+		// Select from highest priority channels among the available candidates
+		// Since candidateChannels maintains the original cache order (sorted by priority desc),
+		// we need to find the highest priority among the remaining candidates
+		if len(candidateChannels) == 0 {
+			return nil, errors.New("no candidate channels available")
+		}
+
+		// Find the maximum priority among available candidates
+		maxPriority := candidateChannels[0].GetPriority()
+		for _, channel := range candidateChannels {
+			if channel.GetPriority() > maxPriority {
+				maxPriority = channel.GetPriority()
+			}
+		}
+
+		// Collect channels with the maximum priority
+		var maxPriorityChannels []*Channel
+		for _, channel := range candidateChannels {
+			if channel.GetPriority() == maxPriority {
+				maxPriorityChannels = append(maxPriorityChannels, channel)
+			}
+		}
+
+		if len(maxPriorityChannels) == 0 {
+			return nil, errors.New("no channels with maximum priority available")
+		}
+
+		idx := rand.Intn(len(maxPriorityChannels))
+		return maxPriorityChannels[idx], nil
+	}
 }

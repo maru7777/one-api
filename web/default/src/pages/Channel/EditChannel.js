@@ -57,6 +57,7 @@ const EditChannel = () => {
     system_prompt: '',
     models: [],
     groups: ['default'],
+    ratelimit: 0,
   };
   const [batch, setBatch] = useState(false);
   const [inputs, setInputs] = useState(originInputs);
@@ -207,7 +208,7 @@ const EditChannel = () => {
         showInfo(t('channel.edit.messages.oauth_config_invalid_format'));
         return;
       }
-      
+
       try {
         const oauthConfig = JSON.parse(inputs.key);
         const requiredFields = [
@@ -218,7 +219,7 @@ const EditChannel = () => {
           'private_key',
           'public_key_id'
         ];
-        
+
         for (const field of requiredFields) {
           if (!oauthConfig.hasOwnProperty(field)) {
             showInfo(t('channel.edit.messages.oauth_config_missing_field', { field }));
@@ -230,7 +231,7 @@ const EditChannel = () => {
         return;
       }
     }
-    
+
     let localInputs = { ...inputs };
     if (localInputs.key === 'undefined|undefined|undefined') {
       localInputs.key = ''; // prevent potential bug
@@ -247,6 +248,7 @@ const EditChannel = () => {
     let res;
     localInputs.models = localInputs.models.join(',');
     localInputs.group = localInputs.groups.join(',');
+    localInputs.ratelimit = parseInt(localInputs.ratelimit);
     localInputs.config = JSON.stringify(config);
     if (isEdit) {
       res = await API.put(`/api/channel/`, {
@@ -608,7 +610,7 @@ const EditChannel = () => {
                 )}
               </>
             )}
-            
+
             {inputs.type === 33 && (
               <Form.Field>
                 <Form.Input
@@ -721,7 +723,7 @@ const EditChannel = () => {
                   name='user_id'
                   required
                   placeholder={
-                    '请输入 Account ID，例如：d8d7c61dbc334c32d3ced580e4bf42b4'
+                    'Please enter Account ID, e.g.: d8d7c61dbc334c32d3ced580e4bf42b4'
                   }
                   onChange={handleConfigChange}
                   value={config.user_id}
@@ -767,6 +769,22 @@ const EditChannel = () => {
                 />
               </Form.Field>
             )}
+            {inputs.type !== 3 &&
+              inputs.type !== 33 &&
+              inputs.type !== 8 &&
+                inputs.type !== 50 &&
+              inputs.type !== 22 && (
+                <Form.Field>
+                  <Form.Input
+                      label={t('channel.edit.ratelimit')}
+                    name='ratelimit'
+                      placeholder={t('channel.edit.ratelimit_placeholder')}
+                    onChange={handleInputChange}
+                    value={inputs.ratelimit}
+                    autoComplete='new-password'
+                  />
+                </Form.Field>
+              )}
             <Button onClick={handleCancel}>
               {t('channel.edit.buttons.cancel')}
             </Button>

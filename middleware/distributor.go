@@ -3,12 +3,11 @@ package middleware
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 
+	"github.com/Laisky/errors/v2"
 	gutils "github.com/Laisky/go-utils/v5"
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/model"
@@ -28,14 +27,10 @@ func Distribute() func(c *gin.Context) {
 		c.Set(ctxkey.Group, userGroup)
 		var requestModel string
 		var channel *model.Channel
-		channelId, ok := c.Get(ctxkey.SpecificChannelId)
-		if ok {
-			id, err := strconv.Atoi(channelId.(string))
-			if err != nil {
-				AbortWithError(c, http.StatusBadRequest, errors.New("Invalid Channel Id"))
-				return
-			}
-			channel, err = model.GetChannelById(id, true)
+		channelId := c.GetInt(ctxkey.SpecificChannelId)
+		if channelId != 0 {
+			var err error
+			channel, err = model.GetChannelById(channelId, true)
 			if err != nil {
 				AbortWithError(c, http.StatusBadRequest, errors.New("Invalid Channel Id"))
 				return
@@ -47,15 +42,21 @@ func Distribute() func(c *gin.Context) {
 		} else {
 			requestModel = c.GetString(ctxkey.RequestModel)
 			var err error
+			// First try to get highest priority channels
 			channel, err = model.CacheGetRandomSatisfiedChannel(userGroup, requestModel, false)
 			if err != nil {
-				message := fmt.Sprintf("No available channels for Model %s under Group %s", requestModel, userGroup)
-				if channel != nil {
-					logger.SysError(fmt.Sprintf("Channel does not exist: %d", channel.Id))
-					message = "Database consistency has been broken, please contact the administrator"
+				// If no highest priority channels available, try lower priority channels as fallback
+				logger.Infof(ctx, "No highest priority channels available for model %s in group %s, trying lower priority channels", requestModel, userGroup)
+				channel, err = model.CacheGetRandomSatisfiedChannel(userGroup, requestModel, true)
+				if err != nil {
+					message := fmt.Sprintf("No available channels for Model %s under Group %s", requestModel, userGroup)
+					if channel != nil {
+						logger.SysError(fmt.Sprintf("Channel does not exist: %d", channel.Id))
+						message = "Database consistency has been broken, please contact the administrator"
+					}
+					AbortWithError(c, http.StatusServiceUnavailable, errors.New(message))
+					return
 				}
-				AbortWithError(c, http.StatusServiceUnavailable, errors.New(message))
-				return
 			}
 		}
 		logger.Debugf(ctx, "user id %d, user group: %s, request model: %s, using channel #%d", userId, userGroup, requestModel, channel.Id)
@@ -95,6 +96,12 @@ func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, mode
 	c.Set(ctxkey.OriginalModel, modelName) // for retry
 	c.Request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.Key))
 	c.Set(ctxkey.BaseURL, channel.GetBaseURL())
+	if channel.RateLimit != nil {
+		c.Set(ctxkey.RateLimit, *channel.RateLimit)
+	} else {
+		c.Set(ctxkey.RateLimit, 0)
+	}
+
 	cfg, _ := channel.LoadConfig()
 	// this is for backward compatibility
 	if channel.Other != nil {

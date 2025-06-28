@@ -3,10 +3,10 @@ package middleware
 import (
 	"strings"
 
+	"github.com/Laisky/errors/v2"
 	gmw "github.com/Laisky/gin-middlewares/v6"
 	"github.com/Laisky/zap"
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/logger"
@@ -75,4 +75,14 @@ func isModelInList(modelName string, models string) bool {
 		}
 	}
 	return false
+}
+
+// GetTokenKeyParts extracts the token key parts from the Authorization header
+//
+// key like `sk-{token}[-{channelid}]`
+func GetTokenKeyParts(c *gin.Context) []string {
+	key := c.Request.Header.Get("Authorization")
+	key = strings.TrimPrefix(key, "Bearer ")
+	key = strings.TrimPrefix(strings.TrimPrefix(key, "sk-"), "laisky-")
+	return strings.Split(key, "-")
 }

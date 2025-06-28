@@ -1,14 +1,15 @@
 package openai
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"math"
 	"net/http"
 	"strings"
 
+	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/ctxkey"
@@ -17,7 +18,7 @@ import (
 	"github.com/songquanpeng/one-api/relay/adaptor/alibailian"
 	"github.com/songquanpeng/one-api/relay/adaptor/baiduv2"
 	"github.com/songquanpeng/one-api/relay/adaptor/doubao"
-	"github.com/songquanpeng/one-api/relay/adaptor/geminiv2"
+	"github.com/songquanpeng/one-api/relay/adaptor/geminiOpenaiCompatible"
 	"github.com/songquanpeng/one-api/relay/adaptor/minimax"
 	"github.com/songquanpeng/one-api/relay/adaptor/novita"
 	"github.com/songquanpeng/one-api/relay/adaptor/openrouter"
@@ -59,7 +60,8 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 		requestURL = fmt.Sprintf("%s?api-version=%s", requestURL, defaultVersion)
 		task := strings.TrimPrefix(requestURL, "/v1/")
 		model_ := meta.ActualModelName
-		model_ = strings.Replace(model_, ".", "", -1)
+		// https://github.com/songquanpeng/one-api/issues/2235
+		// model_ = strings.Replace(model_, ".", "", -1)
 		//https://github.com/songquanpeng/one-api/issues/1191
 		// {your endpoint}/openai/deployments/{your azure_model}/chat/completions?api-version={api_version}
 		requestURL = fmt.Sprintf("/openai/deployments/%s/%s", model_, task)
@@ -75,8 +77,16 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	case channeltype.AliBailian:
 		return alibailian.GetRequestURL(meta)
 	case channeltype.GeminiOpenAICompatible:
-		return geminiv2.GetRequestURL(meta)
+		return geminiOpenaiCompatible.GetRequestURL(meta)
 	default:
+		// Convert chat completions to responses API for OpenAI only
+		// Skip conversion for models that only support ChatCompletion API
+		if meta.Mode == relaymode.ChatCompletions &&
+			meta.ChannelType == channeltype.OpenAI &&
+			!IsModelsOnlySupportedByChatCompletionAPI(meta.ActualModelName) {
+			responseAPIPath := "/v1/responses"
+			return GetFullRequestURL(meta.BaseURL, responseAPIPath, meta.ChannelType), nil
+		}
 		return GetFullRequestURL(meta.BaseURL, meta.RequestURLPath, meta.ChannelType), nil
 	}
 }
@@ -101,6 +111,36 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 	}
 
 	meta := meta.GetByContext(c)
+
+	// Convert ChatCompletion requests to Response API format only for OpenAI
+	// Skip conversion for models that only support ChatCompletion API
+	if relayMode == relaymode.ChatCompletions &&
+		meta.ChannelType == channeltype.OpenAI &&
+		!IsModelsOnlySupportedByChatCompletionAPI(meta.ActualModelName) {
+		// Apply existing transformations first
+		if err := a.applyRequestTransformations(meta, request); err != nil {
+			return nil, err
+		}
+
+		// Convert to Response API format
+		responseAPIRequest := ConvertChatCompletionToResponseAPI(request)
+
+		// Store the converted request in context to detect it later in DoResponse
+		c.Set(ctxkey.ConvertedRequest, responseAPIRequest)
+
+		return responseAPIRequest, nil
+	}
+
+	// Apply existing transformations for other modes
+	if err := a.applyRequestTransformations(meta, request); err != nil {
+		return nil, err
+	}
+
+	return request, nil
+}
+
+// applyRequestTransformations applies the existing request transformations
+func (a *Adaptor) applyRequestTransformations(meta *meta.Meta, request *model.GeneralOpenAIRequest) error {
 	switch meta.ChannelType {
 	case channeltype.OpenRouter:
 		includeReasoning := true
@@ -117,7 +157,7 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 	}
 
 	if request.Stream && !config.EnforceIncludeUsage {
-		logger.Warn(c.Request.Context(),
+		logger.Warn(context.Background(),
 			"please set ENFORCE_INCLUDE_USAGE=true to ensure accurate billing in stream mode")
 	}
 
@@ -133,8 +173,13 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 	if strings.HasPrefix(meta.ActualModelName, "o") {
 		temperature := float64(1)
 		request.Temperature = &temperature // Only the default (1) value is supported
-
 		request.MaxTokens = 0
+		request.TopP = nil
+		if request.ReasoningEffort == nil {
+			effortHigh := "high"
+			request.ReasoningEffort = &effortHigh
+		}
+
 		request.Messages = func(raw []model.Message) (filtered []model.Message) {
 			for i := range raw {
 				if raw[i].Role != "system" {
@@ -144,6 +189,8 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 
 			return
 		}(request.Messages)
+	} else {
+		request.ReasoningEffort = nil
 	}
 
 	// web search do not support system prompt/max_tokens/temperature
@@ -159,10 +206,10 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 		strings.HasSuffix(request.Model, "-audio") {
 		// TODO: Since it is not clear how to implement billing in stream mode,
 		// it is temporarily not supported
-		return nil, errors.New("set ENFORCE_INCLUDE_USAGE=true to enable stream mode for gpt-4o-audio")
+		return errors.New("set ENFORCE_INCLUDE_USAGE=true to enable stream mode for gpt-4o-audio")
 	}
 
-	return request, nil
+	return nil
 }
 
 func (a *Adaptor) ConvertImageRequest(_ *gin.Context, request *model.ImageRequest) (any, error) {
@@ -184,7 +231,20 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 	err *model.ErrorWithStatusCode) {
 	if meta.IsStream {
 		var responseText string
-		err, responseText, usage = StreamHandler(c, resp, meta.Mode)
+		// Check if we need to handle Response API streaming response
+		if vi, ok := c.Get(ctxkey.ConvertedRequest); ok {
+			if _, ok := vi.(*ResponseAPIRequest); ok {
+				// This is a Response API streaming response that needs conversion
+				err, responseText, usage = ResponseAPIStreamHandler(c, resp, meta.Mode)
+			} else {
+				// Regular streaming response
+				err, responseText, usage = StreamHandler(c, resp, meta.Mode)
+			}
+		} else {
+			// Regular streaming response
+			err, responseText, usage = StreamHandler(c, resp, meta.Mode)
+		}
+
 		if usage == nil || usage.TotalTokens == 0 {
 			usage = ResponseText2Usage(responseText, meta.ActualModelName, meta.PromptTokens)
 		}
@@ -199,6 +259,20 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 			err, usage = ImageHandler(c, resp)
 		// case relaymode.ImagesEdits:
 		// err, usage = ImagesEditsHandler(c, resp)
+		case relaymode.ChatCompletions:
+			// Check if we need to convert Response API response back to ChatCompletion format
+			if vi, ok := c.Get(ctxkey.ConvertedRequest); ok {
+				if _, ok := vi.(*ResponseAPIRequest); ok {
+					// This is a Response API response that needs conversion
+					err, usage = ResponseAPIHandler(c, resp, meta.PromptTokens, meta.ActualModelName)
+				} else {
+					// Regular ChatCompletion request
+					err, usage = Handler(c, resp, meta.PromptTokens, meta.ActualModelName)
+				}
+			} else {
+				// Regular ChatCompletion request
+				err, usage = Handler(c, resp, meta.PromptTokens, meta.ActualModelName)
+			}
 		default:
 			err, usage = Handler(c, resp, meta.PromptTokens, meta.ActualModelName)
 		}
@@ -246,6 +320,44 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 							errors.Errorf("invalid search context size %q", searchContextSize),
 							"invalid search context size: "+searchContextSize,
 							http.StatusBadRequest)
+					}
+				}
+
+				// -------------------------------------
+				// calculate structured output cost
+				// -------------------------------------
+				// Structured output with json_schema incurs additional costs
+				// Based on OpenAI's pricing, structured output typically has a multiplier applied
+				if req.ResponseFormat != nil &&
+					req.ResponseFormat.Type == "json_schema" &&
+					req.ResponseFormat.JsonSchema != nil {
+					// Apply structured output cost multiplier
+					// For structured output, there's typically an additional cost based on completion tokens
+					// Using a conservative estimate of 25% additional cost for structured output
+					structuredOutputCost := int64(math.Ceil(float64(usage.CompletionTokens) * 0.25 * ratio.GetModelRatio(meta.ActualModelName, meta.ChannelType)))
+					usage.ToolsCost += structuredOutputCost
+
+					// Log structured output cost application for debugging
+					logger.Debugf(c.Request.Context(), "Applied structured output cost: %d (completion tokens: %d, model: %s)",
+						structuredOutputCost, usage.CompletionTokens, meta.ActualModelName)
+				}
+			}
+		}
+
+		// Also check the original request in case it wasn't converted
+		if req == nil {
+			if vi, ok := c.Get(ctxkey.RequestModel); ok {
+				if req, ok = vi.(*model.GeneralOpenAIRequest); ok && req != nil {
+					if req.ResponseFormat != nil &&
+						req.ResponseFormat.Type == "json_schema" &&
+						req.ResponseFormat.JsonSchema != nil {
+						// Apply structured output cost multiplier
+						structuredOutputCost := int64(math.Ceil(float64(usage.CompletionTokens) * 0.25 * ratio.GetModelRatio(meta.ActualModelName, meta.ChannelType)))
+						usage.ToolsCost += structuredOutputCost
+
+						// Log structured output cost application for debugging
+						logger.Debugf(c.Request.Context(), "Applied structured output cost from original request: %d (completion tokens: %d, model: %s)",
+							structuredOutputCost, usage.CompletionTokens, meta.ActualModelName)
 					}
 				}
 			}

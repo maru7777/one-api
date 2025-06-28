@@ -3,8 +3,8 @@ package vertexai
 import (
 	"net/http"
 
+	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/relay/adaptor/gemini"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
@@ -16,18 +16,18 @@ import (
 // ModelList is the list of models supported by Vertex AI.
 //
 // https://cloud.google.com/vertex-ai/generative-ai/docs/learn/models
-var ModelList = []string{
-	"gemini-pro", "gemini-pro-vision",
-	"gemini-exp-1206",
-	"gemini-1.0-pro",
-	"gemini-1.0-pro-vision",
-	"gemini-1.5-pro", "gemini-1.5-pro-001", "gemini-1.5-pro-002",
-	"gemini-1.5-flash", "gemini-1.5-flash-001", "gemini-1.5-flash-002",
-	"gemini-2.0-flash", "gemini-2.0-flash-exp", "gemini-2.0-flash-001",
-	"gemini-2.0-flash-lite", "gemini-2.0-flash-lite-001",
-	"gemini-2.0-flash-thinking-exp-01-21",
-	"gemini-2.0-pro-exp-02-05",
-}
+// var ModelList = []string{
+// 	"gemini-pro", "gemini-pro-vision",
+// 	"gemini-exp-1206",
+// 	"gemini-1.0-pro",
+// 	"gemini-1.0-pro-vision",
+// 	"gemini-1.5-pro", "gemini-1.5-pro-001", "gemini-1.5-pro-002",
+// 	"gemini-1.5-flash", "gemini-1.5-flash-001", "gemini-1.5-flash-002",
+// 	"gemini-2.0-flash", "gemini-2.0-flash-exp", "gemini-2.0-flash-001",
+// 	"gemini-2.0-flash-lite", "gemini-2.0-flash-lite-001",
+// 	"gemini-2.0-flash-thinking-exp-01-21",
+// 	"gemini-2.0-pro-exp-02-05",
+// }
 
 type Adaptor struct {
 }

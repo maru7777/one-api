@@ -1,6 +1,6 @@
 # This file contains all available configuration options
 # with their default values.
-# 配置文件教程地址  https://golangci-lint.run/usage/configuration
+# Configuration file tutorial: https://golangci-lint.run/usage/configuration
 
 # options for analysis running
 run:
@@ -223,6 +223,9 @@ linters-settings:
       #       - golang.org/x/mod
       #     reason: "`mod` is the official go.mod parser library."  # Reason why the recommended module should be used (Optional)
       versions: # List of blocked module version constraints
+      - github.com/gin-contrib/sessions:
+          version: "!= 1.0.3"
+          reason: https://github.com/gin-contrib/sessions/issues/287
       # - github.com/mitchellh/go-homedir:                          # Blocked module with version constraint
       #     version: "< 1.1.0"                                      # Version constraint, see https://github.com/Masterminds/semver#basic-comparisons
       #     reason: "testing if blocked version constraint works."  # Reason why the version constraint exists. (Optional)
@@ -464,7 +467,7 @@ issues:
   # it can be disabled by `exclude-use-default: false`. To list all
   # excluded by default patterns execute `golangci-lint run --help`
   exclude:
-    - "ineffectual assignment to `.*` (ineffassign)" #正则排除这lint 错误类型
+    - "ineffectual assignment to `.*` (ineffassign)" # Regex exclude this lint error type
     - 'shadow: declaration of ".*" shadows declaration'
     - "^exported [^ ]* .* should have comment"
     - "^comment on"

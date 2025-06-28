@@ -39,7 +39,7 @@ type Message struct {
 	Annotation []AnnotationItem `json:"annotation,omitempty"`
 
 	// -------------------------------------
-	// Deepseek 专有的一些字段
+	// DeepSeek specific fields
 	// https://api-docs.deepseek.com/api/create-chat-completion
 	// -------------------------------------
 	// Prefix forces the model to begin its answer with the supplied prefix in the assistant message.

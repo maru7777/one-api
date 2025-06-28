@@ -90,7 +90,7 @@ const OtherSetting = () => {
 
   const openGitHubRelease = () => {
     window.location =
-      'https://github.com/songquanpeng/one-api/releases/latest';
+      'https://github.com/Laisky/one-api/releases/latest';
   };
 
   const checkUpdate = async () => {
@@ -141,7 +141,7 @@ const OtherSetting = () => {
           <Form.Group widths='equal'>
             <Form.Input
               label={<label>主题名称（<Link
-                to='https://github.com/songquanpeng/one-api/blob/main/web/README.md'>当前可用主题</Link>）</label>}
+                to='https://github.com/Laisky/one-api/blob/main/web/README.md'>当前可用主题</Link>）</label>}
               placeholder='请输入主题名称'
               value={inputs.Theme}
               name='Theme'

@@ -16,7 +16,7 @@ import {
 import axios from 'axios';
 import './Dashboard.css';
 
-// 在 Dashboard 组件内添加自定义配置
+// Add custom configuration inside Dashboard component
 const chartConfig = {
   lineChart: {
     style: {
@@ -40,16 +40,16 @@ const chartConfig = {
     tokens: '#6C63FF',
   },
   barColors: [
-    '#4318FF', // 深紫色
-    '#00B5D8', // 青色
-    '#6C63FF', // 紫色
-    '#05CD99', // 绿色
-    '#FFB547', // 橙色
-    '#FF5E7D', // 粉色
-    '#41B883', // 翠绿
-    '#7983FF', // 淡紫
-    '#FF8F6B', // 珊瑚色
-    '#49BEFF', // 天蓝
+    '#4318FF', // Deep purple
+    '#00B5D8', // Cyan
+    '#6C63FF', // Purple
+    '#05CD99', // Green
+    '#FFB547', // Orange
+    '#FF5E7D', // Pink
+    '#41B883', // Emerald
+    '#7983FF', // Light Purple
+    '#FF8F6B', // Coral
+    '#49BEFF', // Sky Blue
   ],
 };
 

@@ -106,7 +106,7 @@ const OtherSetting = () => {
   };
 
   const openGitHubRelease = () => {
-    window.location = 'https://github.com/songquanpeng/one-api/releases/latest';
+    window.location = 'https://github.com/Laisky/one-api/releases/latest';
   };
 
   const checkUpdate = async () => {

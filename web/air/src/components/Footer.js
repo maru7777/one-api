@@ -38,13 +38,13 @@ const Footer = () => {
         ) : (
           <div className='custom-footer'>
             <a
-              href='https://github.com/songquanpeng/one-api'
+              href='https://github.com/Laisky/one-api'
               target='_blank'
             >
               {systemName} {process.env.REACT_APP_VERSION}{' '}
             </a>
             由{' '}
-            <a href='https://github.com/songquanpeng' target='_blank'>
+            <a href='https://github.com/Laisky' target='_blank'>
               JustSong
             </a>{' '}
             构建，主题 air 来自{' '}

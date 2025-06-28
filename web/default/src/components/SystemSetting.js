@@ -581,7 +581,7 @@ const SystemSetting = () => {
             <Header.Subheader>
               {t('setting.system.wechat.subtitle')}
               <a
-                href='https://github.com/songquanpeng/wechat-server'
+                href='https://github.com/Laisky/wechat-server'
                 target='_blank'
               >
                 {t('setting.system.wechat.learn_more')}

@@ -7,8 +7,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/relay/adaptor"
 	channelhelper "github.com/songquanpeng/one-api/relay/adaptor"
 	"github.com/songquanpeng/one-api/relay/adaptor/vertexai/imagen"
@@ -20,6 +20,15 @@ import (
 var _ adaptor.Adaptor = new(Adaptor)
 
 const channelName = "vertexai"
+
+// IsRequireGlobalEndpoint determines if the given model requires a global endpoint
+//
+//   - https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-5-pro
+//   - https://cloud.google.com/vertex-ai/generative-ai/docs/learn/locations#global-preview
+func IsRequireGlobalEndpoint(model string) bool {
+	// gemini-2.5-pro-preview models use global endpoint
+	return strings.HasPrefix(model, "gemini-2.5-pro-preview")
+}
 
 type Adaptor struct{}
 
@@ -76,12 +85,24 @@ func (a *Adaptor) GetChannelName() string {
 
 func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	var suffix string
+	var location string
+	var baseHost string
+
 	switch {
 	case strings.HasPrefix(meta.ActualModelName, "gemini"):
 		if meta.IsStream {
 			suffix = "streamGenerateContent?alt=sse"
 		} else {
 			suffix = "generateContent"
+		}
+
+		// Use global endpoint for models that require it
+		if IsRequireGlobalEndpoint(meta.ActualModelName) {
+			location = "global"
+			baseHost = "aiplatform.googleapis.com"
+		} else {
+			location = meta.Config.Region
+			baseHost = fmt.Sprintf("%s-aiplatform.googleapis.com", meta.Config.Region)
 		}
 	case slices.Contains(imagen.ModelList, meta.ActualModelName):
 		return fmt.Sprintf("https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/google/models/imagen-3.0-generate-001:predict",
@@ -93,6 +114,8 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 		} else {
 			suffix = "rawPredict"
 		}
+		location = meta.Config.Region
+		baseHost = fmt.Sprintf("%s-aiplatform.googleapis.com", meta.Config.Region)
 	}
 
 	if meta.BaseURL != "" {
@@ -100,17 +123,17 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 			"%s/v1/projects/%s/locations/%s/publishers/google/models/%s:%s",
 			meta.BaseURL,
 			meta.Config.VertexAIProjectID,
-			meta.Config.Region,
+			location,
 			meta.ActualModelName,
 			suffix,
 		), nil
 	}
 
 	return fmt.Sprintf(
-		"https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/google/models/%s:%s",
-		meta.Config.Region,
+		"https://%s/v1/projects/%s/locations/%s/publishers/google/models/%s:%s",
+		baseHost,
 		meta.Config.VertexAIProjectID,
-		meta.Config.Region,
+		location,
 		meta.ActualModelName,
 		suffix,
 	), nil

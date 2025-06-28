@@ -2,9 +2,11 @@ package config
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -22,6 +24,9 @@ func init() {
 		}
 
 		SessionSecret = base64.StdEncoding.EncodeToString(key)
+	} else if !slices.Contains([]int{16, 24, 32}, len(SessionSecret)) {
+		hashed := sha256.Sum256([]byte(SessionSecret))
+		SessionSecret = base64.StdEncoding.EncodeToString(hashed[:32])
 	}
 }
 
@@ -35,6 +40,8 @@ var QuotaPerUnit = 500 * 1000.0 // $0.002 / 1K tokens
 var DisplayInCurrencyEnabled = true
 var DisplayTokenStatEnabled = true
 
+var ChannelSuspendSecondsFor429 = time.Second * time.Duration(env.Int("CHANNEL_SUSPEND_SECONDS_FOR_429", 60))
+
 // Any options with "Secret", "Token" in its key won't be return by GetOptions
 
 var SessionSecret = os.Getenv("SESSION_SECRET")
@@ -43,7 +50,8 @@ var DisableCookieSecret = strings.ToLower(os.Getenv("DISABLE_COOKIE_SECURE")) ==
 var OptionMap map[string]string
 var OptionMapRWMutex sync.RWMutex
 
-var ItemsPerPage = 10
+var DefaultItemsPerPage = 10
+var MaxItemsPerPage = env.Int("MAX_ITEMS_PER_PAGE", 10)
 var MaxRecentItems = 100
 
 var PasswordLoginEnabled = true
@@ -150,19 +158,26 @@ var (
 	GlobalWebRateLimitNum            = env.Int("GLOBAL_WEB_RATE_LIMIT", 240)
 	GlobalWebRateLimitDuration int64 = 3 * 60
 
+	GlobalRelayRateLimitNum            = env.Int("GLOBAL_RELAY_RATE_LIMIT", 480)
+	GlobalRelayRateLimitDuration int64 = 3 * 60
+
+	ChannelRateLimitEnabled        = env.Bool("GLOBAL_CHANNEL_RATE_LIMIT", false)
+	ChannelRateLimitDuration int64 = 3 * 60
+
 	UploadRateLimitNum            = 10
 	UploadRateLimitDuration int64 = 60
 
 	DownloadRateLimitNum            = 10
 	DownloadRateLimitDuration int64 = 60
 
-	CriticalRateLimitNum            = 20
+	CriticalRateLimitNum            = env.Int("CRITICAL_RATE_LIMIT", 20)
 	CriticalRateLimitDuration int64 = 20 * 60
 )
 
 var RateLimitKeyExpirationDuration = 20 * time.Minute
 
 var EnableMetric = env.Bool("ENABLE_METRIC", false)
+var EnablePrometheusMetrics = env.Bool("ENABLE_PROMETHEUS_METRICS", true)
 var MetricQueueSize = env.Int("METRIC_QUEUE_SIZE", 10)
 var MetricSuccessRateThreshold = env.Float64("METRIC_SUCCESS_RATE_THRESHOLD", 0.8)
 var MetricSuccessChanSize = env.Int("METRIC_SUCCESS_CHAN_SIZE", 1024)

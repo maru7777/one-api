@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/common/helper"
@@ -38,7 +38,8 @@ func buildTestRequest(model string) *relaymodel.GeneralOpenAIRequest {
 		model = "gpt-3.5-turbo"
 	}
 	testRequest := &relaymodel.GeneralOpenAIRequest{
-		Model: model,
+		MaxTokens: 2,
+		Model:     model,
 	}
 	testMessage := relaymodel.Message{
 		Role:    "user",

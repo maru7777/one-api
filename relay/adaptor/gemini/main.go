@@ -16,7 +16,7 @@ import (
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/common/random"
 	"github.com/songquanpeng/one-api/common/render"
-	"github.com/songquanpeng/one-api/relay/adaptor/geminiv2"
+	"github.com/songquanpeng/one-api/relay/adaptor/geminiOpenaiCompatible"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/relay/constant"
 	"github.com/songquanpeng/one-api/relay/model"
@@ -31,6 +31,82 @@ const (
 var mimeTypeMap = map[string]string{
 	"json_object": "application/json",
 	"text":        "text/plain",
+}
+
+// cleanJsonSchemaForGemini removes unsupported fields and converts types for Gemini API compatibility
+func cleanJsonSchemaForGemini(schema interface{}) interface{} {
+	switch v := schema.(type) {
+	case map[string]interface{}:
+		cleaned := make(map[string]interface{})
+
+		// List of supported fields in Gemini (from official documentation)
+		supportedFields := map[string]bool{
+			"anyOf": true, "enum": true, "format": true, "items": true,
+			"maximum": true, "maxItems": true, "minimum": true, "minItems": true,
+			"nullable": true, "properties": true, "propertyOrdering": true,
+			"required": true, "type": true,
+		}
+
+		// Type mapping from lowercase to uppercase (Gemini requirement)
+		typeMapping := map[string]string{
+			"object":  "OBJECT",
+			"array":   "ARRAY",
+			"string":  "STRING",
+			"number":  "NUMBER",
+			"integer": "INTEGER",
+			"boolean": "BOOLEAN",
+			"null":    "NULL",
+		}
+
+		for key, value := range v {
+			// Skip unsupported fields like additionalProperties, description, strict
+			if !supportedFields[key] {
+				continue
+			}
+
+			switch key {
+			case "type":
+				// Convert type to uppercase if it's a string
+				if typeStr, ok := value.(string); ok {
+					if mappedType, exists := typeMapping[strings.ToLower(typeStr)]; exists {
+						cleaned[key] = mappedType
+					} else {
+						cleaned[key] = strings.ToUpper(typeStr)
+					}
+				} else {
+					cleaned[key] = value
+				}
+			case "properties":
+				// Handle properties object - recursively clean each property
+				if props, ok := value.(map[string]interface{}); ok {
+					cleanedProps := make(map[string]interface{})
+					for propKey, propValue := range props {
+						cleanedProps[propKey] = cleanJsonSchemaForGemini(propValue)
+					}
+					cleaned[key] = cleanedProps
+				} else {
+					cleaned[key] = value
+				}
+			case "items":
+				// Handle array items schema - recursively clean
+				cleaned[key] = cleanJsonSchemaForGemini(value)
+			default:
+				// For other supported fields, recursively clean if they're objects/arrays
+				cleaned[key] = cleanJsonSchemaForGemini(value)
+			}
+		}
+		return cleaned
+	case []interface{}:
+		// Clean arrays recursively
+		cleaned := make([]interface{}, len(v))
+		for i, item := range v {
+			cleaned[i] = cleanJsonSchemaForGemini(item)
+		}
+		return cleaned
+	default:
+		// Return primitive values as-is
+		return v
+	}
 }
 
 // Setting safety to the lowest possible values since Gemini is already powerless enough
@@ -63,7 +139,7 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *ChatRequest {
 			Temperature:        textRequest.Temperature,
 			TopP:               textRequest.TopP,
 			MaxOutputTokens:    textRequest.MaxTokens,
-			ResponseModalities: geminiv2.GetModelModalities(textRequest.Model),
+			ResponseModalities: geminiOpenaiCompatible.GetModelModalities(textRequest.Model),
 		},
 	}
 	if textRequest.ResponseFormat != nil {
@@ -71,7 +147,9 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *ChatRequest {
 			geminiRequest.GenerationConfig.ResponseMimeType = mimeType
 		}
 		if textRequest.ResponseFormat.JsonSchema != nil {
-			geminiRequest.GenerationConfig.ResponseSchema = textRequest.ResponseFormat.JsonSchema.Schema
+			// Clean the schema to remove unsupported properties for Gemini
+			cleanedSchema := cleanJsonSchemaForGemini(textRequest.ResponseFormat.JsonSchema.Schema)
+			geminiRequest.GenerationConfig.ResponseSchema = cleanedSchema
 			geminiRequest.GenerationConfig.ResponseMimeType = mimeTypeMap["json_object"]
 		}
 	}
@@ -111,24 +189,54 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *ChatRequest {
 		}
 	}
 
+	if geminiRequest.GenerationConfig.TopP != nil &&
+		(*geminiRequest.GenerationConfig.TopP < 0 || *geminiRequest.GenerationConfig.TopP > 1) {
+		geminiRequest.GenerationConfig.TopP = nil
+	}
+
 	shouldAddDummyModelMessage := false
 	for _, message := range textRequest.Messages {
-		content := ChatContent{
-			Role: message.Role,
-			Parts: []Part{
-				{
-					Text: message.StringContent(),
-				},
-			},
-		}
-		openaiContent := message.ParseContent()
+		// Start with initial content based on message string content
+		initialText := message.StringContent()
 		var parts []Part
+
+		// Add text content if it's not empty
+		if initialText != "" {
+			parts = append(parts, Part{
+				Text: initialText,
+			})
+		}
+
+		// Handle OpenAI tool calls - convert them to Gemini function calls
+		if len(message.ToolCalls) > 0 {
+			for _, toolCall := range message.ToolCalls {
+				// Parse the arguments from JSON string to interface{}
+				var args interface{}
+				if err := json.Unmarshal([]byte(toolCall.Function.Arguments.(string)), &args); err != nil {
+					// If parsing fails, use the raw string
+					args = toolCall.Function.Arguments
+				}
+
+				parts = append(parts, Part{
+					FunctionCall: &FunctionCall{
+						FunctionName: toolCall.Function.Name,
+						Arguments:    args,
+					},
+				})
+			}
+		}
+
+		// Parse structured content and add additional parts
+		openaiContent := message.ParseContent()
 		imageNum := 0
 		for _, part := range openaiContent {
 			if part.Type == model.ContentTypeText && part.Text != nil && *part.Text != "" {
-				parts = append(parts, Part{
-					Text: *part.Text,
-				})
+				// Only add if we haven't already added this text from StringContent()
+				if *part.Text != initialText {
+					parts = append(parts, Part{
+						Text: *part.Text,
+					})
+				}
 			} else if part.Type == model.ContentTypeImageURL {
 				imageNum += 1
 				if imageNum > VisionMaxImageNum {
@@ -143,7 +251,19 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *ChatRequest {
 				})
 			}
 		}
-		content.Parts = parts
+
+		// If we have no parts at all (empty content with tool calls), add a minimal text part
+		// to satisfy Gemini's requirement that parts cannot be empty
+		if len(parts) == 0 {
+			parts = append(parts, Part{
+				Text: " ", // Minimal non-empty text to satisfy Gemini's requirements
+			})
+		}
+
+		content := ChatContent{
+			Role:  message.Role,
+			Parts: parts,
+		}
 
 		// there's no assistant role in gemini and API shall vomit if Role is not user or model
 		if content.Role == "assistant" {
@@ -159,6 +279,14 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *ChatRequest {
 			} else {
 				content.Role = "user"
 			}
+		}
+		// Handle tool responses - convert to user role with function response format
+		if content.Role == "tool" {
+			// Tool responses in OpenAI are converted to user messages in Gemini
+			// with the function response content
+			content.Role = "user"
+			// Keep the original content as text, as Gemini expects function responses
+			// to be handled in a different format than OpenAI
 		}
 
 		geminiRequest.Contents = append(geminiRequest.Contents, content)

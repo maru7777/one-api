@@ -7,6 +7,7 @@ var ModelList = []string{
 	// -------------------------------------
 	// image model
 	// -------------------------------------
+	"black-forest-labs/flux-kontext-pro",
 	"black-forest-labs/flux-1.1-pro",
 	"black-forest-labs/flux-1.1-pro-ultra",
 	"black-forest-labs/flux-canny-dev",

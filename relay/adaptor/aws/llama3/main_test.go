@@ -5,7 +5,7 @@ import (
 
 	aws "github.com/songquanpeng/one-api/relay/adaptor/aws/llama3"
 	relaymodel "github.com/songquanpeng/one-api/relay/model"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRenderPrompt(t *testing.T) {
@@ -18,7 +18,7 @@ func TestRenderPrompt(t *testing.T) {
 	prompt := aws.RenderPrompt(messages)
 	expected := `<|begin_of_text|><|start_header_id|>user<|end_header_id|>What's your name?<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 `
-	assert.Equal(t, expected, prompt)
+	require.Equal(t, expected, prompt)
 
 	messages = []relaymodel.Message{
 		{
@@ -41,5 +41,5 @@ func TestRenderPrompt(t *testing.T) {
 	prompt = aws.RenderPrompt(messages)
 	expected = `<|begin_of_text|><|start_header_id|>system<|end_header_id|>Your name is Kat. You are a detective.<|eot_id|><|start_header_id|>user<|end_header_id|>What's your name?<|eot_id|><|start_header_id|>assistant<|end_header_id|>Kat<|eot_id|><|start_header_id|>user<|end_header_id|>What's your job?<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 `
-	assert.Equal(t, expected, prompt)
+	require.Equal(t, expected, prompt)
 }

@@ -15,11 +15,11 @@ const Footer = () => {
           <div className="custom-footer" dangerouslySetInnerHTML={{ __html: siteInfo.footer_html }}></div>
         ) : (
           <>
-            <Link href="https://github.com/songquanpeng/one-api" target="_blank">
+            <Link href="https://github.com/Laisky/one-api" target="_blank">
               {siteInfo.system_name} {process.env.REACT_APP_VERSION}{' '}
             </Link>
             由{' '}
-            <Link href="https://github.com/songquanpeng" target="_blank">
+            <Link href="https://github.com/Laisky" target="_blank">
               JustSong
             </Link>{' '}
             构建，主题 berry 来自{' '}
