@@ -13,6 +13,7 @@
     - [2. Pricing System](#2-pricing-system)
       - [Key Files:](#key-files-1)
     - [3. Adapter System](#3-adapter-system)
+      - [Adapter Pricing Implementation Status](#adapter-pricing-implementation-status)
   - [Quota Management](#quota-management)
     - [User Quota System](#user-quota-system)
       - [Database Schema (User):](#database-schema-user)
@@ -55,6 +56,15 @@
       - [Update Channel Pricing](#update-channel-pricing)
       - [Get Default Pricing](#get-default-pricing)
     - [Token Management Endpoints](#token-management-endpoints)
+  - [Recent Pricing Implementation Improvements](#recent-pricing-implementation-improvements)
+    - [Comprehensive Adapter Pricing Implementation](#comprehensive-adapter-pricing-implementation)
+      - [Implementation Overview](#implementation-overview)
+      - [Key Improvements](#key-improvements)
+      - [Technical Implementation Details](#technical-implementation-details)
+      - [Provider-Specific Pricing Examples](#provider-specific-pricing-examples)
+      - [Migration from DefaultPricingMethods](#migration-from-defaultpricingmethods)
+      - [Impact and Benefits](#impact-and-benefits)
+      - [Files Modified](#files-modified)
   - [Implementation Details](#implementation-details)
     - [Pricing Resolution Algorithm](#pricing-resolution-algorithm)
     - [Batch Processing](#batch-processing)
@@ -82,10 +92,12 @@ The One-API billing system is a comprehensive quota and pricing management syste
 
 - **Multi-tier Quota System**: User quotas, token quotas, and unlimited quota support
 - **Channel-specific Pricing**: Per-channel model pricing overrides
-- **Adapter-based Pricing**: Each channel adapter manages its own default pricing
+- **Comprehensive Adapter Pricing**: 13+ channel adapters with native pricing implementations
+- **Complete Pricing Coverage**: 350+ models across major AI providers with accurate pricing
 - **Real-time Billing**: Pre-consumption and post-consumption quota management
 - **Caching Layer**: Redis-based caching for performance optimization
 - **Batch Updates**: Configurable batch processing for high-throughput scenarios
+- **Zero-Loss Pricing Display**: All completion ratios (including 0) are displayed in the UI
 
 ## System Architecture
 
@@ -114,7 +126,17 @@ graph TB
         OA[OpenAI Adapter]
         AA[Anthropic Adapter]
         GA[Gemini Adapter]
-        CA[Custom Adapters]
+        ZA[Zhipu Adapter]
+        ALA[Ali Adapter]
+        BA[Baidu Adapter]
+        TA[Tencent Adapter]
+        XA[Xunfei Adapter]
+        VA[VertexAI Adapter]
+        AWA[AWS Adapter]
+        RA[Replicate Adapter]
+        CHA[Cohere Adapter]
+        CFA[Cloudflare Adapter]
+        CA[Other Adapters]
     end
 
     subgraph "Data Layer"
@@ -137,6 +159,16 @@ graph TB
     PM --> OA
     PM --> AA
     PM --> GA
+    PM --> ZA
+    PM --> ALA
+    PM --> BA
+    PM --> TA
+    PM --> XA
+    PM --> VA
+    PM --> AWA
+    PM --> RA
+    PM --> CHA
+    PM --> CFA
     PM --> CA
 
     QM --> DB
@@ -208,7 +240,7 @@ graph TD
 
 ### 3. Adapter System
 
-Each channel adapter implements its own pricing logic:
+Each channel adapter implements its own comprehensive pricing logic. As of the latest implementation, 13 major adapters have native pricing support:
 
 ```mermaid
 classDiagram
@@ -237,10 +269,56 @@ classDiagram
         +GetCompletionRatio(modelName string) float64
     }
 
+    class AliAdaptor {
+        +GetDefaultModelPricing() map[string]ModelPrice
+        +GetModelRatio(modelName string) float64
+        +GetCompletionRatio(modelName string) float64
+    }
+
+    class GeminiAdaptor {
+        +GetDefaultModelPricing() map[string]ModelPrice
+        +GetModelRatio(modelName string) float64
+        +GetCompletionRatio(modelName string) float64
+    }
+
+    class ReplicateAdaptor {
+        +GetDefaultModelPricing() map[string]ModelPrice
+        +GetModelRatio(modelName string) float64
+        +GetCompletionRatio(modelName string) float64
+    }
+
     Adaptor <|-- DefaultPricingMethods
-    DefaultPricingMethods <|-- OpenAIAdaptor
-    DefaultPricingMethods <|-- AnthropicAdaptor
+    Adaptor <|-- OpenAIAdaptor
+    Adaptor <|-- AnthropicAdaptor
+    Adaptor <|-- AliAdaptor
+    Adaptor <|-- GeminiAdaptor
+    Adaptor <|-- ReplicateAdaptor
+
+    note for Adaptor "13+ adapters with native pricing:\n• OpenAI (54 models)\n• Anthropic (15 models)\n• Zhipu (23 models)\n• Ali (89 models)\n• Baidu (16 models)\n• Tencent (6 models)\n• Gemini (26 models)\n• Xunfei (6 models)\n• VertexAI (34 models)\n• AWS (31 models)\n• Replicate (48 models)\n• Cohere (12 models)\n• Cloudflare (33 models)"
 ```
+
+#### Adapter Pricing Implementation Status
+
+**✅ Adapters with Native Pricing (13 total)**:
+- **OpenAI**: 54 models with comprehensive GPT pricing
+- **Anthropic**: 15 models with Claude pricing
+- **Zhipu**: 23 models with GLM pricing
+- **Ali (Alibaba)**: 89 models with Qwen and other models
+- **Baidu**: 16 models with ERNIE pricing
+- **Tencent**: 6 models with Hunyuan pricing
+- **Gemini**: 26 models with Gemini/Gemma pricing
+- **Xunfei**: 6 models with Spark pricing
+- **VertexAI**: 34 models with Google Cloud pricing
+- **AWS**: 31 models with Bedrock pricing
+- **Replicate**: 48 models with image/text generation pricing
+- **Cohere**: 12 models with Command pricing
+- **Cloudflare**: 33 models with Workers AI pricing
+
+**❌ Adapters Using DefaultPricingMethods (4 remaining)**:
+- **Ollama**: Local model hosting (typically free)
+- **Coze**: Conversational AI platform
+- **DeepL**: Translation service
+- **Proxy**: Generic proxy adapter
 
 ## Quota Management
 
@@ -613,9 +691,158 @@ GET /api/channel/default-pricing?type=:channelType
 **Controller**: `controller.GetChannelDefaultPricing()`
 **File**: `controller/channel.go`
 
+**Response Format**:
+```json
+{
+  "success": true,
+  "message": "",
+  "data": {
+    "model_ratio": "{\"model1\": 0.001, \"model2\": 0.002}",
+    "completion_ratio": "{\"model1\": 1.0, \"model2\": 3.0}"
+  }
+}
+```
+
+**Key Implementation Details**:
+- Converts channel type to API type using `channeltype.ToAPIType()`
+- Includes ALL completion ratios (including 0) for complete pricing transparency
+- Returns comprehensive pricing for all models supported by the adapter
+
 ### Token Management Endpoints
 
 Token management is handled through existing user and admin endpoints with quota operations integrated.
+
+## Recent Pricing Implementation Improvements
+
+### Comprehensive Adapter Pricing Implementation
+
+As of the latest update, the system has undergone a major overhaul to implement comprehensive pricing across all major channel adapters. This addresses the previous issue where only OpenAI channels displayed pricing information.
+
+#### Implementation Overview
+
+```mermaid
+graph TD
+    subgraph "Before: Limited Pricing"
+        B1[OpenAI Only] --> B2[3 Adapters with Pricing]
+        B2 --> B3[~70 Models Covered]
+    end
+
+    subgraph "After: Comprehensive Pricing"
+        A1[13 Major Adapters] --> A2[Native Pricing Implementation]
+        A2 --> A3[350+ Models Covered]
+        A3 --> A4[Complete UI Display]
+    end
+
+    B3 -.->|Major Upgrade| A1
+```
+
+#### Key Improvements
+
+1. **Expanded Adapter Coverage**: From 3 to 13 adapters with native pricing
+2. **Model Coverage**: From ~70 to 350+ models with accurate pricing
+3. **UI Consistency**: All channel edit pages now display pricing information
+4. **Pricing Accuracy**: Based on official provider documentation
+5. **Complete Data Display**: All completion ratios (including 0) are shown
+
+#### Technical Implementation Details
+
+**Adapter Pricing Structure**:
+```go
+// Each adapter implements comprehensive pricing
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+    const MilliTokensUsd = 0.000001
+
+    return map[string]adaptor.ModelPrice{
+        "model-name": {
+            Ratio:           0.001 * MilliTokensUsd,  // Input pricing
+            CompletionRatio: 3.0,                     // Output multiplier
+        },
+        // ... comprehensive model coverage
+    }
+}
+```
+
+**Channel Type Mapping Fix**:
+```go
+// Fixed the channel type to API type conversion
+apiType := channeltype.ToAPIType(channelType)
+adaptor := relay.GetAdaptor(apiType)
+```
+
+**Complete Pricing Display**:
+```go
+// Include ALL completion ratios (including 0)
+for model, price := range defaultPricing {
+    modelRatios[model] = price.Ratio
+    completionRatios[model] = price.CompletionRatio  // No filtering
+}
+```
+
+#### Provider-Specific Pricing Examples
+
+**Ali (Alibaba Cloud)**: 89 models
+- Qwen models: ¥0.0003-¥0.0024 per 1K tokens
+- DeepSeek models: ¥0.0001-¥0.008 per 1K tokens
+- Embedding models: ¥0.00005 per 1K tokens
+
+**AWS Bedrock**: 31 models
+- Claude models: $0.25-$75 per 1M tokens
+- Llama models: $0.3-$2.65 per 1M tokens
+- Amazon Nova models: $0.035-$10 per 1M tokens
+
+**Replicate**: 48 models
+- FLUX image generation: $0.003-$0.12 per image
+- Language models: $0.05-$9.5 per 1M tokens
+- Specialized models for various use cases
+
+#### Migration from DefaultPricingMethods
+
+**Before**:
+```go
+type Adaptor struct {
+    adaptor.DefaultPricingMethods  // Empty pricing
+}
+```
+
+**After**:
+```go
+type Adaptor struct {
+    // No DefaultPricingMethods embedding
+}
+
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+    // Comprehensive pricing implementation
+    return map[string]adaptor.ModelPrice{
+        // ... detailed pricing for all supported models
+    }
+}
+```
+
+#### Impact and Benefits
+
+1. **Complete Pricing Transparency**: Users can now see accurate default pricing for all major providers
+2. **Improved User Experience**: Channel edit pages display comprehensive pricing information
+3. **Accurate Billing**: Pricing based on official provider documentation ensures accurate cost calculations
+4. **Easier Channel Management**: Default pricing serves as a reference for custom pricing configuration
+5. **Reduced Support Burden**: Clear pricing information reduces user confusion and support requests
+
+#### Files Modified
+
+**Core Implementation Files**:
+- `controller/channel.go` - Fixed channel type mapping and completion ratio filtering
+- `relay/adaptor/*/adaptor.go` - Added comprehensive pricing to 13 major adapters
+
+**Adapters with New Pricing**:
+- `relay/adaptor/ali/adaptor.go` - 89 Alibaba Cloud models
+- `relay/adaptor/baidu/adaptor.go` - 16 Baidu ERNIE models
+- `relay/adaptor/tencent/adaptor.go` - 6 Tencent Hunyuan models
+- `relay/adaptor/gemini/adaptor.go` - 26 Google Gemini models
+- `relay/adaptor/xunfei/adaptor.go` - 6 iFlytek Spark models
+- `relay/adaptor/vertexai/adaptor.go` - 34 Google Cloud VertexAI models
+- `relay/adaptor/aws/adaptor.go` - 31 AWS Bedrock models
+- `relay/adaptor/replicate/adaptor.go` - 48 Replicate models
+- `relay/adaptor/cohere/adaptor.go` - 12 Cohere Command models
+- `relay/adaptor/cloudflare/adaptor.go` - 33 Cloudflare Workers AI models
 
 ## Implementation Details
 

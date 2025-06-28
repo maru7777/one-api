@@ -11,6 +11,7 @@ import (
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/relay"
+	"github.com/songquanpeng/one-api/relay/channeltype"
 )
 
 func GetAllChannels(c *gin.Context) {
@@ -284,7 +285,9 @@ func GetChannelDefaultPricing(c *gin.Context) {
 	}
 
 	// Get adapter for this channel type and retrieve its default pricing
-	adaptor := relay.GetAdaptor(channelType)
+	// Convert channel type to API type first
+	apiType := channeltype.ToAPIType(channelType)
+	adaptor := relay.GetAdaptor(apiType)
 	if adaptor == nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -301,9 +304,8 @@ func GetChannelDefaultPricing(c *gin.Context) {
 
 	for model, price := range defaultPricing {
 		modelRatios[model] = price.Ratio
-		if price.CompletionRatio != 0 && price.CompletionRatio != 1 {
-			completionRatios[model] = price.CompletionRatio
-		}
+		// Include all completion ratios, including 0 (which is valid pricing info)
+		completionRatios[model] = price.CompletionRatio
 	}
 
 	// Convert to JSON

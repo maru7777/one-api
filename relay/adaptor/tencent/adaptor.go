@@ -23,7 +23,6 @@ type Adaptor struct {
 	Action    string
 	Version   string
 	Timestamp int64
-	adaptor.DefaultPricingMethods
 }
 
 func (a *Adaptor) Init(meta *meta.Meta) {
@@ -102,4 +101,47 @@ func (a *Adaptor) GetModelList() []string {
 
 func (a *Adaptor) GetChannelName() string {
 	return "tencent"
+}
+
+// Pricing methods - Tencent adapter manages its own model pricing
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+	const MilliRmb = 0.0001
+
+	// Direct map definition - much easier to maintain and edit
+	// Pricing from https://cloud.tencent.com/document/product/1729/97731
+	return map[string]adaptor.ModelPrice{
+		// Hunyuan Lite Models
+		"hunyuan-lite": {Ratio: 0.75 * MilliRmb, CompletionRatio: 1},
+
+		// Hunyuan Standard Models
+		"hunyuan-standard":      {Ratio: 4.5 * MilliRmb, CompletionRatio: 1},
+		"hunyuan-standard-256K": {Ratio: 15 * MilliRmb, CompletionRatio: 1},
+
+		// Hunyuan Pro Models
+		"hunyuan-pro": {Ratio: 30 * MilliRmb, CompletionRatio: 1},
+
+		// Hunyuan Vision Models
+		"hunyuan-vision": {Ratio: 18 * MilliRmb, CompletionRatio: 1},
+
+		// Hunyuan Embedding Models
+		"hunyuan-embedding": {Ratio: 0.7 * MilliRmb, CompletionRatio: 1},
+	}
+}
+
+func (a *Adaptor) GetModelRatio(modelName string) float64 {
+	pricing := a.GetDefaultModelPricing()
+	if price, exists := pricing[modelName]; exists {
+		return price.Ratio
+	}
+	// Default Tencent pricing
+	return 4.5 * 0.0001 // Default RMB pricing
+}
+
+func (a *Adaptor) GetCompletionRatio(modelName string) float64 {
+	pricing := a.GetDefaultModelPricing()
+	if price, exists := pricing[modelName]; exists {
+		return price.CompletionRatio
+	}
+	// Default completion ratio for Tencent
+	return 1.0
 }
