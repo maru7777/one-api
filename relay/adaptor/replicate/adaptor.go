@@ -22,6 +22,7 @@ import (
 
 type Adaptor struct {
 	meta *meta.Meta
+	adaptor.DefaultPricingMethods
 }
 
 // ConvertImageRequest implements adaptor.Adaptor.

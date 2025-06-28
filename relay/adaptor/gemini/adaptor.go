@@ -18,6 +18,7 @@ import (
 )
 
 type Adaptor struct {
+	channelhelper.DefaultPricingMethods
 }
 
 func (a *Adaptor) Init(meta *meta.Meta) {

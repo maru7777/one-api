@@ -271,7 +271,15 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 		}
 	}
 
-	modelRatio := billingratio.GetModelRatio(imageModel, meta.ChannelType)
+	// get channel-specific pricing if available
+	var channelModelRatio map[string]float64
+	if channelModel, ok := c.Get(ctxkey.ChannelModel); ok {
+		if channel, ok := channelModel.(*model.Channel); ok {
+			channelModelRatio = channel.GetModelRatio()
+		}
+	}
+
+	modelRatio := billingratio.GetModelRatioWithChannel(imageModel, meta.ChannelType, channelModelRatio)
 	// groupRatio := billingratio.GetGroupRatio(meta.Group)
 	groupRatio := c.GetFloat64(ctxkey.ChannelRatio)
 

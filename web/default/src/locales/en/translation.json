@@ -121,6 +121,12 @@
       },
       "oauth_jwt_config": "OAuth JWT Config",
       "oauth_jwt_config_placeholder": "Please enter OAuth JWT Config information",
+      "model_ratio": "Model Pricing",
+      "model_ratio_placeholder": "Optional, channel-specific model pricing in JSON format. Leave empty to use default pricing.",
+      "model_ratio_help": "JSON format: {\"model-name\": price_ratio}. Price ratio is multiplied by token count to calculate cost.",
+      "completion_ratio": "Completion Pricing",
+      "completion_ratio_placeholder": "Optional, channel-specific completion token pricing ratios in JSON format.",
+      "completion_ratio_help": "JSON format: {\"model-name\": completion_ratio}. Completion ratio is multiplied by completion tokens.",
       "buttons": {
         "cancel": "Cancel",
         "submit": "Submit",
@@ -128,12 +134,15 @@
         "fill_all": "Fill All Models",
         "clear": "Clear All Models",
         "add_custom": "Add",
-        "custom_placeholder": "Enter custom model name"
+        "custom_placeholder": "Enter custom model name",
+        "load_defaults": "Load Defaults"
       },
       "messages": {
         "name_required": "Please enter channel name and key!",
         "models_required": "Please select at least one model!",
         "model_mapping_invalid": "Model mapping must be valid JSON format!",
+        "model_ratio_invalid": "Model pricing must be valid JSON format!",
+        "completion_ratio_invalid": "Completion pricing must be valid JSON format!",
         "update_success": "Channel updated successfully!",
         "create_success": "Channel created successfully!",
         "oauth_jwt_config_invalid_format": "OAuth JWT Config must be valid JSON format!",

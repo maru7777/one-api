@@ -19,7 +19,9 @@ var _ adaptor.Adaptor = new(Adaptor)
 
 const channelName = "proxy"
 
-type Adaptor struct{}
+type Adaptor struct {
+	adaptor.DefaultPricingMethods
+}
 
 func (a *Adaptor) Init(meta *meta.Meta) {
 }

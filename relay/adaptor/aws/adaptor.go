@@ -22,6 +22,7 @@ type Adaptor struct {
 
 	Meta      *meta.Meta
 	AwsClient *bedrockruntime.Client
+	adaptor.DefaultPricingMethods
 }
 
 func (a *Adaptor) Init(meta *meta.Meta) {

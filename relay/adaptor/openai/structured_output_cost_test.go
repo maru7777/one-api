@@ -144,7 +144,7 @@ func TestStructuredOutputCostCalculation(t *testing.T) {
 				}
 
 				// Calculate expected cost (25% of completion tokens * model ratio)
-				modelRatio := ratio.GetModelRatio(tt.request.Model, channeltype.OpenAI)
+				modelRatio := ratio.GetModelRatioWithChannel(tt.request.Model, channeltype.OpenAI, nil)
 				expectedStructuredCost := int64(float64(tt.completionTokens) * 0.25 * modelRatio)
 
 				// Allow for rounding differences due to math.Ceil
@@ -240,7 +240,7 @@ func TestStructuredOutputCostWithOriginalRequest(t *testing.T) {
 	}
 
 	// Calculate expected cost
-	modelRatio := ratio.GetModelRatio(request.Model, channeltype.OpenAI)
+	modelRatio := ratio.GetModelRatioWithChannel(request.Model, channeltype.OpenAI, nil)
 	expectedStructuredCost := int64(float64(completionTokens) * 0.25 * modelRatio)
 
 	// Allow for rounding differences due to math.Ceil

@@ -30,7 +30,9 @@ func IsRequireGlobalEndpoint(model string) bool {
 	return strings.HasPrefix(model, "gemini-2.5-pro-preview")
 }
 
-type Adaptor struct{}
+type Adaptor struct {
+	adaptor.DefaultPricingMethods
+}
 
 func (a *Adaptor) Init(meta *meta.Meta) {
 }

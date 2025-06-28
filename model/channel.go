@@ -39,6 +39,9 @@ type Channel struct {
 	Config             string  `json:"config"`
 	SystemPrompt       *string `json:"system_prompt" gorm:"type:text"`
 	RateLimit          *int    `json:"ratelimit" gorm:"column:ratelimit;default:0"`
+	// Channel-specific pricing tables
+	ModelRatio      *string `json:"model_ratio" gorm:"type:text"`      // JSON string of model pricing ratios
+	CompletionRatio *string `json:"completion_ratio" gorm:"type:text"` // JSON string of completion pricing ratios
 }
 
 type ChannelConfig struct {
@@ -197,6 +200,64 @@ func (channel *Channel) LoadConfig() (ChannelConfig, error) {
 		return cfg, err
 	}
 	return cfg, nil
+}
+
+// GetModelRatio returns the channel-specific model ratio map
+func (channel *Channel) GetModelRatio() map[string]float64 {
+	if channel.ModelRatio == nil || *channel.ModelRatio == "" || *channel.ModelRatio == "{}" {
+		return nil
+	}
+	modelRatio := make(map[string]float64)
+	err := json.Unmarshal([]byte(*channel.ModelRatio), &modelRatio)
+	if err != nil {
+		logger.SysError(fmt.Sprintf("failed to unmarshal model ratio for channel %d, error: %s", channel.Id, err.Error()))
+		return nil
+	}
+	return modelRatio
+}
+
+// GetCompletionRatio returns the channel-specific completion ratio map
+func (channel *Channel) GetCompletionRatio() map[string]float64 {
+	if channel.CompletionRatio == nil || *channel.CompletionRatio == "" || *channel.CompletionRatio == "{}" {
+		return nil
+	}
+	completionRatio := make(map[string]float64)
+	err := json.Unmarshal([]byte(*channel.CompletionRatio), &completionRatio)
+	if err != nil {
+		logger.SysError(fmt.Sprintf("failed to unmarshal completion ratio for channel %d, error: %s", channel.Id, err.Error()))
+		return nil
+	}
+	return completionRatio
+}
+
+// SetModelRatio sets the channel-specific model ratio map
+func (channel *Channel) SetModelRatio(modelRatio map[string]float64) error {
+	if modelRatio == nil || len(modelRatio) == 0 {
+		channel.ModelRatio = nil
+		return nil
+	}
+	jsonBytes, err := json.Marshal(modelRatio)
+	if err != nil {
+		return err
+	}
+	jsonStr := string(jsonBytes)
+	channel.ModelRatio = &jsonStr
+	return nil
+}
+
+// SetCompletionRatio sets the channel-specific completion ratio map
+func (channel *Channel) SetCompletionRatio(completionRatio map[string]float64) error {
+	if completionRatio == nil || len(completionRatio) == 0 {
+		channel.CompletionRatio = nil
+		return nil
+	}
+	jsonBytes, err := json.Marshal(completionRatio)
+	if err != nil {
+		return err
+	}
+	jsonStr := string(jsonBytes)
+	channel.CompletionRatio = &jsonStr
+	return nil
 }
 
 func UpdateChannelStatusById(id int, status int) {

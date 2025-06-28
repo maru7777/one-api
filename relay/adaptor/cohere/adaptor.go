@@ -12,7 +12,9 @@ import (
 	"github.com/songquanpeng/one-api/relay/model"
 )
 
-type Adaptor struct{}
+type Adaptor struct {
+	adaptor.DefaultPricingMethods
+}
 
 // ConvertImageRequest implements adaptor.Adaptor.
 func (*Adaptor) ConvertImageRequest(_ *gin.Context, request *model.ImageRequest) (any, error) {

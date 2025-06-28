@@ -23,6 +23,7 @@ type Adaptor struct {
 	Action    string
 	Version   string
 	Timestamp int64
+	adaptor.DefaultPricingMethods
 }
 
 func (a *Adaptor) Init(meta *meta.Meta) {

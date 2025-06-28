@@ -16,6 +16,7 @@ import (
 type Adaptor struct {
 	request *model.GeneralOpenAIRequest
 	meta    *meta.Meta
+	adaptor.DefaultPricingMethods
 }
 
 func (a *Adaptor) Init(meta *meta.Meta) {

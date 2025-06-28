@@ -140,15 +140,15 @@ func TestGetRandomSatisfiedChannelExcluding_PriorityLogic(t *testing.T) {
 			} else {
 				assert.NoError(t, err, tt.description)
 				assert.NotNil(t, channel)
-				
+
 				// Verify the returned channel has the expected priority
 				channelPriority := channel.GetPriority()
-				assert.Contains(t, tt.expectedPriorities, channelPriority, 
-					"Returned channel priority %d should be in expected priorities %v. %s", 
+				assert.Contains(t, tt.expectedPriorities, channelPriority,
+					"Returned channel priority %d should be in expected priorities %v. %s",
 					channelPriority, tt.expectedPriorities, tt.description)
-				
+
 				// Verify the channel is not in the excluded list
-				assert.False(t, tt.excludeChannelIds[channel.Id], 
+				assert.False(t, tt.excludeChannelIds[channel.Id],
 					"Returned channel %d should not be in excluded list", channel.Id)
 			}
 		})

@@ -15,6 +15,7 @@ import (
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/model"
+	"github.com/songquanpeng/one-api/relay"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/relay/billing/ratio"
 	billingratio "github.com/songquanpeng/one-api/relay/billing/ratio"
@@ -135,13 +136,28 @@ func postConsumeQuota(ctx context.Context,
 	preConsumedQuota int64,
 	modelRatio float64,
 	groupRatio float64,
-	systemPromptReset bool) (quota int64) {
+	systemPromptReset bool,
+	channelCompletionRatio map[string]float64) (quota int64) {
 	if usage == nil {
 		logger.Error(ctx, "usage is nil, which is unexpected")
 		return
 	}
 
-	completionRatio := billingratio.GetCompletionRatio(textRequest.Model, meta.ChannelType)
+	// Use adapter-based pricing with database overrides
+	pricingAdaptor := relay.GetAdaptor(meta.ChannelType)
+	var completionRatio float64
+	if pricingAdaptor != nil {
+		completionRatio = pricingAdaptor.GetCompletionRatio(textRequest.Model)
+		// Apply database overrides if available
+		if channelCompletionRatio != nil {
+			if override, exists := channelCompletionRatio[textRequest.Model]; exists {
+				completionRatio = override
+			}
+		}
+	} else {
+		// Fallback to global pricing
+		completionRatio = billingratio.GetCompletionRatio(textRequest.Model, meta.ChannelType)
+	}
 	promptTokens := usage.PromptTokens
 	// It appears that DeepSeek's official service automatically merges ReasoningTokens into CompletionTokens,
 	// but the behavior of third-party providers may differ, so for now we do not add them manually.

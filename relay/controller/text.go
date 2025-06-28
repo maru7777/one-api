@@ -48,8 +48,32 @@ func RelayTextHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 	meta.ActualModelName = textRequest.Model
 	// set system prompt if not empty
 	systemPromptReset := setSystemPrompt(ctx, textRequest, meta.ForcedSystemPrompt)
-	// get model ratio & group ratio
-	modelRatio := billingratio.GetModelRatio(textRequest.Model, meta.ChannelType)
+
+	// get channel-specific pricing if available
+	var channelModelRatio map[string]float64
+	var channelCompletionRatio map[string]float64
+	if channelModel, ok := c.Get(ctxkey.ChannelModel); ok {
+		if channel, ok := channelModel.(*model.Channel); ok {
+			channelModelRatio = channel.GetModelRatio()
+			channelCompletionRatio = channel.GetCompletionRatio()
+		}
+	}
+
+	// get model ratio & group ratio with adapter-based pricing
+	pricingAdaptor := relay.GetAdaptor(meta.ChannelType)
+	var modelRatio float64
+	if pricingAdaptor != nil {
+		modelRatio = pricingAdaptor.GetModelRatio(textRequest.Model)
+		// Apply database overrides if available
+		if channelModelRatio != nil {
+			if override, exists := channelModelRatio[textRequest.Model]; exists {
+				modelRatio = override
+			}
+		}
+	} else {
+		// Fallback to global pricing
+		modelRatio = billingratio.GetModelRatio(textRequest.Model, meta.ChannelType)
+	}
 	// groupRatio := billingratio.GetGroupRatio(meta.Group)
 	groupRatio := c.GetFloat64(ctxkey.ChannelRatio)
 
@@ -148,7 +172,7 @@ func RelayTextHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		quota := postConsumeQuota(ctx, usage, meta, textRequest, ratio, preConsumedQuota, modelRatio, groupRatio, systemPromptReset)
+		quota := postConsumeQuota(ctx, usage, meta, textRequest, ratio, preConsumedQuota, modelRatio, groupRatio, systemPromptReset, channelCompletionRatio)
 
 		// also update user request cost
 		if quota != 0 {

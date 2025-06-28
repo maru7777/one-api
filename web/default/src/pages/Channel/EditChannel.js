@@ -58,6 +58,8 @@ const EditChannel = () => {
     models: [],
     groups: ['default'],
     ratelimit: 0,
+    model_ratio: '',
+    completion_ratio: '',
   };
   const [batch, setBatch] = useState(false);
   const [inputs, setInputs] = useState(originInputs);
@@ -76,6 +78,32 @@ const EditChannel = () => {
     vertex_ai_adc: '',
     auth_type: 'personal_access_token',
   });
+  const [defaultPricing, setDefaultPricing] = useState({
+    model_ratio: '',
+    completion_ratio: '',
+  });
+  const loadDefaultPricing = async (channelType) => {
+    try {
+      const res = await API.get(`/api/channel/default-pricing?type=${channelType}`);
+      if (res.data.success) {
+        setDefaultPricing({
+          model_ratio: res.data.data.model_ratio,
+          completion_ratio: res.data.data.completion_ratio,
+        });
+        // If current pricing is empty, populate with defaults
+        if (!inputs.model_ratio && !inputs.completion_ratio) {
+          setInputs((inputs) => ({
+            ...inputs,
+            model_ratio: res.data.data.model_ratio,
+            completion_ratio: res.data.data.completion_ratio,
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load default pricing:', error);
+    }
+  };
+
   const handleInputChange = (e, { name, value }) => {
     setInputs((inputs) => ({ ...inputs, [name]: value }));
     if (name === 'type') {
@@ -84,6 +112,8 @@ const EditChannel = () => {
         setInputs((inputs) => ({ ...inputs, models: localModels }));
       }
       setBasicModels(localModels);
+      // Load default pricing for the new channel type
+      loadDefaultPricing(value);
     }
   };
 
@@ -112,11 +142,28 @@ const EditChannel = () => {
           2
         );
       }
+      // Format pricing fields for display
+      if (data.model_ratio && data.model_ratio !== '') {
+        try {
+          data.model_ratio = JSON.stringify(JSON.parse(data.model_ratio), null, 2);
+        } catch (e) {
+          console.error('Failed to parse model_ratio:', e);
+        }
+      }
+      if (data.completion_ratio && data.completion_ratio !== '') {
+        try {
+          data.completion_ratio = JSON.stringify(JSON.parse(data.completion_ratio), null, 2);
+        } catch (e) {
+          console.error('Failed to parse completion_ratio:', e);
+        }
+      }
       setInputs(data);
       if (data.config !== '') {
         setConfig(JSON.parse(data.config));
       }
       setBasicModels(getChannelModels(data.type));
+      // Load default pricing for this channel type
+      loadDefaultPricing(data.type);
     } else {
       showError(message);
     }
@@ -173,6 +220,8 @@ const EditChannel = () => {
     } else {
       let localModels = getChannelModels(inputs.type);
       setBasicModels(localModels);
+      // Load default pricing for new channels
+      loadDefaultPricing(inputs.type);
     }
     fetchModels().then();
     fetchGroups().then();
@@ -200,6 +249,16 @@ const EditChannel = () => {
     }
     if (inputs.model_mapping !== '' && !verifyJSON(inputs.model_mapping)) {
       showInfo(t('channel.edit.messages.model_mapping_invalid'));
+      return;
+    }
+
+    // Validate pricing fields
+    if (inputs.model_ratio !== '' && !verifyJSON(inputs.model_ratio)) {
+      showInfo(t('channel.edit.messages.model_ratio_invalid'));
+      return;
+    }
+    if (inputs.completion_ratio !== '' && !verifyJSON(inputs.completion_ratio)) {
+      showInfo(t('channel.edit.messages.completion_ratio_invalid'));
       return;
     }
 
@@ -250,6 +309,14 @@ const EditChannel = () => {
     localInputs.group = localInputs.groups.join(',');
     localInputs.ratelimit = parseInt(localInputs.ratelimit);
     localInputs.config = JSON.stringify(config);
+
+    // Handle pricing fields - convert empty strings to null for the API
+    if (localInputs.model_ratio === '') {
+      localInputs.model_ratio = null;
+    }
+    if (localInputs.completion_ratio === '') {
+      localInputs.completion_ratio = null;
+    }
     if (isEdit) {
       res = await API.put(`/api/channel/`, {
         ...localInputs,
@@ -785,6 +852,74 @@ const EditChannel = () => {
                   />
                 </Form.Field>
               )}
+
+            {/* Channel-specific pricing fields */}
+            <Form.Field>
+              <label>
+                {t('channel.edit.model_ratio')}
+                <Button
+                  type="button"
+                  size="mini"
+                  onClick={() => {
+                    setInputs((inputs) => ({
+                      ...inputs,
+                      model_ratio: defaultPricing.model_ratio,
+                    }));
+                  }}
+                  style={{ marginLeft: '10px' }}
+                >
+                  {t('channel.edit.buttons.load_defaults')}
+                </Button>
+              </label>
+              <Form.TextArea
+                name="model_ratio"
+                placeholder={t('channel.edit.model_ratio_placeholder')}
+                style={{
+                  minHeight: 150,
+                  fontFamily: 'JetBrains Mono, Consolas',
+                }}
+                onChange={handleInputChange}
+                value={inputs.model_ratio}
+                autoComplete="new-password"
+              />
+              <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+                {t('channel.edit.model_ratio_help')}
+              </div>
+            </Form.Field>
+
+            <Form.Field>
+              <label>
+                {t('channel.edit.completion_ratio')}
+                <Button
+                  type="button"
+                  size="mini"
+                  onClick={() => {
+                    setInputs((inputs) => ({
+                      ...inputs,
+                      completion_ratio: defaultPricing.completion_ratio,
+                    }));
+                  }}
+                  style={{ marginLeft: '10px' }}
+                >
+                  {t('channel.edit.buttons.load_defaults')}
+                </Button>
+              </label>
+              <Form.TextArea
+                name="completion_ratio"
+                placeholder={t('channel.edit.completion_ratio_placeholder')}
+                style={{
+                  minHeight: 150,
+                  fontFamily: 'JetBrains Mono, Consolas',
+                }}
+                onChange={handleInputChange}
+                value={inputs.completion_ratio}
+                autoComplete="new-password"
+              />
+              <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+                {t('channel.edit.completion_ratio_help')}
+              </div>
+            </Form.Field>
+
             <Button onClick={handleCancel}>
               {t('channel.edit.buttons.cancel')}
             </Button>

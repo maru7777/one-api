@@ -38,7 +38,7 @@ func TestPreConsumedQuotaWithStructuredOutput(t *testing.T) {
 				},
 			},
 			promptTokens:              100,
-			ratio:                     ratio.GetModelRatio("gpt-4o", channeltype.OpenAI),
+			ratio:                     ratio.GetModelRatioWithChannel("gpt-4o", channeltype.OpenAI, nil),
 			expectStructuredSurcharge: true,
 		},
 		{
@@ -48,7 +48,7 @@ func TestPreConsumedQuotaWithStructuredOutput(t *testing.T) {
 				MaxTokens: 1000,
 			},
 			promptTokens:              100,
-			ratio:                     ratio.GetModelRatio("gpt-4o", channeltype.OpenAI),
+			ratio:                     ratio.GetModelRatioWithChannel("gpt-4o", channeltype.OpenAI, nil),
 			expectStructuredSurcharge: false,
 		},
 		{
@@ -61,7 +61,7 @@ func TestPreConsumedQuotaWithStructuredOutput(t *testing.T) {
 				},
 			},
 			promptTokens:              100,
-			ratio:                     ratio.GetModelRatio("gpt-4o", channeltype.OpenAI),
+			ratio:                     ratio.GetModelRatioWithChannel("gpt-4o", channeltype.OpenAI, nil),
 			expectStructuredSurcharge: false,
 		},
 		{
@@ -79,7 +79,7 @@ func TestPreConsumedQuotaWithStructuredOutput(t *testing.T) {
 				},
 			},
 			promptTokens:              100,
-			ratio:                     ratio.GetModelRatio("gpt-4o", channeltype.OpenAI),
+			ratio:                     ratio.GetModelRatioWithChannel("gpt-4o", channeltype.OpenAI, nil),
 			expectStructuredSurcharge: true,
 		},
 	}
@@ -143,13 +143,13 @@ func TestStructuredOutputQuotaConsistency(t *testing.T) {
 
 	promptTokens := 100
 	completionTokens := 400 // Less than max tokens
-	modelRatio := ratio.GetModelRatio("gpt-4o", channeltype.OpenAI)
+	modelRatio := ratio.GetModelRatioWithChannel("gpt-4o", channeltype.OpenAI, nil)
 
 	// Calculate pre-consumed quota
 	preConsumedQuota := getPreConsumedQuota(textRequest, promptTokens, modelRatio)
 
 	// Simulate post-consumption calculation
-	completionRatio := ratio.GetCompletionRatio("gpt-4o", channeltype.OpenAI)
+	completionRatio := ratio.GetCompletionRatioWithChannel("gpt-4o", channeltype.OpenAI, nil)
 	basePostQuota := int64(float64(promptTokens)+float64(completionTokens)*completionRatio) * int64(modelRatio)
 	structuredOutputCost := int64(float64(completionTokens) * 0.25 * modelRatio)
 	actualPostQuota := basePostQuota + structuredOutputCost

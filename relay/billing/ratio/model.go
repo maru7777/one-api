@@ -30,6 +30,12 @@ const (
 
 var modelRatioLock sync.RWMutex
 
+// Note: ModelPrice has been moved to relay/adaptor/interface.go
+// Each adapter now manages its own pricing independently
+
+// Note: Channel-specific pricing has been moved to individual adapters
+// Each adapter now implements GetDefaultModelPricing() method
+
 // ModelRatio
 // https://platform.openai.com/docs/models/model-endpoint-compatibility
 // https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Blfmc9dlf
@@ -977,6 +983,11 @@ func UpdateModelRatioByJSONString(jsonStr string) error {
 
 // GetModelRatio is used to get the model ratio for a given model name and channel type.
 func GetModelRatio(actualModelName string, channelType int) float64 {
+	return GetModelRatioWithChannel(actualModelName, channelType, nil)
+}
+
+// GetModelRatioWithChannel is used to get the model ratio for a given model name, channel type, and optional channel-specific pricing.
+func GetModelRatioWithChannel(actualModelName string, channelType int, channelModelRatio map[string]float64) float64 {
 	modelRatioLock.RLock()
 	defer modelRatioLock.RUnlock()
 	if strings.HasPrefix(actualModelName, "qwen-") &&
@@ -989,6 +1000,17 @@ func GetModelRatio(actualModelName string, channelType int) float64 {
 	}
 
 	nameWithChannel := fmt.Sprintf("%s(%d)", actualModelName, channelType)
+
+	// First check channel-specific pricing if provided
+	if channelModelRatio != nil {
+		for _, targetName := range []string{nameWithChannel, actualModelName} {
+			if ratio, ok := channelModelRatio[targetName]; ok {
+				return ratio
+			}
+		}
+	}
+
+	// Fallback to global pricing
 	for _, targetName := range []string{nameWithChannel, actualModelName} {
 		for _, ratioMap := range []map[string]float64{
 			ModelRatio,
@@ -1027,6 +1049,11 @@ func UpdateCompletionRatioByJSONString(jsonStr string) error {
 
 // GetCompletionRatio returns the completion ratio for the given model name and channel type.
 func GetCompletionRatio(name string, channelType int) float64 {
+	return GetCompletionRatioWithChannel(name, channelType, nil)
+}
+
+// GetCompletionRatioWithChannel returns the completion ratio for the given model name, channel type, and optional channel-specific pricing.
+func GetCompletionRatioWithChannel(name string, channelType int, channelCompletionRatio map[string]float64) float64 {
 	completionRatioLock.RLock()
 	defer completionRatioLock.RUnlock()
 	if strings.HasPrefix(name, "qwen-") && strings.HasSuffix(name, "-internet") {
@@ -1035,6 +1062,24 @@ func GetCompletionRatio(name string, channelType int) float64 {
 	model := fmt.Sprintf("%s(%d)", name, channelType)
 
 	name = strings.TrimPrefix(name, "openai/")
+
+	// First check channel-specific pricing if provided
+	if channelCompletionRatio != nil {
+		for _, targetName := range []string{model, name} {
+			// first try the model name
+			if ratio, ok := channelCompletionRatio[targetName]; ok {
+				return ratio
+			}
+
+			// then try the model name without some special prefix
+			normalizedTargetName := strings.TrimPrefix(targetName, "openai/")
+			if ratio, ok := channelCompletionRatio[normalizedTargetName]; ok {
+				return ratio
+			}
+		}
+	}
+
+	// Fallback to global pricing
 	for _, targetName := range []string{model, name} {
 		for _, ratioMap := range []map[string]float64{
 			CompletionRatio,
@@ -1164,3 +1209,6 @@ func GetCompletionRatio(name string, channelType int) float64 {
 	logger.SysWarn(fmt.Sprintf("completion ratio not found for model: %s (channel type: %d), using default value 1", name, channelType))
 	return 1
 }
+
+// Note: All channel-specific pricing functions have been moved to individual adapters
+// Each adapter now implements its own GetDefaultModelPricing() method
