@@ -401,6 +401,7 @@ func (a *Adaptor) GetChannelName() string {
 // Pricing methods - OpenAI adapter manages its own model pricing
 func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
 	// Direct map definition - much easier to maintain and edit
+	// Note: Ratios are in quota units (USD * QuotaPerUsd) for direct use in quota calculations
 	return map[string]adaptor.ModelPrice{
 		// GPT-4.5 Models
 		"gpt-4.5-preview":            {Ratio: 75 * ratio.MilliTokensUsd, CompletionRatio: 2},

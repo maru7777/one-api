@@ -25,7 +25,7 @@ func TestAdapterPricingImplementations(t *testing.T) {
 		{"VertexAI", apitype.VertexAI, "gemini-pro", false},
 		// Adapters that still use DefaultPricingMethods (expected to have empty pricing)
 		{"Ollama", apitype.Ollama, "llama2", true},
-		{"Cohere", apitype.Cohere, "command", true},
+		{"Cohere", apitype.Cohere, "command", false},
 		{"Coze", apitype.Coze, "test-model", true},
 	}
 
@@ -38,7 +38,7 @@ func TestAdapterPricingImplementations(t *testing.T) {
 
 			// Test GetDefaultModelPricing
 			defaultPricing := adaptor.GetDefaultModelPricing()
-			
+
 			if tc.expectEmpty {
 				if len(defaultPricing) != 0 {
 					t.Errorf("%s: Expected empty pricing map, got %d models", tc.name, len(defaultPricing))
@@ -110,9 +110,9 @@ func TestSpecificAdapterPricing(t *testing.T) {
 			expectedRatio           float64
 			expectedCompletionRatio float64
 		}{
-			"gemini-pro":        {0.0000005, 3.0},
-			"gemini-1.5-flash":  {0.000000075, 4.0},
-			"gemini-1.5-pro":    {0.00000125, 4.0},
+			"gemini-pro":       {0.0000005, 3.0},
+			"gemini-1.5-flash": {0.000000075, 4.0},
+			"gemini-1.5-pro":   {0.00000125, 4.0},
 		}
 
 		for model, expected := range testModels {
@@ -186,12 +186,12 @@ func TestPricingConsistency(t *testing.T) {
 				actualCompletionRatio := adaptor.GetCompletionRatio(model)
 
 				if actualRatio != expectedPrice.Ratio {
-					t.Errorf("%s %s: GetModelRatio (%.9f) != DefaultModelPricing.Ratio (%.9f)", 
+					t.Errorf("%s %s: GetModelRatio (%.9f) != DefaultModelPricing.Ratio (%.9f)",
 						adapter.name, model, actualRatio, expectedPrice.Ratio)
 				}
 
 				if actualCompletionRatio != expectedPrice.CompletionRatio {
-					t.Errorf("%s %s: GetCompletionRatio (%.2f) != DefaultModelPricing.CompletionRatio (%.2f)", 
+					t.Errorf("%s %s: GetCompletionRatio (%.2f) != DefaultModelPricing.CompletionRatio (%.2f)",
 						adapter.name, model, actualCompletionRatio, expectedPrice.CompletionRatio)
 				}
 			}

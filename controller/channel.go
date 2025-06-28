@@ -335,5 +335,4 @@ func GetChannelDefaultPricing(c *gin.Context) {
 			"completion_ratio": string(completionRatioJSON),
 		},
 	})
-	return
 }

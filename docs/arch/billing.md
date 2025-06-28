@@ -65,8 +65,14 @@
       - [Migration from DefaultPricingMethods](#migration-from-defaultpricingmethods)
       - [Impact and Benefits](#impact-and-benefits)
       - [Files Modified](#files-modified)
+    - [Global Pricing Removal and Clean Architecture](#global-pricing-removal-and-clean-architecture)
+      - [Architecture Transformation](#architecture-transformation)
+      - [What Was Removed](#what-was-removed)
+      - [What Was Preserved](#what-was-preserved)
+      - [Benefits Achieved](#benefits-achieved)
   - [Implementation Details](#implementation-details)
-    - [Pricing Resolution Algorithm](#pricing-resolution-algorithm)
+    - [Clean Two-Layer Pricing Resolution](#clean-two-layer-pricing-resolution)
+      - [Legacy Compatibility](#legacy-compatibility)
     - [Batch Processing](#batch-processing)
       - [Configuration:](#configuration)
       - [Batch Types:](#batch-types)
@@ -218,25 +224,29 @@ The pricing system uses a hierarchical approach with multiple fallback levels:
 
 ```mermaid
 graph TD
-    REQ[Request] --> CCP{Channel-specific<br/>Pricing?}
-    CCP -->|Yes| CSP[Channel Specific<br/>Pricing]
-    CCP -->|No| ADP{Adapter Default<br/>Pricing?}
-    ADP -->|Yes| ADAP[Adapter Pricing]
-    ADP -->|No| GP[Global Pricing]
+    REQ[Request] --> CCP{Channel-specific<br/>Override?}
+    CCP -->|Yes| CSP[Use Channel<br/>Override]
+    CCP -->|No| ADP[Use Adapter<br/>Default Pricing]
 
     CSP --> CALC[Calculate Cost]
-    ADAP --> CALC
-    GP --> CALC
+    ADP --> CALC
 
     CALC --> BILL[Billing]
+
+    style REQ fill:#e1f5fe
+    style CSP fill:#c8e6c9
+    style ADP fill:#c8e6c9
+    style CALC fill:#fff3e0
+    style BILL fill:#fce4ec
 ```
 
 #### Key Files:
 
-- `relay/billing/ratio/model.go` - Global pricing definitions
+- `relay/billing/ratio/model.go` - Audio/video pricing constants and legacy compatibility functions
 - `relay/adaptor/interface.go` - Adapter pricing interface
-- `relay/adaptor/*/adaptor.go` - Adapter-specific pricing implementations
+- `relay/adaptor/*/adaptor.go` - Adapter-specific pricing implementations (13 adapters)
 - `model/channel.go` - Channel-specific pricing storage
+- `controller/channel.go` - Channel pricing API endpoints
 
 ### 3. Adapter System
 
@@ -300,6 +310,7 @@ classDiagram
 #### Adapter Pricing Implementation Status
 
 **✅ Adapters with Native Pricing (13 total)**:
+
 - **OpenAI**: 54 models with comprehensive GPT pricing
 - **Anthropic**: 15 models with Claude pricing
 - **Zhipu**: 23 models with GLM pricing
@@ -315,6 +326,7 @@ classDiagram
 - **Cloudflare**: 33 models with Workers AI pricing
 
 **❌ Adapters Using DefaultPricingMethods (4 remaining)**:
+
 - **Ollama**: Local model hosting (typically free)
 - **Coze**: Conversational AI platform
 - **DeepL**: Translation service
@@ -394,23 +406,26 @@ graph LR
 
 ### Pricing Hierarchy
 
-The system uses a three-tier pricing hierarchy:
+The system uses a **clean two-layer pricing hierarchy**:
 
-1. **Channel-specific Pricing** (Highest Priority)
-2. **Adapter Default Pricing** (Medium Priority)
-3. **Global Pricing** (Fallback)
+1. **User Custom Ratio** (Channel-specific overrides) - Highest Priority
+2. **Channel Default Ratio** (Adapter's default pricing) - Fallback
+
+**Global pricing maps have been completely removed** for a cleaner, more maintainable architecture.
 
 ### Pricing Constants
 
 ```go
 // Currency and token conversion constants
 const (
-    USD2RMB float64 = 7
-    QuotaPerUsd float64 = 500000        // $0.002 / 1K tokens
-    KiloTokensUsd float64 = QuotaPerUsd / 1000
-    MilliTokensUsd float64 = KiloTokensUsd / 1000
-    ImageUsdPerPic float64 = QuotaPerUsd / 1000
-    VideoUsdPerSec float64 = QuotaPerUsd / TokensPerSec
+    QuotaPerUsd     = 500000 // $1 = 500,000 quota
+    MilliTokensUsd  = 0.5    // 0.5 quota per milli-token (0.000001 USD * 500000)
+    ImageUsdPerPic  = 1000   // 1000 quota per image (0.002 USD * 500000)
+    MilliTokensRmb  = 3.5    // 3.5 quota per milli-token (0.000007 RMB * 500000)
+    ImageRmbPerPic  = 7000   // 7000 quota per image (0.014 RMB * 500000)
+    MilliTokensYuan = 3.5    // 3.5 quota per milli-token (0.000007 Yuan * 500000)
+    ImageYuanPerPic = 7000   // 7000 quota per image (0.014 Yuan * 500000)
+    TokensPerSec    = 10     // Video tokens per second for video generation models
 )
 ```
 
@@ -692,6 +707,7 @@ GET /api/channel/default-pricing?type=:channelType
 **File**: `controller/channel.go`
 
 **Response Format**:
+
 ```json
 {
   "success": true,
@@ -704,6 +720,7 @@ GET /api/channel/default-pricing?type=:channelType
 ```
 
 **Key Implementation Details**:
+
 - Converts channel type to API type using `channeltype.ToAPIType()`
 - Includes ALL completion ratios (including 0) for complete pricing transparency
 - Returns comprehensive pricing for all models supported by the adapter
@@ -743,10 +760,12 @@ graph TD
 3. **UI Consistency**: All channel edit pages now display pricing information
 4. **Pricing Accuracy**: Based on official provider documentation
 5. **Complete Data Display**: All completion ratios (including 0) are shown
+6. **Global Pricing Removal**: Eliminated complex multi-layer fallbacks for clean two-layer architecture
 
 #### Technical Implementation Details
 
 **Adapter Pricing Structure**:
+
 ```go
 // Each adapter implements comprehensive pricing
 func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
@@ -763,6 +782,7 @@ func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
 ```
 
 **Channel Type Mapping Fix**:
+
 ```go
 // Fixed the channel type to API type conversion
 apiType := channeltype.ToAPIType(channelType)
@@ -770,6 +790,7 @@ adaptor := relay.GetAdaptor(apiType)
 ```
 
 **Complete Pricing Display**:
+
 ```go
 // Include ALL completion ratios (including 0)
 for model, price := range defaultPricing {
@@ -781,16 +802,19 @@ for model, price := range defaultPricing {
 #### Provider-Specific Pricing Examples
 
 **Ali (Alibaba Cloud)**: 89 models
+
 - Qwen models: ¥0.0003-¥0.0024 per 1K tokens
 - DeepSeek models: ¥0.0001-¥0.008 per 1K tokens
 - Embedding models: ¥0.00005 per 1K tokens
 
 **AWS Bedrock**: 31 models
+
 - Claude models: $0.25-$75 per 1M tokens
 - Llama models: $0.3-$2.65 per 1M tokens
 - Amazon Nova models: $0.035-$10 per 1M tokens
 
 **Replicate**: 48 models
+
 - FLUX image generation: $0.003-$0.12 per image
 - Language models: $0.05-$9.5 per 1M tokens
 - Specialized models for various use cases
@@ -798,6 +822,7 @@ for model, price := range defaultPricing {
 #### Migration from DefaultPricingMethods
 
 **Before**:
+
 ```go
 type Adaptor struct {
     adaptor.DefaultPricingMethods  // Empty pricing
@@ -805,6 +830,7 @@ type Adaptor struct {
 ```
 
 **After**:
+
 ```go
 type Adaptor struct {
     // No DefaultPricingMethods embedding
@@ -829,10 +855,12 @@ func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
 #### Files Modified
 
 **Core Implementation Files**:
+
 - `controller/channel.go` - Fixed channel type mapping and completion ratio filtering
 - `relay/adaptor/*/adaptor.go` - Added comprehensive pricing to 13 major adapters
 
 **Adapters with New Pricing**:
+
 - `relay/adaptor/ali/adaptor.go` - 89 Alibaba Cloud models
 - `relay/adaptor/baidu/adaptor.go` - 16 Baidu ERNIE models
 - `relay/adaptor/tencent/adaptor.go` - 6 Tencent Hunyuan models
@@ -844,27 +872,100 @@ func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
 - `relay/adaptor/cohere/adaptor.go` - 12 Cohere Command models
 - `relay/adaptor/cloudflare/adaptor.go` - 33 Cloudflare Workers AI models
 
+### Global Pricing Removal and Clean Architecture
+
+Following the comprehensive adapter pricing implementation, the system underwent a second major improvement: **complete removal of global pricing maps** to achieve a clean two-layer architecture.
+
+#### Architecture Transformation
+
+```mermaid
+graph TD
+    subgraph "Before: Complex Multi-Layer"
+        C1[Channel Override] --> C2[Adapter Pricing]
+        C2 --> C3[Global ModelRatio]
+        C3 --> C4[DefaultModelRatio]
+        C4 --> C5[AudioRatio]
+        C5 --> C6[Fallback Default]
+    end
+
+    subgraph "After: Clean Two-Layer"
+        A1[Channel Override] --> A2[Adapter Pricing]
+        A2 --> A3[Reasonable Default]
+    end
+
+    C6 -.->|Simplified| A1
+
+    style A1 fill:#c8e6c9
+    style A2 fill:#c8e6c9
+    style A3 fill:#fff3e0
+```
+
+#### What Was Removed
+
+1. **Global `ModelRatio` map** - 700+ lines of global pricing data
+2. **Global `CompletionRatio` map** - 100+ lines of global completion ratios
+3. **Complex fallback chains** - Multiple map lookups and priority logic
+4. **Redundant pricing storage** - Duplicate pricing information across global and adapter maps
+
+#### What Was Preserved
+
+1. **Audio/Video pricing** - Special pricing for audio and video models
+2. **Currency constants** - Essential conversion constants
+3. **Legacy compatibility** - Functions preserved but simplified
+4. **All adapter pricing** - 13 adapters with comprehensive pricing intact
+
+#### Benefits Achieved
+
+1. **Performance**: Faster pricing lookups with direct adapter calls
+2. **Maintainability**: Single source of truth for each adapter's pricing
+3. **Memory efficiency**: Reduced memory usage without large global maps
+4. **Code clarity**: Simplified pricing resolution logic
+5. **Type safety**: Structured pricing with `ModelPrice` interface
+
 ## Implementation Details
 
-### Pricing Resolution Algorithm
+### Clean Two-Layer Pricing Resolution
+
+The new pricing resolution follows a clean two-layer approach:
 
 ```go
+// Modern approach: Controllers implement the two-layer logic directly
+func getModelPricing(modelName string, channelType int, channelOverrides map[string]float64) float64 {
+    // Layer 1: User custom ratio (channel-specific overrides)
+    if channelOverrides != nil {
+        if override, exists := channelOverrides[modelName]; exists {
+            return override
+        }
+    }
+
+    // Layer 2: Channel default ratio (adapter's default pricing)
+    apiType := channeltype.ToAPIType(channelType)
+    if adaptor := relay.GetAdaptor(apiType); adaptor != nil {
+        return adaptor.GetModelRatio(modelName)
+    }
+
+    // Final fallback: reasonable default
+    return 2.5 * MilliTokensUsd
+}
+```
+
+#### Legacy Compatibility
+
+The legacy `GetModelRatioWithChannel()` function is preserved for backward compatibility but simplified:
+
+```go
+// LEGACY FUNCTION - simplified for compatibility only
 func GetModelRatioWithChannel(modelName string, channelType int, channelRatio map[string]float64) float64 {
-    // 1. Check channel-specific pricing
+    // Check channel-specific pricing if provided
     if channelRatio != nil {
         if ratio, exists := channelRatio[modelName]; exists {
             return ratio
         }
     }
 
-    // 2. Check adapter default pricing
-    adapter := GetAdaptor(channelType)
-    if adapter != nil {
-        return adapter.GetModelRatio(modelName)
-    }
-
-    // 3. Fallback to global pricing
-    return GetGlobalModelRatio(modelName, channelType)
+    // Legacy fallback: only audio models and reasonable default
+    // Note: Global pricing maps have been removed
+    return 2.5 * MilliTokensUsd
 }
 ```
 
