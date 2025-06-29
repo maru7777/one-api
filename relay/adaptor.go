@@ -11,7 +11,11 @@ import (
 	"github.com/songquanpeng/one-api/relay/adaptor/cohere"
 	"github.com/songquanpeng/one-api/relay/adaptor/coze"
 	"github.com/songquanpeng/one-api/relay/adaptor/deepl"
+	"github.com/songquanpeng/one-api/relay/adaptor/deepseek"
 	"github.com/songquanpeng/one-api/relay/adaptor/gemini"
+	"github.com/songquanpeng/one-api/relay/adaptor/groq"
+	"github.com/songquanpeng/one-api/relay/adaptor/mistral"
+	"github.com/songquanpeng/one-api/relay/adaptor/moonshot"
 	"github.com/songquanpeng/one-api/relay/adaptor/ollama"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/relay/adaptor/palm"
@@ -22,6 +26,7 @@ import (
 	"github.com/songquanpeng/one-api/relay/adaptor/xunfei"
 	"github.com/songquanpeng/one-api/relay/adaptor/zhipu"
 	"github.com/songquanpeng/one-api/relay/apitype"
+	"github.com/songquanpeng/one-api/relay/pricing"
 )
 
 func GetAdaptor(apiType int) adaptor.Adaptor {
@@ -64,7 +69,20 @@ func GetAdaptor(apiType int) adaptor.Adaptor {
 		return &proxy.Adaptor{}
 	case apitype.Replicate:
 		return &replicate.Adaptor{}
+	case apitype.DeepSeek:
+		return &deepseek.Adaptor{}
+	case apitype.Groq:
+		return &groq.Adaptor{}
+	case apitype.Mistral:
+		return &mistral.Adaptor{}
+	case apitype.Moonshot:
+		return &moonshot.Adaptor{}
 	}
 
 	return nil
+}
+
+// InitializeGlobalPricing initializes the global pricing manager with the GetAdaptor function
+func InitializeGlobalPricing() {
+	pricing.InitializeGlobalPricingManager(GetAdaptor)
 }

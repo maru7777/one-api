@@ -20,6 +20,10 @@ const (
 	VertexAI
 	Proxy
 	Replicate
+	DeepSeek
+	Groq
+	Mistral
+	Moonshot
 
 	Dummy // this one is only for count, do not add any channel after this
 )

@@ -21,10 +21,11 @@ import (
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/relay/apitype"
 	"github.com/songquanpeng/one-api/relay/billing"
-	billingratio "github.com/songquanpeng/one-api/relay/billing/ratio"
+
 	"github.com/songquanpeng/one-api/relay/channeltype"
 	metalib "github.com/songquanpeng/one-api/relay/meta"
 	relaymodel "github.com/songquanpeng/one-api/relay/model"
+	"github.com/songquanpeng/one-api/relay/pricing"
 )
 
 func RelayTextHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
@@ -59,21 +60,9 @@ func RelayTextHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 		}
 	}
 
-	// get model ratio & group ratio with adapter-based pricing
+	// get model ratio using three-layer pricing system
 	pricingAdaptor := relay.GetAdaptor(meta.ChannelType)
-	var modelRatio float64
-	if pricingAdaptor != nil {
-		modelRatio = pricingAdaptor.GetModelRatio(textRequest.Model)
-		// Apply database overrides if available
-		if channelModelRatio != nil {
-			if override, exists := channelModelRatio[textRequest.Model]; exists {
-				modelRatio = override
-			}
-		}
-	} else {
-		// Fallback to global pricing
-		modelRatio = billingratio.GetModelRatio(textRequest.Model, meta.ChannelType)
-	}
+	modelRatio := pricing.GetModelRatioWithThreeLayers(textRequest.Model, channelModelRatio, pricingAdaptor)
 	// groupRatio := billingratio.GetGroupRatio(meta.Group)
 	groupRatio := c.GetFloat64(ctxkey.ChannelRatio)
 

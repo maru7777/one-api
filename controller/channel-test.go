@@ -27,11 +27,12 @@ import (
 	"github.com/songquanpeng/one-api/monitor"
 	"github.com/songquanpeng/one-api/relay"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
-	billingratio "github.com/songquanpeng/one-api/relay/billing/ratio"
+
 	"github.com/songquanpeng/one-api/relay/channeltype"
 	"github.com/songquanpeng/one-api/relay/controller"
 	"github.com/songquanpeng/one-api/relay/meta"
 	relaymodel "github.com/songquanpeng/one-api/relay/model"
+	"github.com/songquanpeng/one-api/relay/pricing"
 	"github.com/songquanpeng/one-api/relay/relaymode"
 )
 
@@ -74,24 +75,10 @@ func calculateTestCost(usage *relaymodel.Usage, meta *meta.Meta, request *relaym
 		return 0
 	}
 
-	// Get model ratio using adapter-based pricing
+	// Get model ratio and completion ratio using three-layer pricing system
 	pricingAdaptor := relay.GetAdaptor(meta.ChannelType)
-	var modelRatio float64
-	if pricingAdaptor != nil {
-		modelRatio = pricingAdaptor.GetModelRatio(request.Model)
-	} else {
-		// Fallback to global pricing
-		modelRatio = billingratio.GetModelRatio(request.Model, meta.ChannelType)
-	}
-
-	// Get completion ratio
-	var completionRatio float64
-	if pricingAdaptor != nil {
-		completionRatio = pricingAdaptor.GetCompletionRatio(request.Model)
-	} else {
-		// Fallback to global pricing
-		completionRatio = billingratio.GetCompletionRatio(request.Model, meta.ChannelType)
-	}
+	modelRatio := pricing.GetModelRatioWithThreeLayers(request.Model, nil, pricingAdaptor)
+	completionRatio := pricing.GetCompletionRatioWithThreeLayers(request.Model, nil, pricingAdaptor)
 
 	// Use the same group ratio as set in the context (typically 1.0 for tests)
 	groupRatio := 1.0 // Default group ratio for tests

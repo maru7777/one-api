@@ -118,11 +118,13 @@ func GetModelRatio(actualModelName string, channelType int) float64 {
 
 // GetModelRatioWithChannel - LEGACY FUNCTION
 // This function is deprecated and should only be used for legacy compatibility.
-// New code should use the two-layer approach directly:
-// 1. Check channel-specific overrides first
-// 2. Use adapter.GetModelRatio() as fallback
+// New code should use the three-layer approach directly via pricing.GetModelRatioWithThreeLayers()
 //
-// This function now only handles legacy cases and special models not covered by adapters.
+// This function now implements the three-layer system for backward compatibility:
+// 1. Channel-specific overrides (highest priority)
+// 2. Adapter default pricing (second priority)
+// 3. Global pricing fallback (third priority)
+// 4. Legacy special models and final default (lowest priority)
 func GetModelRatioWithChannel(actualModelName string, channelType int, channelModelRatio map[string]float64) float64 {
 	// Normalize model names for internet variants
 	if strings.HasPrefix(actualModelName, "qwen-") &&
@@ -136,7 +138,7 @@ func GetModelRatioWithChannel(actualModelName string, channelType int, channelMo
 
 	nameWithChannel := fmt.Sprintf("%s(%d)", actualModelName, channelType)
 
-	// Check channel-specific pricing if provided
+	// Layer 1: Check channel-specific pricing if provided
 	if channelModelRatio != nil {
 		for _, targetName := range []string{nameWithChannel, actualModelName} {
 			if ratio, ok := channelModelRatio[targetName]; ok {
@@ -145,7 +147,17 @@ func GetModelRatioWithChannel(actualModelName string, channelType int, channelMo
 		}
 	}
 
-	// Legacy fallback: check remaining global maps for special models
+	// Layer 2: Try adapter pricing (if available)
+	// Note: We can't import relay package here due to import cycles,
+	// so we skip this layer in the legacy function.
+	// Modern code should use pricing.GetModelRatioWithThreeLayers() instead.
+
+	// Layer 3: Try global pricing (if available)
+	// Note: We can't import pricing package here due to import cycles,
+	// so we skip this layer in the legacy function.
+	// Modern code should use pricing.GetModelRatioWithThreeLayers() instead.
+
+	// Layer 4: Legacy fallback - check remaining global maps for special models
 	for _, targetName := range []string{nameWithChannel, actualModelName} {
 		// Check audio models (still needed for special audio pricing)
 		if ratio, ok := AudioRatio[targetName]; ok {
@@ -154,7 +166,7 @@ func GetModelRatioWithChannel(actualModelName string, channelType int, channelMo
 	}
 
 	// Final fallback: reasonable default
-	logger.SysWarn(fmt.Sprintf("Legacy pricing fallback for model %s (channel type: %d), consider migrating to adapter pricing", actualModelName, channelType))
+	logger.SysWarn(fmt.Sprintf("Legacy pricing fallback for model %s (channel type: %d), consider migrating to three-layer pricing", actualModelName, channelType))
 	return 2.5 * MilliTokensUsd
 }
 
@@ -165,11 +177,13 @@ func GetCompletionRatio(name string, channelType int) float64 {
 
 // GetCompletionRatioWithChannel - LEGACY FUNCTION
 // This function is deprecated and should only be used for legacy compatibility.
-// New code should use the two-layer approach directly:
-// 1. Check channel-specific overrides first
-// 2. Use adapter.GetCompletionRatio() as fallback
+// New code should use the three-layer approach directly via pricing.GetCompletionRatioWithThreeLayers()
 //
-// This function now only handles legacy cases and special models not covered by adapters.
+// This function now implements the three-layer system for backward compatibility:
+// 1. Channel-specific overrides (highest priority)
+// 2. Adapter default pricing (second priority) - skipped due to import cycles
+// 3. Global pricing fallback (third priority) - skipped due to import cycles
+// 4. Legacy special models and final default (lowest priority)
 func GetCompletionRatioWithChannel(name string, channelType int, channelCompletionRatio map[string]float64) float64 {
 	if strings.HasPrefix(name, "qwen-") && strings.HasSuffix(name, "-internet") {
 		name = strings.TrimSuffix(name, "-internet")
@@ -178,7 +192,7 @@ func GetCompletionRatioWithChannel(name string, channelType int, channelCompleti
 
 	name = strings.TrimPrefix(name, "openai/")
 
-	// Check channel-specific pricing if provided
+	// Layer 1: Check channel-specific pricing if provided
 	if channelCompletionRatio != nil {
 		for _, targetName := range []string{model, name} {
 			// first try the model name
@@ -194,7 +208,17 @@ func GetCompletionRatioWithChannel(name string, channelType int, channelCompleti
 		}
 	}
 
-	// Legacy fallback: check remaining global maps for special models
+	// Layer 2: Try adapter pricing (if available)
+	// Note: We can't import relay package here due to import cycles,
+	// so we skip this layer in the legacy function.
+	// Modern code should use pricing.GetCompletionRatioWithThreeLayers() instead.
+
+	// Layer 3: Try global pricing (if available)
+	// Note: We can't import pricing package here due to import cycles,
+	// so we skip this layer in the legacy function.
+	// Modern code should use pricing.GetCompletionRatioWithThreeLayers() instead.
+
+	// Layer 4: Legacy fallback - check remaining global maps for special models
 	for _, targetName := range []string{model, name} {
 		// Check audio completion ratios (still needed for special audio pricing)
 		if ratio, ok := AudioCompletionRatio[targetName]; ok {
@@ -203,7 +227,7 @@ func GetCompletionRatioWithChannel(name string, channelType int, channelCompleti
 	}
 
 	// Final fallback: reasonable default
-	logger.SysWarn(fmt.Sprintf("completion ratio not found for model: %s (channel type: %d), using default value 1", name, channelType))
+	logger.SysWarn(fmt.Sprintf("completion ratio not found for model: %s (channel type: %d), using default value 1, consider migrating to three-layer pricing", name, channelType))
 	return 1
 }
 

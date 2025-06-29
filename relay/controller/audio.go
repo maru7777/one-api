@@ -24,10 +24,10 @@ import (
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/relay/billing"
 	"github.com/songquanpeng/one-api/relay/billing/ratio"
-	billingratio "github.com/songquanpeng/one-api/relay/billing/ratio"
 	"github.com/songquanpeng/one-api/relay/channeltype"
 	"github.com/songquanpeng/one-api/relay/meta"
 	relaymodel "github.com/songquanpeng/one-api/relay/model"
+	"github.com/songquanpeng/one-api/relay/pricing"
 	"github.com/songquanpeng/one-api/relay/relaymode"
 )
 
@@ -95,21 +95,9 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 		}
 	}
 
-	// Use adapter-based pricing with database overrides
+	// Use three-layer pricing system
 	pricingAdaptor := relay.GetAdaptor(channelType)
-	var modelRatio float64
-	if pricingAdaptor != nil {
-		modelRatio = pricingAdaptor.GetModelRatio(audioModel)
-		// Apply database overrides if available
-		if channelModelRatio != nil {
-			if override, exists := channelModelRatio[audioModel]; exists {
-				modelRatio = override
-			}
-		}
-	} else {
-		// Fallback to global pricing
-		modelRatio = billingratio.GetModelRatio(audioModel, channelType)
-	}
+	modelRatio := pricing.GetModelRatioWithThreeLayers(audioModel, channelModelRatio, pricingAdaptor)
 	// groupRatio := billingratio.GetGroupRatio(group)
 	groupRatio := c.GetFloat64(ctxkey.ChannelRatio)
 	ratio := modelRatio * groupRatio

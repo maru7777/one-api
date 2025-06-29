@@ -5,7 +5,6 @@ import (
 	"github.com/songquanpeng/one-api/relay/adaptor/alibailian"
 	"github.com/songquanpeng/one-api/relay/adaptor/baichuan"
 	"github.com/songquanpeng/one-api/relay/adaptor/baiduv2"
-	"github.com/songquanpeng/one-api/relay/adaptor/deepseek"
 	"github.com/songquanpeng/one-api/relay/adaptor/doubao"
 	"github.com/songquanpeng/one-api/relay/adaptor/geminiOpenaiCompatible"
 	"github.com/songquanpeng/one-api/relay/adaptor/groq"
@@ -64,7 +63,7 @@ func GetCompatibleChannelMeta(channelType int) (string, []string) {
 	case channeltype.StepFun:
 		return "stepfun", stepfun.ModelList
 	case channeltype.DeepSeek:
-		return "deepseek", deepseek.ModelList
+		return "deepseek", []string{"deepseek-chat", "deepseek-reasoner"}
 	case channeltype.TogetherAI:
 		return "together.ai", togetherai.ModelList
 	case channeltype.Doubao:

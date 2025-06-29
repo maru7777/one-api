@@ -18,12 +18,12 @@ import (
 	"github.com/songquanpeng/one-api/relay"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/relay/billing/ratio"
-	billingratio "github.com/songquanpeng/one-api/relay/billing/ratio"
 	"github.com/songquanpeng/one-api/relay/channeltype"
 	"github.com/songquanpeng/one-api/relay/constant/role"
 	"github.com/songquanpeng/one-api/relay/controller/validator"
 	"github.com/songquanpeng/one-api/relay/meta"
 	relaymodel "github.com/songquanpeng/one-api/relay/model"
+	"github.com/songquanpeng/one-api/relay/pricing"
 	"github.com/songquanpeng/one-api/relay/relaymode"
 )
 
@@ -143,21 +143,9 @@ func postConsumeQuota(ctx context.Context,
 		return
 	}
 
-	// Use adapter-based pricing with database overrides
+	// Use three-layer pricing system for completion ratio
 	pricingAdaptor := relay.GetAdaptor(meta.ChannelType)
-	var completionRatio float64
-	if pricingAdaptor != nil {
-		completionRatio = pricingAdaptor.GetCompletionRatio(textRequest.Model)
-		// Apply database overrides if available
-		if channelCompletionRatio != nil {
-			if override, exists := channelCompletionRatio[textRequest.Model]; exists {
-				completionRatio = override
-			}
-		}
-	} else {
-		// Fallback to global pricing
-		completionRatio = billingratio.GetCompletionRatio(textRequest.Model, meta.ChannelType)
-	}
+	completionRatio := pricing.GetCompletionRatioWithThreeLayers(textRequest.Model, channelCompletionRatio, pricingAdaptor)
 	promptTokens := usage.PromptTokens
 	// It appears that DeepSeek's official service automatically merges ReasoningTokens into CompletionTokens,
 	// but the behavior of third-party providers may differ, so for now we do not add them manually.

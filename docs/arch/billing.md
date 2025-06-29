@@ -9,37 +9,42 @@
   - [System Architecture](#system-architecture)
   - [Core Components](#core-components)
     - [1. Quota Management System](#1-quota-management-system)
-      - [Key Files:](#key-files)
+      - [Key Files](#key-files)
     - [2. Pricing System](#2-pricing-system)
-      - [Key Files:](#key-files-1)
+      - [Key Files](#key-files-1)
     - [3. Adapter System](#3-adapter-system)
       - [Adapter Pricing Implementation Status](#adapter-pricing-implementation-status)
   - [Quota Management](#quota-management)
     - [User Quota System](#user-quota-system)
-      - [Database Schema (User):](#database-schema-user)
-      - [Key Operations:](#key-operations)
+      - [Database Schema (User)](#database-schema-user)
+      - [Key Operations](#key-operations)
     - [Token Quota System](#token-quota-system)
-      - [Database Schema (Token):](#database-schema-token)
-      - [Token Types:](#token-types)
+      - [Database Schema (Token)](#database-schema-token)
+      - [Token Types](#token-types)
     - [Caching Strategy](#caching-strategy)
-      - [Key Files:](#key-files-2)
+      - [Key Files](#key-files-2)
   - [Pricing System](#pricing-system)
     - [Pricing Hierarchy](#pricing-hierarchy)
     - [Pricing Constants](#pricing-constants)
     - [Model Pricing Structure](#model-pricing-structure)
+    - [Global Pricing System](#global-pricing-system)
+      - [Architecture](#architecture)
+      - [Configuration](#configuration)
+      - [Key Functions](#key-functions)
+      - [Conflict Resolution](#conflict-resolution)
     - [Channel-specific Pricing](#channel-specific-pricing)
-      - [Database Schema (Channel):](#database-schema-channel)
-      - [Key Functions:](#key-functions)
+      - [Database Schema (Channel)](#database-schema-channel)
+      - [Key Functions](#key-functions-1)
   - [Billing Flow](#billing-flow)
     - [Request Processing Flow](#request-processing-flow)
     - [Pre-consumption Phase](#pre-consumption-phase)
-      - [Key Functions:](#key-functions-1)
+      - [Key Functions](#key-functions-2)
     - [Post-consumption Phase](#post-consumption-phase)
-      - [Key Functions:](#key-functions-2)
+      - [Key Functions](#key-functions-3)
     - [Quota Calculation](#quota-calculation)
-      - [Text Requests:](#text-requests)
-      - [Audio Requests:](#audio-requests)
-      - [Image Requests:](#image-requests)
+      - [Text Requests](#text-requests)
+      - [Audio Requests](#audio-requests)
+      - [Image Requests](#image-requests)
   - [Database Schema](#database-schema)
     - [Core Tables](#core-tables)
       - [Users Table](#users-table)
@@ -71,24 +76,24 @@
       - [What Was Preserved](#what-was-preserved)
       - [Benefits Achieved](#benefits-achieved)
   - [Implementation Details](#implementation-details)
-    - [Clean Two-Layer Pricing Resolution](#clean-two-layer-pricing-resolution)
+    - [Three-Layer Pricing Resolution](#three-layer-pricing-resolution)
       - [Legacy Compatibility](#legacy-compatibility)
     - [Batch Processing](#batch-processing)
-      - [Configuration:](#configuration)
-      - [Batch Types:](#batch-types)
-      - [Key Files:](#key-files-3)
+      - [Configuration](#configuration-1)
+      - [Batch Types](#batch-types)
+      - [Key Files](#key-files-3)
     - [Error Handling and Recovery](#error-handling-and-recovery)
-      - [Quota Refund Mechanism:](#quota-refund-mechanism)
-      - [Key Files:](#key-files-4)
+      - [Quota Refund Mechanism](#quota-refund-mechanism)
+      - [Key Files](#key-files-4)
     - [Structured Output Pricing](#structured-output-pricing)
-      - [Key Files:](#key-files-5)
+      - [Key Files](#key-files-5)
   - [Performance Considerations](#performance-considerations)
     - [Caching Strategy](#caching-strategy-1)
     - [Database Optimization](#database-optimization)
     - [Memory Management](#memory-management)
     - [Monitoring and Metrics](#monitoring-and-metrics)
-      - [Key Metrics:](#key-metrics)
-      - [Key Files:](#key-files-6)
+      - [Key Metrics](#key-metrics)
+      - [Key Files](#key-files-6)
 
 ## Overview
 
@@ -211,7 +216,7 @@ graph LR
     end
 ```
 
-#### Key Files:
+#### Key Files
 
 - `model/user.go` - User quota management
 - `model/token.go` - Token quota management
@@ -220,28 +225,39 @@ graph LR
 
 ### 2. Pricing System
 
-The pricing system uses a hierarchical approach with multiple fallback levels:
+The pricing system uses a hierarchical approach with three fallback levels:
 
 ```mermaid
 graph TD
     REQ[Request] --> CCP{Channel-specific<br/>Override?}
-    CCP -->|Yes| CSP[Use Channel<br/>Override]
-    CCP -->|No| ADP[Use Adapter<br/>Default Pricing]
+    CCP -->|Yes| CSP[Layer 1: Use Channel<br/>Override]
+    CCP -->|No| ADP{Adapter has<br/>Model Pricing?}
+
+    ADP -->|Yes| ADP_PRICE[Layer 2: Use Adapter<br/>Default Pricing]
+    ADP -->|No| GP{Global Pricing<br/>Available?}
+
+    GP -->|Yes| GP_PRICE[Layer 3: Use Global<br/>Pricing Fallback]
+    GP -->|No| DEFAULT[Layer 4: Use Final<br/>Default]
 
     CSP --> CALC[Calculate Cost]
-    ADP --> CALC
+    ADP_PRICE --> CALC
+    GP_PRICE --> CALC
+    DEFAULT --> CALC
 
     CALC --> BILL[Billing]
 
     style REQ fill:#e1f5fe
     style CSP fill:#c8e6c9
-    style ADP fill:#c8e6c9
+    style ADP_PRICE fill:#c8e6c9
+    style GP_PRICE fill:#fff9c4
+    style DEFAULT fill:#ffcdd2
     style CALC fill:#fff3e0
     style BILL fill:#fce4ec
 ```
 
-#### Key Files:
+#### Key Files
 
+- `relay/pricing/global.go` - Global pricing manager and three-layer pricing logic
 - `relay/billing/ratio/model.go` - Audio/video pricing constants and legacy compatibility functions
 - `relay/adaptor/interface.go` - Adapter pricing interface
 - `relay/adaptor/*/adaptor.go` - Adapter-specific pricing implementations (13 adapters)
@@ -338,7 +354,7 @@ classDiagram
 
 Users have a primary quota that serves as the main billing account:
 
-#### Database Schema (User):
+#### Database Schema (User)
 
 ```sql
 CREATE TABLE users (
@@ -349,7 +365,7 @@ CREATE TABLE users (
 );
 ```
 
-#### Key Operations:
+#### Key Operations
 
 - `IncreaseUserQuota()` - Add quota to user account
 - `DecreaseUserQuota()` - Deduct quota from user account
@@ -360,7 +376,7 @@ CREATE TABLE users (
 
 Tokens can have individual quotas or inherit from user quotas:
 
-#### Database Schema (Token):
+#### Database Schema (Token)
 
 ```sql
 CREATE TABLE tokens (
@@ -372,7 +388,7 @@ CREATE TABLE tokens (
 );
 ```
 
-#### Token Types:
+#### Token Types
 
 1. **Limited Tokens**: Have specific quota limits
 2. **Unlimited Tokens**: Bypass quota restrictions
@@ -397,7 +413,7 @@ graph LR
     end
 ```
 
-#### Key Files:
+#### Key Files
 
 - `model/cache.go` - Caching implementations
 - Cache TTL configurations in `model/cache.go`
@@ -406,12 +422,14 @@ graph LR
 
 ### Pricing Hierarchy
 
-The system uses a **clean two-layer pricing hierarchy**:
+The system uses a **comprehensive three-layer pricing hierarchy** to handle custom channels and unknown models:
 
 1. **User Custom Ratio** (Channel-specific overrides) - Highest Priority
-2. **Channel Default Ratio** (Adapter's default pricing) - Fallback
+2. **Channel Default Ratio** (Adapter's default pricing) - Second Priority
+3. **Global Pricing Fallback** (Merged from selected adapters) - Third Priority
+4. **Final Default** (Reasonable fallback) - Lowest Priority
 
-**Global pricing maps have been completely removed** for a cleaner, more maintainable architecture.
+This three-layer approach ensures that custom channels with common models can automatically receive appropriate pricing even when the channel adapter doesn't have specific pricing for those models.
 
 ### Pricing Constants
 
@@ -438,11 +456,57 @@ type ModelPrice struct {
 }
 ```
 
+### Global Pricing System
+
+The global pricing system provides a third layer of pricing fallback for custom channels that offer common models but don't have specific pricing defined in their adapters.
+
+#### Architecture
+
+The global pricing manager automatically merges pricing from selected adapters on startup:
+
+```go
+type GlobalPricingManager struct {
+    globalModelPricing    map[string]adaptor.ModelPrice
+    contributingAdapters  []int // API types to include
+    getAdaptorFunc        func(apiType int) adaptor.Adaptor
+}
+```
+
+#### Configuration
+
+Global pricing adapters are defined as a simple slice in the code for easy modification:
+
+```go
+// DefaultGlobalPricingAdapters defines which adapters contribute to global pricing fallback
+var DefaultGlobalPricingAdapters = []int{
+    apitype.OpenAI,     // Most comprehensive model coverage
+    apitype.Anthropic,  // Claude models
+    apitype.Gemini,     // Google models
+    apitype.Ali,        // Alibaba models
+    apitype.Baidu,      // Baidu models
+    apitype.Zhipu,      // Zhipu models
+    apitype.VertexAI,   // Google Cloud models
+    apitype.Cloudflare, // Cloudflare Workers AI
+}
+```
+
+#### Key Functions
+
+- `GetModelRatioWithThreeLayers()` - Three-layer pricing resolution
+- `GetCompletionRatioWithThreeLayers()` - Three-layer completion ratio resolution
+- `SetContributingAdapters()` - Configure which adapters contribute to global pricing
+- `ReloadGlobalPricing()` - Force reload of global pricing from adapters
+- `GetGlobalPricingStats()` - Get statistics about global pricing coverage
+
+#### Conflict Resolution
+
+When multiple adapters define pricing for the same model, the first adapter in the configuration list takes precedence. Conflicts are logged for transparency.
+
 ### Channel-specific Pricing
 
 Channels can override default pricing for specific models:
 
-#### Database Schema (Channel):
+#### Database Schema (Channel)
 
 ```sql
 CREATE TABLE channels (
@@ -452,7 +516,7 @@ CREATE TABLE channels (
 );
 ```
 
-#### Key Functions:
+#### Key Functions
 
 - `GetModelRatio()` - Retrieve channel model pricing
 - `SetModelRatio()` - Update channel model pricing
@@ -502,7 +566,7 @@ sequenceDiagram
 
 Before processing requests, the system reserves quota:
 
-#### Key Functions:
+#### Key Functions
 
 - `preConsumeQuota()` in `relay/controller/text.go`
 - `getPreConsumedQuota()` for quota calculation
@@ -512,7 +576,7 @@ Before processing requests, the system reserves quota:
 
 After request completion, final billing is calculated:
 
-#### Key Functions:
+#### Key Functions
 
 - `postConsumeQuota()` in `relay/controller/helper.go`
 - `PostConsumeQuota()` in `relay/billing/billing.go`
@@ -522,19 +586,19 @@ After request completion, final billing is calculated:
 
 Different request types use different calculation methods:
 
-#### Text Requests:
+#### Text Requests
 
 ```
 quota = (prompt_tokens + completion_tokens * completion_ratio) * model_ratio * group_ratio
 ```
 
-#### Audio Requests:
+#### Audio Requests
 
 ```
 quota = audio_duration_seconds * audio_tokens_per_second * model_ratio * group_ratio
 ```
 
-#### Image Requests:
+#### Image Requests
 
 ```
 quota = image_count * image_cost_per_pic * model_ratio * group_ratio
@@ -921,16 +985,28 @@ graph TD
 3. **Memory efficiency**: Reduced memory usage without large global maps
 4. **Code clarity**: Simplified pricing resolution logic
 5. **Type safety**: Structured pricing with `ModelPrice` interface
+6. **Custom Channel Support**: Automatic pricing for custom channels with common models
+7. **Configurable Fallback**: Easily configurable global pricing adapters
+8. **Conflict Resolution**: Transparent handling of pricing conflicts between adapters
 
 ## Implementation Details
 
-### Clean Two-Layer Pricing Resolution
+### Three-Layer Pricing Resolution
 
-The new pricing resolution follows a clean two-layer approach:
+The new pricing resolution follows a comprehensive three-layer approach:
 
 ```go
-// Modern approach: Controllers implement the two-layer logic directly
+// Modern approach: Use the three-layer pricing system
 func getModelPricing(modelName string, channelType int, channelOverrides map[string]float64) float64 {
+    apiType := channeltype.ToAPIType(channelType)
+    adaptor := relay.GetAdaptor(apiType)
+
+    // Use the three-layer pricing system
+    return pricing.GetModelRatioWithThreeLayers(modelName, channelOverrides, adaptor)
+}
+
+// Three-layer implementation:
+func GetModelRatioWithThreeLayers(modelName string, channelOverrides map[string]float64, adaptor adaptor.Adaptor) float64 {
     // Layer 1: User custom ratio (channel-specific overrides)
     if channelOverrides != nil {
         if override, exists := channelOverrides[modelName]; exists {
@@ -939,13 +1015,21 @@ func getModelPricing(modelName string, channelType int, channelOverrides map[str
     }
 
     // Layer 2: Channel default ratio (adapter's default pricing)
-    apiType := channeltype.ToAPIType(channelType)
-    if adaptor := relay.GetAdaptor(apiType); adaptor != nil {
-        return adaptor.GetModelRatio(modelName)
+    if adaptor != nil {
+        defaultPricing := adaptor.GetDefaultModelPricing()
+        if _, hasSpecificPricing := defaultPricing[modelName]; hasSpecificPricing {
+            return adaptor.GetModelRatio(modelName)
+        }
     }
 
-    // Final fallback: reasonable default
-    return 2.5 * MilliTokensUsd
+    // Layer 3: Global model pricing (merged from selected adapters)
+    globalRatio := GetGlobalModelRatio(modelName)
+    if globalRatio > 0 {
+        return globalRatio
+    }
+
+    // Layer 4: Final fallback - reasonable default
+    return 2.5 * 0.000001 // 2.5 USD per million tokens
 }
 ```
 
@@ -973,27 +1057,27 @@ func GetModelRatioWithChannel(modelName string, channelType int, channelRatio ma
 
 For high-throughput scenarios, the system supports batch updates:
 
-#### Configuration:
+#### Configuration
 
 ```go
 config.BatchUpdateEnabled = true
 ```
 
-#### Batch Types:
+#### Batch Types
 
 - `BatchUpdateTypeUserQuota` - User quota updates
 - `BatchUpdateTypeTokenQuota` - Token quota updates
 - `BatchUpdateTypeUsedQuota` - Usage tracking
 - `BatchUpdateTypeRequestCount` - Request counting
 
-#### Key Files:
+#### Key Files
 
 - `model/batch.go` - Batch processing implementation
 - Batch operations in `model/user.go` and `model/token.go`
 
 ### Error Handling and Recovery
 
-#### Quota Refund Mechanism:
+#### Quota Refund Mechanism
 
 When requests fail, pre-consumed quota is refunded:
 
@@ -1008,7 +1092,7 @@ func ReturnPreConsumedQuota(ctx context.Context, quota int64, tokenId int) {
 }
 ```
 
-#### Key Files:
+#### Key Files
 
 - `relay/billing/billing.go` - Quota refund operations
 - Error handling in controller files
@@ -1023,7 +1107,7 @@ structuredOutputCost := int64(math.Ceil(float64(completionTokens) * 0.25 * model
 usage.ToolsCost += structuredOutputCost
 ```
 
-#### Key Files:
+#### Key Files
 
 - `relay/adaptor/openai/adaptor.go` - Structured output cost calculation
 - Test files: `relay/adaptor/openai/structured_output_*_test.go`
@@ -1052,14 +1136,14 @@ usage.ToolsCost += structuredOutputCost
 
 The system includes comprehensive monitoring:
 
-#### Key Metrics:
+#### Key Metrics
 
 - Request rate and response time
 - Quota consumption patterns
 - Channel utilization
 - Error rates and types
 
-#### Key Files:
+#### Key Files
 
 - `common/metrics/` - Metrics collection
 - Monitoring integration in controller files
