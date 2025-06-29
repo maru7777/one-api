@@ -70,13 +70,13 @@
       - [Migration from DefaultPricingMethods](#migration-from-defaultpricingmethods)
       - [Impact and Benefits](#impact-and-benefits)
       - [Files Modified](#files-modified)
-    - [Global Pricing Removal and Clean Architecture](#global-pricing-removal-and-clean-architecture)
+    - [Global Pricing Enhancement and Clean Architecture](#global-pricing-enhancement-and-clean-architecture)
       - [Architecture Transformation](#architecture-transformation)
-      - [What Was Removed](#what-was-removed)
+      - [What Was Enhanced](#what-was-enhanced)
       - [What Was Preserved](#what-was-preserved)
       - [Benefits Achieved](#benefits-achieved)
   - [Implementation Details](#implementation-details)
-    - [Three-Layer Pricing Resolution](#three-layer-pricing-resolution)
+    - [Four-Layer Pricing Resolution](#four-layer-pricing-resolution)
       - [Legacy Compatibility](#legacy-compatibility)
     - [Batch Processing](#batch-processing)
       - [Configuration](#configuration-1)
@@ -99,12 +99,15 @@
 
 The One-API billing system is a comprehensive quota and pricing management system designed to handle multi-tenant API usage billing across various AI model providers. The system supports both user-level and token-level quota management, channel-specific pricing, and real-time billing calculations.
 
+**Current System Status (2025)**: The billing system now features comprehensive pricing coverage with 16+ adapters supporting 400+ models across major AI providers, implementing a sophisticated four-layer pricing resolution system with intelligent global fallback capabilities.
+
 ### Key Features
 
 - **Multi-tier Quota System**: User quotas, token quotas, and unlimited quota support
 - **Channel-specific Pricing**: Per-channel model pricing overrides
-- **Comprehensive Adapter Pricing**: 13+ channel adapters with native pricing implementations
-- **Complete Pricing Coverage**: 350+ models across major AI providers with accurate pricing
+- **Comprehensive Adapter Pricing**: 16+ channel adapters with native pricing implementations
+- **Complete Pricing Coverage**: 400+ models across major AI providers with accurate pricing
+- **Four-Layer Pricing System**: Channel overrides → Adapter pricing → Global fallback → Final default
 - **Real-time Billing**: Pre-consumption and post-consumption quota management
 - **Caching Layer**: Redis-based caching for performance optimization
 - **Batch Updates**: Configurable batch processing for high-throughput scenarios
@@ -320,14 +323,14 @@ classDiagram
     Adaptor <|-- GeminiAdaptor
     Adaptor <|-- ReplicateAdaptor
 
-    note for Adaptor "13+ adapters with native pricing:\n• OpenAI (54 models)\n• Anthropic (15 models)\n• Zhipu (23 models)\n• Ali (89 models)\n• Baidu (16 models)\n• Tencent (6 models)\n• Gemini (26 models)\n• Xunfei (6 models)\n• VertexAI (34 models)\n• AWS (31 models)\n• Replicate (48 models)\n• Cohere (12 models)\n• Cloudflare (33 models)"
+    note for Adaptor "16+ adapters with native pricing:\n• OpenAI (84 models)\n• Anthropic (15 models)\n• Zhipu (23 models)\n• Ali (89 models)\n• Baidu (16 models)\n• Tencent (6 models)\n• Gemini (26 models)\n• Xunfei (6 models)\n• VertexAI (34 models)\n• DeepSeek (2 models)\n• Groq (20+ models)\n• Mistral (10+ models)\n• Moonshot (3 models)\n• Cohere (12 models)\n• AI360 (4 models)\n• Doubao (20+ models)\n• Novita (40+ models)"
 ```
 
 #### Adapter Pricing Implementation Status
 
-**✅ Adapters with Native Pricing (13 total)**:
+**✅ Adapters with Native Pricing (16 total)**:
 
-- **OpenAI**: 54 models with comprehensive GPT pricing
+- **OpenAI**: 84 models with comprehensive GPT pricing
 - **Anthropic**: 15 models with Claude pricing
 - **Zhipu**: 23 models with GLM pricing
 - **Ali (Alibaba)**: 89 models with Qwen and other models
@@ -336,17 +339,20 @@ classDiagram
 - **Gemini**: 26 models with Gemini/Gemma pricing
 - **Xunfei**: 6 models with Spark pricing
 - **VertexAI**: 34 models with Google Cloud pricing
-- **AWS**: 31 models with Bedrock pricing
-- **Replicate**: 48 models with image/text generation pricing
+- **DeepSeek**: 2 models with DeepSeek pricing
+- **Groq**: 20+ models with Groq pricing
+- **Mistral**: 10+ models with Mistral pricing
+- **Moonshot**: 3 models with Moonshot pricing
 - **Cohere**: 12 models with Command pricing
-- **Cloudflare**: 33 models with Workers AI pricing
+- **AI360**: 4 models with AI360 pricing
+- **Doubao**: 20+ models with Doubao pricing
+- **Novita**: 40+ models with Novita pricing
 
-**❌ Adapters Using DefaultPricingMethods (4 remaining)**:
+**❌ Adapters Using DefaultPricingMethods (3 remaining)**:
 
 - **Ollama**: Local model hosting (typically free)
 - **Coze**: Conversational AI platform
 - **DeepL**: Translation service
-- **Proxy**: Generic proxy adapter
 
 ## Quota Management
 
@@ -422,14 +428,14 @@ graph LR
 
 ### Pricing Hierarchy
 
-The system uses a **comprehensive three-layer pricing hierarchy** to handle custom channels and unknown models:
+The system uses a **comprehensive four-layer pricing hierarchy** to handle custom channels and unknown models:
 
 1. **User Custom Ratio** (Channel-specific overrides) - Highest Priority
 2. **Channel Default Ratio** (Adapter's default pricing) - Second Priority
 3. **Global Pricing Fallback** (Merged from selected adapters) - Third Priority
 4. **Final Default** (Reasonable fallback) - Lowest Priority
 
-This three-layer approach ensures that custom channels with common models can automatically receive appropriate pricing even when the channel adapter doesn't have specific pricing for those models.
+This four-layer approach ensures that custom channels with common models can automatically receive appropriate pricing even when the channel adapter doesn't have specific pricing for those models. The global pricing system merges pricing from 13 major adapters to provide comprehensive fallback coverage.
 
 ### Pricing Constants
 
@@ -479,14 +485,19 @@ Global pricing adapters are defined as a simple slice in the code for easy modif
 ```go
 // DefaultGlobalPricingAdapters defines which adapters contribute to global pricing fallback
 var DefaultGlobalPricingAdapters = []int{
-    apitype.OpenAI,     // Most comprehensive model coverage
-    apitype.Anthropic,  // Claude models
-    apitype.Gemini,     // Google models
-    apitype.Ali,        // Alibaba models
-    apitype.Baidu,      // Baidu models
-    apitype.Zhipu,      // Zhipu models
-    apitype.VertexAI,   // Google Cloud models
-    apitype.Cloudflare, // Cloudflare Workers AI
+    apitype.OpenAI,    // Comprehensive GPT models with pricing
+    apitype.Anthropic, // Claude models with pricing
+    apitype.Gemini,    // Google Gemini models with pricing
+    apitype.Ali,       // Alibaba Qwen models with pricing
+    apitype.Baidu,     // Baidu ERNIE models with pricing
+    apitype.Zhipu,     // Zhipu GLM models with pricing
+    apitype.DeepSeek,  // DeepSeek models with pricing
+    apitype.Groq,      // Groq models with pricing
+    apitype.Mistral,   // Mistral models with pricing
+    apitype.Moonshot,  // Moonshot models with pricing
+    apitype.Cohere,    // Cohere models with pricing
+    apitype.Tencent,   // Tencent Hunyuan models with pricing
+    apitype.Xunfei,    // Xunfei Spark models with pricing
 }
 ```
 
@@ -819,12 +830,12 @@ graph TD
 
 #### Key Improvements
 
-1. **Expanded Adapter Coverage**: From 3 to 13 adapters with native pricing
-2. **Model Coverage**: From ~70 to 350+ models with accurate pricing
+1. **Expanded Adapter Coverage**: From 3 to 16+ adapters with native pricing
+2. **Model Coverage**: From ~70 to 400+ models with accurate pricing
 3. **UI Consistency**: All channel edit pages now display pricing information
 4. **Pricing Accuracy**: Based on official provider documentation
 5. **Complete Data Display**: All completion ratios (including 0) are shown
-6. **Global Pricing Removal**: Eliminated complex multi-layer fallbacks for clean two-layer architecture
+6. **Four-Layer Pricing System**: Comprehensive fallback system with global pricing support
 
 #### Technical Implementation Details
 
@@ -923,89 +934,97 @@ func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
 - `controller/channel.go` - Fixed channel type mapping and completion ratio filtering
 - `relay/adaptor/*/adaptor.go` - Added comprehensive pricing to 13 major adapters
 
-**Adapters with New Pricing**:
+**Adapters with Native Pricing**:
 
+- `relay/adaptor/openai/adaptor.go` - 84 OpenAI GPT models
+- `relay/adaptor/anthropic/adaptor.go` - 15 Anthropic Claude models
 - `relay/adaptor/ali/adaptor.go` - 89 Alibaba Cloud models
 - `relay/adaptor/baidu/adaptor.go` - 16 Baidu ERNIE models
 - `relay/adaptor/tencent/adaptor.go` - 6 Tencent Hunyuan models
 - `relay/adaptor/gemini/adaptor.go` - 26 Google Gemini models
 - `relay/adaptor/xunfei/adaptor.go` - 6 iFlytek Spark models
 - `relay/adaptor/vertexai/adaptor.go` - 34 Google Cloud VertexAI models
-- `relay/adaptor/aws/adaptor.go` - 31 AWS Bedrock models
-- `relay/adaptor/replicate/adaptor.go` - 48 Replicate models
+- `relay/adaptor/zhipu/adaptor.go` - 23 Zhipu GLM models
+- `relay/adaptor/deepseek/adaptor.go` - 2 DeepSeek models
+- `relay/adaptor/groq/adaptor.go` - 20+ Groq models
+- `relay/adaptor/mistral/adaptor.go` - 10+ Mistral models
+- `relay/adaptor/moonshot/adaptor.go` - 3 Moonshot models
 - `relay/adaptor/cohere/adaptor.go` - 12 Cohere Command models
-- `relay/adaptor/cloudflare/adaptor.go` - 33 Cloudflare Workers AI models
+- `relay/adaptor/ai360/adaptor.go` - 4 AI360 models
+- `relay/adaptor/doubao/adaptor.go` - 20+ Doubao models
+- `relay/adaptor/novita/adaptor.go` - 40+ Novita models
 
-### Global Pricing Removal and Clean Architecture
+### Global Pricing Enhancement and Clean Architecture
 
-Following the comprehensive adapter pricing implementation, the system underwent a second major improvement: **complete removal of global pricing maps** to achieve a clean two-layer architecture.
+Following the comprehensive adapter pricing implementation, the system underwent a second major improvement: **enhanced global pricing system** with a clean four-layer architecture that provides comprehensive fallback coverage.
 
 #### Architecture Transformation
 
 ```mermaid
 graph TD
-    subgraph "Before: Complex Multi-Layer"
-        C1[Channel Override] --> C2[Adapter Pricing]
-        C2 --> C3[Global ModelRatio]
-        C3 --> C4[DefaultModelRatio]
-        C4 --> C5[AudioRatio]
-        C5 --> C6[Fallback Default]
+    subgraph "Before: Limited Coverage"
+        C1[Channel Override] --> C2[Few Adapters with Pricing]
+        C2 --> C3[Large Global ModelRatio]
+        C3 --> C4[Fallback Default]
     end
 
-    subgraph "After: Clean Two-Layer"
-        A1[Channel Override] --> A2[Adapter Pricing]
-        A2 --> A3[Reasonable Default]
+    subgraph "After: Comprehensive Four-Layer"
+        A1[Channel Override] --> A2[16+ Adapters with Pricing]
+        A2 --> A3[Smart Global Fallback]
+        A3 --> A4[Reasonable Default]
     end
 
-    C6 -.->|Simplified| A1
+    C4 -.->|Enhanced| A1
 
     style A1 fill:#c8e6c9
     style A2 fill:#c8e6c9
-    style A3 fill:#fff3e0
+    style A3 fill:#fff9c4
+    style A4 fill:#fff3e0
 ```
 
-#### What Was Removed
+#### What Was Enhanced
 
-1. **Global `ModelRatio` map** - 700+ lines of global pricing data
-2. **Global `CompletionRatio` map** - 100+ lines of global completion ratios
-3. **Complex fallback chains** - Multiple map lookups and priority logic
-4. **Redundant pricing storage** - Duplicate pricing information across global and adapter maps
+1. **Adapter Coverage** - Expanded from 3 to 16+ adapters with native pricing
+2. **Global Pricing System** - Smart merging from selected adapters instead of static maps
+3. **Model Coverage** - Increased from ~70 to 400+ models with accurate pricing
+4. **Pricing Resolution** - Four-layer system with comprehensive fallback coverage
 
 #### What Was Preserved
 
 1. **Audio/Video pricing** - Special pricing for audio and video models
 2. **Currency constants** - Essential conversion constants
-3. **Legacy compatibility** - Functions preserved but simplified
-4. **All adapter pricing** - 13 adapters with comprehensive pricing intact
+3. **Legacy compatibility** - Functions preserved for backward compatibility
+4. **All existing functionality** - No breaking changes to existing features
 
 #### Benefits Achieved
 
-1. **Performance**: Faster pricing lookups with direct adapter calls
-2. **Maintainability**: Single source of truth for each adapter's pricing
-3. **Memory efficiency**: Reduced memory usage without large global maps
-4. **Code clarity**: Simplified pricing resolution logic
+1. **Comprehensive Coverage**: 400+ models across 16+ adapters with accurate pricing
+2. **Smart Fallback**: Global pricing system merges from selected adapters automatically
+3. **Maintainability**: Each adapter manages its own pricing independently
+4. **Flexibility**: Four-layer system handles any pricing scenario
 5. **Type safety**: Structured pricing with `ModelPrice` interface
 6. **Custom Channel Support**: Automatic pricing for custom channels with common models
 7. **Configurable Fallback**: Easily configurable global pricing adapters
 8. **Conflict Resolution**: Transparent handling of pricing conflicts between adapters
+9. **Performance**: Efficient pricing lookups with caching and smart resolution
 
 ## Implementation Details
 
-### Three-Layer Pricing Resolution
+### Four-Layer Pricing Resolution
 
-The new pricing resolution follows a comprehensive three-layer approach:
+The current pricing resolution follows a comprehensive four-layer approach:
 
 ```go
-// Modern approach: Use the three-layer pricing system
+// Modern approach: Use the four-layer pricing system
 func getModelPricing(modelName string, channelType int, channelOverrides map[string]float64) float64 {
     apiType := channeltype.ToAPIType(channelType)
     adaptor := relay.GetAdaptor(apiType)
 
-    // Use the three-layer pricing system
+    // Use the four-layer pricing system
     return pricing.GetModelRatioWithThreeLayers(modelName, channelOverrides, adaptor)
 }
 
-// Three-layer implementation:
+// Four-layer implementation:
 func GetModelRatioWithThreeLayers(modelName string, channelOverrides map[string]float64, adaptor adaptor.Adaptor) float64 {
     // Layer 1: User custom ratio (channel-specific overrides)
     if channelOverrides != nil {
@@ -1016,9 +1035,12 @@ func GetModelRatioWithThreeLayers(modelName string, channelOverrides map[string]
 
     // Layer 2: Channel default ratio (adapter's default pricing)
     if adaptor != nil {
+        ratio := adaptor.GetModelRatio(modelName)
+        // Check if the adapter actually has pricing for this model
+        // If GetModelRatio returns the default fallback, we should try global pricing
         defaultPricing := adaptor.GetDefaultModelPricing()
         if _, hasSpecificPricing := defaultPricing[modelName]; hasSpecificPricing {
-            return adaptor.GetModelRatio(modelName)
+            return ratio
         }
     }
 

@@ -78,13 +78,14 @@ func TestSpecificAdapterPricing(t *testing.T) {
 			t.Fatal("Ali adaptor not found")
 		}
 
+		// Ali uses RMB pricing with ratio.MilliTokensRmb = 3.5
 		testModels := map[string]struct {
 			expectedRatio           float64
 			expectedCompletionRatio float64
 		}{
-			"qwen-turbo": {0.00003, 1.0},
-			"qwen-plus":  {0.00008, 1.0},
-			"qwen-max":   {0.00024, 1.0},
+			"qwen-turbo": {0.3 * 3.5, 1.0}, // 0.3 * ratio.MilliTokensRmb
+			"qwen-plus":  {0.8 * 3.5, 1.0}, // 0.8 * ratio.MilliTokensRmb
+			"qwen-max":   {2.4 * 3.5, 1.0}, // 2.4 * ratio.MilliTokensRmb
 		}
 
 		for model, expected := range testModels {
@@ -106,13 +107,14 @@ func TestSpecificAdapterPricing(t *testing.T) {
 			t.Fatal("Gemini adaptor not found")
 		}
 
+		// Gemini uses USD pricing with ratio.MilliTokensUsd = 0.5
 		testModels := map[string]struct {
 			expectedRatio           float64
 			expectedCompletionRatio float64
 		}{
-			"gemini-pro":       {0.0000005, 3.0},
-			"gemini-1.5-flash": {0.000000075, 4.0},
-			"gemini-1.5-pro":   {0.00000125, 4.0},
+			"gemini-pro":       {0.5 * 0.5, 3.0},   // 0.5 * ratio.MilliTokensUsd
+			"gemini-1.5-flash": {0.075 * 0.5, 4.0}, // 0.075 * ratio.MilliTokensUsd
+			"gemini-1.5-pro":   {1.25 * 0.5, 4.0},  // 1.25 * ratio.MilliTokensUsd
 		}
 
 		for model, expected := range testModels {
