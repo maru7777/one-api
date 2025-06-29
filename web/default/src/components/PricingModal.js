@@ -23,7 +23,7 @@ const PricingModal = ({ open, onClose, channelId, channelName, channelType }) =>
 
   const loadSupportedModels = async () => {
     try {
-      const response = await API.get('/api/channel/models');
+      const response = await API.get('/api/models');
       if (response.data.success) {
         const channelModels = response.data.data[channelType] || [];
         setSupportedModels(channelModels.map(model => ({ key: model, value: model, text: model })));
