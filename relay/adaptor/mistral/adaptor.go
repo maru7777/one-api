@@ -6,7 +6,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/relay/adaptor"
-	"github.com/songquanpeng/one-api/relay/billing/ratio"
 	"github.com/songquanpeng/one-api/relay/meta"
 	"github.com/songquanpeng/one-api/relay/model"
 )
@@ -20,20 +19,13 @@ func (a *Adaptor) GetChannelName() string {
 }
 
 func (a *Adaptor) GetModelList() []string {
-	return ModelList
+	return adaptor.GetModelListFromPricing(ModelRatios)
 }
 
 // GetDefaultModelPricing returns the pricing information for Mistral models
 // Based on official Mistral pricing: https://docs.mistral.ai/platform/pricing/
 func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
-	return map[string]adaptor.ModelPrice{
-		"open-mistral-7b":       {Ratio: 0.25 * ratio.MilliTokensUsd, CompletionRatio: 1},
-		"open-mixtral-8x7b":     {Ratio: 0.7 * ratio.MilliTokensUsd, CompletionRatio: 1},
-		"mistral-small-latest":  {Ratio: 2.0 * ratio.MilliTokensUsd, CompletionRatio: 1},
-		"mistral-medium-latest": {Ratio: 2.7 * ratio.MilliTokensUsd, CompletionRatio: 1},
-		"mistral-large-latest":  {Ratio: 8.0 * ratio.MilliTokensUsd, CompletionRatio: 1},
-		"mistral-embed":         {Ratio: 0.1 * ratio.MilliTokensUsd, CompletionRatio: 1},
-	}
+	return ModelRatios
 }
 
 func (a *Adaptor) GetModelRatio(modelName string) float64 {

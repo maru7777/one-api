@@ -1,25 +1,62 @@
 package geminiOpenaiCompatible
 
-import "strings"
+import (
+	"github.com/songquanpeng/one-api/relay/adaptor"
+	"github.com/songquanpeng/one-api/relay/billing/ratio"
+	"strings"
+)
 
-// https://ai.google.dev/models/gemini
+// ModelRatios contains all supported models and their pricing ratios
+// Model list is derived from the keys of this map, eliminating redundancy
+// Based on Google AI pricing: https://ai.google.dev/pricing
+var ModelRatios = map[string]adaptor.ModelPrice{
+	// Gemini Pro Models
+	"gemini-pro":     {Ratio: 0.5 * ratio.MilliTokensUsd, CompletionRatio: 3},
+	"gemini-1.0-pro": {Ratio: 0.5 * ratio.MilliTokensUsd, CompletionRatio: 3},
 
-var ModelList = []string{
-	"gemini-pro", "gemini-1.0-pro",
-	"gemma-2-2b-it", "gemma-2-9b-it", "gemma-2-27b-it",
-	"gemma-3-27b-it",
-	"gemini-1.5-flash", "gemini-1.5-flash-8b",
-	"gemini-1.5-pro", "gemini-1.5-pro-experimental",
-	"text-embedding-004", "aqa",
-	"gemini-2.0-flash", "gemini-2.0-flash-exp",
-	"gemini-2.0-flash-lite",
-	"gemini-2.0-flash-thinking-exp-01-21",
-	"gemini-2.0-flash-exp-image-generation",
-	"gemini-2.0-pro-exp-02-05",
-	"gemini-2.5-flash-lite-preview-06-17",
-	"gemini-2.5-flash", "gemini-2.5-flash-preview-04-17", "gemini-2.5-flash-preview-05-20",
-	"gemini-2.5-pro", "gemini-2.5-pro-exp-03-25", "gemini-2.5-pro-preview-05-06", "gemini-2.5-pro-preview-06-05",
+	// Gemma Models
+	"gemma-2-2b-it":  {Ratio: 0.35 * ratio.MilliTokensUsd, CompletionRatio: 1.4},
+	"gemma-2-9b-it":  {Ratio: 0.35 * ratio.MilliTokensUsd, CompletionRatio: 1.4},
+	"gemma-2-27b-it": {Ratio: 0.35 * ratio.MilliTokensUsd, CompletionRatio: 1.4},
+	"gemma-3-27b-it": {Ratio: 0.35 * ratio.MilliTokensUsd, CompletionRatio: 1.4},
+
+	// Gemini 1.5 Flash Models
+	"gemini-1.5-flash":    {Ratio: 0.075 * ratio.MilliTokensUsd, CompletionRatio: 4},
+	"gemini-1.5-flash-8b": {Ratio: 0.0375 * ratio.MilliTokensUsd, CompletionRatio: 4},
+
+	// Gemini 1.5 Pro Models
+	"gemini-1.5-pro":              {Ratio: 1.25 * ratio.MilliTokensUsd, CompletionRatio: 4},
+	"gemini-1.5-pro-experimental": {Ratio: 1.25 * ratio.MilliTokensUsd, CompletionRatio: 4},
+
+	// Embedding Models
+	"text-embedding-004": {Ratio: 0.00001 * ratio.MilliTokensUsd, CompletionRatio: 1},
+	"aqa":                {Ratio: 1, CompletionRatio: 1},
+
+	// Gemini 2.0 Flash Models
+	"gemini-2.0-flash":                      {Ratio: 0.075 * ratio.MilliTokensUsd, CompletionRatio: 4},
+	"gemini-2.0-flash-exp":                  {Ratio: 0.075 * ratio.MilliTokensUsd, CompletionRatio: 4},
+	"gemini-2.0-flash-lite":                 {Ratio: 0.0375 * ratio.MilliTokensUsd, CompletionRatio: 4},
+	"gemini-2.0-flash-thinking-exp-01-21":   {Ratio: 0.075 * ratio.MilliTokensUsd, CompletionRatio: 4},
+	"gemini-2.0-flash-exp-image-generation": {Ratio: 0.075 * ratio.MilliTokensUsd, CompletionRatio: 4},
+
+	// Gemini 2.0 Pro Models
+	"gemini-2.0-pro-exp-02-05": {Ratio: 1.25 * ratio.MilliTokensUsd, CompletionRatio: 4},
+
+	// Gemini 2.5 Flash Models
+	"gemini-2.5-flash-lite-preview-06-17": {Ratio: 0.0375 * ratio.MilliTokensUsd, CompletionRatio: 4},
+	"gemini-2.5-flash":                    {Ratio: 0.075 * ratio.MilliTokensUsd, CompletionRatio: 4},
+	"gemini-2.5-flash-preview-04-17":      {Ratio: 0.075 * ratio.MilliTokensUsd, CompletionRatio: 4},
+	"gemini-2.5-flash-preview-05-20":      {Ratio: 0.075 * ratio.MilliTokensUsd, CompletionRatio: 4},
+
+	// Gemini 2.5 Pro Models
+	"gemini-2.5-pro":               {Ratio: 1.25 * ratio.MilliTokensUsd, CompletionRatio: 4},
+	"gemini-2.5-pro-exp-03-25":     {Ratio: 1.25 * ratio.MilliTokensUsd, CompletionRatio: 4},
+	"gemini-2.5-pro-preview-05-06": {Ratio: 1.25 * ratio.MilliTokensUsd, CompletionRatio: 4},
+	"gemini-2.5-pro-preview-06-05": {Ratio: 1.25 * ratio.MilliTokensUsd, CompletionRatio: 4},
 }
+
+// ModelList derived from ModelRatios for backward compatibility
+var ModelList = adaptor.GetModelListFromPricing(ModelRatios)
 
 const (
 	ModalityText  = "TEXT"

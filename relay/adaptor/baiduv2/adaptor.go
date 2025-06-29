@@ -41,7 +41,7 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Met
 }
 
 func (a *Adaptor) GetModelList() []string {
-	return ModelList
+	return adaptor.GetModelListFromPricing(ModelRatios)
 }
 
 func (a *Adaptor) GetChannelName() string {
@@ -51,27 +51,7 @@ func (a *Adaptor) GetChannelName() string {
 // GetDefaultModelPricing returns the pricing information for BaiduV2 models
 // Based on Baidu pricing: https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Blfmc9do2
 func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
-	const MilliTokensRmb = 3.5 // 0.000007 * 500000 = 3.5 quota per milli-token
-
-	return map[string]adaptor.ModelPrice{
-		// BaiduV2 Models - Based on https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Blfmc9do2
-		"ernie-4.0-8k":         {Ratio: 0.12 * MilliTokensRmb, CompletionRatio: 1},  // ¥0.12 / 1k tokens
-		"ernie-4.0-8k-preview": {Ratio: 0.12 * MilliTokensRmb, CompletionRatio: 1},  // ¥0.12 / 1k tokens
-		"ernie-4.0-turbo-8k":   {Ratio: 0.02 * MilliTokensRmb, CompletionRatio: 1},  // ¥0.02 / 1k tokens
-		"ernie-3.5-8k":         {Ratio: 0.012 * MilliTokensRmb, CompletionRatio: 1}, // ¥0.012 / 1k tokens
-		"ernie-3.5-8k-0205":    {Ratio: 0.012 * MilliTokensRmb, CompletionRatio: 1}, // ¥0.012 / 1k tokens
-		"ernie-3.5-8k-1222":    {Ratio: 0.012 * MilliTokensRmb, CompletionRatio: 1}, // ¥0.012 / 1k tokens
-		"ernie-3.5-4k-0205":    {Ratio: 0.012 * MilliTokensRmb, CompletionRatio: 1}, // ¥0.012 / 1k tokens
-		"ernie-speed-8k":       {Ratio: 0.004 * MilliTokensRmb, CompletionRatio: 1}, // ¥0.004 / 1k tokens
-		"ernie-speed-128k":     {Ratio: 0.004 * MilliTokensRmb, CompletionRatio: 1}, // ¥0.004 / 1k tokens
-		"ernie-lite-8k":        {Ratio: 0.008 * MilliTokensRmb, CompletionRatio: 1}, // ¥0.008 / 1k tokens
-		"ernie-lite-8k-0922":   {Ratio: 0.008 * MilliTokensRmb, CompletionRatio: 1}, // ¥0.008 / 1k tokens
-		"ernie-lite-8k-0308":   {Ratio: 0.008 * MilliTokensRmb, CompletionRatio: 1}, // ¥0.008 / 1k tokens
-		"ernie-tiny-8k":        {Ratio: 0.001 * MilliTokensRmb, CompletionRatio: 1}, // ¥0.001 / 1k tokens
-		"ernie-char-8k":        {Ratio: 0.04 * MilliTokensRmb, CompletionRatio: 1},  // ¥0.04 / 1k tokens
-		"ernie-text-embedding": {Ratio: 0.002 * MilliTokensRmb, CompletionRatio: 1}, // ¥0.002 / 1k tokens
-		"ernie-vilg-v2":        {Ratio: 0.06 * MilliTokensRmb, CompletionRatio: 1},  // ¥0.06 / 1k tokens
-	}
+	return ModelRatios
 }
 
 func (a *Adaptor) GetModelRatio(modelName string) float64 {

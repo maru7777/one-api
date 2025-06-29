@@ -46,3 +46,13 @@ func (d *DefaultPricingMethods) GetModelRatio(modelName string) float64 {
 func (d *DefaultPricingMethods) GetCompletionRatio(modelName string) float64 {
 	return 1.0 // Default completion ratio
 }
+
+// GetModelListFromPricing derives model list from pricing map keys
+// This eliminates the need for separate ModelList variables
+func GetModelListFromPricing(pricing map[string]ModelPrice) []string {
+	models := make([]string, 0, len(pricing))
+	for model := range pricing {
+		models = append(models, model)
+	}
+	return models
+}

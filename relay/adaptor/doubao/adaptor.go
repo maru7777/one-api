@@ -41,7 +41,7 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Met
 }
 
 func (a *Adaptor) GetModelList() []string {
-	return ModelList
+	return adaptor.GetModelListFromPricing(ModelRatios)
 }
 
 func (a *Adaptor) GetChannelName() string {
@@ -51,20 +51,7 @@ func (a *Adaptor) GetChannelName() string {
 // GetDefaultModelPricing returns the pricing information for Doubao models
 // Based on Doubao pricing: https://www.volcengine.com/docs/82379/1099320
 func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
-	const MilliTokensRmb = 3.5 // 0.000007 * 500000 = 3.5 quota per milli-token
-
-	return map[string]adaptor.ModelPrice{
-		// Doubao Models - Based on https://www.volcengine.com/docs/82379/1099320
-		"doubao-lite-4k":        {Ratio: 0.0003 * MilliTokensRmb, CompletionRatio: 1},
-		"doubao-lite-32k":       {Ratio: 0.0006 * MilliTokensRmb, CompletionRatio: 1},
-		"doubao-lite-128k":      {Ratio: 0.0008 * MilliTokensRmb, CompletionRatio: 1},
-		"doubao-pro-4k":         {Ratio: 0.0008 * MilliTokensRmb, CompletionRatio: 1},
-		"doubao-pro-32k":        {Ratio: 0.002 * MilliTokensRmb, CompletionRatio: 1},
-		"doubao-pro-128k":       {Ratio: 0.005 * MilliTokensRmb, CompletionRatio: 1},
-		"doubao-pro-256k":       {Ratio: 0.008 * MilliTokensRmb, CompletionRatio: 1},
-		"doubao-character-8k":   {Ratio: 0.008 * MilliTokensRmb, CompletionRatio: 1},
-		"doubao-vision-pro-32k": {Ratio: 0.002 * MilliTokensRmb, CompletionRatio: 1},
-	}
+	return ModelRatios
 }
 
 func (a *Adaptor) GetModelRatio(modelName string) float64 {

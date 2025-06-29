@@ -96,7 +96,7 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Met
 }
 
 func (a *Adaptor) GetModelList() []string {
-	return ModelList
+	return adaptor.GetModelListFromPricing(ModelRatios)
 }
 
 func (a *Adaptor) GetChannelName() string {
@@ -109,23 +109,7 @@ func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
 
 	// Direct map definition - much easier to maintain and edit
 	// Pricing from https://cloud.tencent.com/document/product/1729/97731
-	return map[string]adaptor.ModelPrice{
-		// Hunyuan Lite Models
-		"hunyuan-lite": {Ratio: 0.75 * MilliRmb, CompletionRatio: 1},
-
-		// Hunyuan Standard Models
-		"hunyuan-standard":      {Ratio: 4.5 * MilliRmb, CompletionRatio: 1},
-		"hunyuan-standard-256K": {Ratio: 15 * MilliRmb, CompletionRatio: 1},
-
-		// Hunyuan Pro Models
-		"hunyuan-pro": {Ratio: 30 * MilliRmb, CompletionRatio: 1},
-
-		// Hunyuan Vision Models
-		"hunyuan-vision": {Ratio: 18 * MilliRmb, CompletionRatio: 1},
-
-		// Hunyuan Embedding Models
-		"hunyuan-embedding": {Ratio: 0.7 * MilliRmb, CompletionRatio: 1},
-	}
+	return ModelRatios
 }
 
 func (a *Adaptor) GetModelRatio(modelName string) float64 {

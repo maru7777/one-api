@@ -41,7 +41,7 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Met
 }
 
 func (a *Adaptor) GetModelList() []string {
-	return ModelList
+	return adaptor.GetModelListFromPricing(ModelRatios)
 }
 
 func (a *Adaptor) GetChannelName() string {
@@ -51,15 +51,7 @@ func (a *Adaptor) GetChannelName() string {
 // GetDefaultModelPricing returns the pricing information for Baichuan models
 // Based on Baichuan pricing: https://platform.baichuan-ai.com/price
 func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
-	const MilliTokensRmb = 3.5 // 0.000007 * 500000 = 3.5 quota per milli-token
-
-	return map[string]adaptor.ModelPrice{
-		// Baichuan Models - Based on https://platform.baichuan-ai.com/price
-		"Baichuan2-Turbo":         {Ratio: 0.008 * MilliTokensRmb, CompletionRatio: 1},
-		"Baichuan2-Turbo-192k":    {Ratio: 0.016 * MilliTokensRmb, CompletionRatio: 1},
-		"Baichuan2-53B":           {Ratio: 0.02 * MilliTokensRmb, CompletionRatio: 1},
-		"Baichuan-Text-Embedding": {Ratio: 0.002 * MilliTokensRmb, CompletionRatio: 1}, // Estimated pricing
-	}
+	return ModelRatios
 }
 
 func (a *Adaptor) GetModelRatio(modelName string) float64 {

@@ -11,33 +11,21 @@ import (
 
 // DefaultGlobalPricingAdapters defines which adapters contribute to global pricing fallback
 // This can be easily modified to add or remove adapters from the global pricing system
+// Only includes adapters that have been refactored with comprehensive pricing models
 var DefaultGlobalPricingAdapters = []int{
-	apitype.OpenAI,
-	apitype.Anthropic,
-	apitype.PaLM,
-	apitype.Baidu,
-	apitype.Zhipu,
-	apitype.Ali,
-	apitype.Xunfei,
-	apitype.AIProxyLibrary,
-	apitype.Tencent,
-	apitype.Gemini,
-	apitype.Ollama,
-	apitype.AwsClaude,
-	apitype.Coze,
-	apitype.Cohere,
-	apitype.Cloudflare,
-	apitype.DeepL,
-	apitype.VertexAI,
-	apitype.Proxy,
-	apitype.Replicate,
-	apitype.DeepSeek,
-	apitype.Groq,
-	apitype.Mistral,
-	apitype.Moonshot,
-	apitype.Groq,
-	apitype.Mistral,
-	apitype.Moonshot,
+	apitype.OpenAI,    // Comprehensive GPT models with pricing
+	apitype.Anthropic, // Claude models with pricing
+	apitype.Gemini,    // Google Gemini models with pricing
+	apitype.Ali,       // Alibaba Qwen models with pricing
+	apitype.Baidu,     // Baidu ERNIE models with pricing
+	apitype.Zhipu,     // Zhipu GLM models with pricing
+	apitype.DeepSeek,  // DeepSeek models with pricing
+	apitype.Groq,      // Groq models with pricing
+	apitype.Mistral,   // Mistral models with pricing
+	apitype.Moonshot,  // Moonshot models with pricing
+	apitype.Cohere,    // Cohere models with pricing
+	apitype.Tencent,   // Tencent Hunyuan models with pricing
+	apitype.Xunfei,    // Xunfei Spark models with pricing
 }
 
 // GlobalPricingManager manages the third-layer global model pricing

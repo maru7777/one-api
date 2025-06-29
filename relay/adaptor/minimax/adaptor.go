@@ -41,7 +41,7 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Met
 }
 
 func (a *Adaptor) GetModelList() []string {
-	return ModelList
+	return adaptor.GetModelListFromPricing(ModelRatios)
 }
 
 func (a *Adaptor) GetChannelName() string {
@@ -51,18 +51,7 @@ func (a *Adaptor) GetChannelName() string {
 // GetDefaultModelPricing returns the pricing information for Minimax models
 // Based on Minimax pricing: https://api.minimax.chat/document/price
 func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
-	const MilliTokensRmb = 3.5 // 0.000007 * 500000 = 3.5 quota per milli-token
-
-	return map[string]adaptor.ModelPrice{
-		// Minimax Models - Based on https://api.minimax.chat/document/price
-		"abab6.5-chat":    {Ratio: 0.03 * MilliTokensRmb, CompletionRatio: 1},
-		"abab6.5s-chat":   {Ratio: 0.01 * MilliTokensRmb, CompletionRatio: 1},
-		"abab6-chat":      {Ratio: 0.1 * MilliTokensRmb, CompletionRatio: 1},
-		"abab5.5-chat":    {Ratio: 0.015 * MilliTokensRmb, CompletionRatio: 1},
-		"abab5.5s-chat":   {Ratio: 0.005 * MilliTokensRmb, CompletionRatio: 1},
-		"MiniMax-VL-01":   {Ratio: 0.02 * MilliTokensRmb, CompletionRatio: 1},  // Estimated pricing
-		"MiniMax-Text-01": {Ratio: 0.015 * MilliTokensRmb, CompletionRatio: 1}, // Estimated pricing
-	}
+	return ModelRatios
 }
 
 func (a *Adaptor) GetModelRatio(modelName string) float64 {

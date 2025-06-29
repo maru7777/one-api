@@ -57,7 +57,7 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Met
 }
 
 func (a *Adaptor) GetModelList() []string {
-	return ModelList
+	return adaptor.GetModelListFromPricing(ModelRatios)
 }
 
 func (a *Adaptor) GetChannelName() string {
@@ -66,31 +66,7 @@ func (a *Adaptor) GetChannelName() string {
 
 // Pricing methods - Cohere adapter manages its own model pricing
 func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
-	const MilliTokensUsd = 0.000001
-
-	// Direct map definition - much easier to maintain and edit
-	// Pricing from https://cohere.com/pricing
-	return map[string]adaptor.ModelPrice{
-		// Command Models
-		"command":         {Ratio: 15 * MilliTokensUsd, CompletionRatio: 2}, // $15/$30 per 1M tokens
-		"command-nightly": {Ratio: 15 * MilliTokensUsd, CompletionRatio: 2}, // $15/$30 per 1M tokens
-
-		// Command Light Models
-		"command-light":         {Ratio: 0.3 * MilliTokensUsd, CompletionRatio: 2}, // $0.3/$0.6 per 1M tokens
-		"command-light-nightly": {Ratio: 0.3 * MilliTokensUsd, CompletionRatio: 2}, // $0.3/$0.6 per 1M tokens
-
-		// Command R Models
-		"command-r":      {Ratio: 0.5 * MilliTokensUsd, CompletionRatio: 3}, // $0.5/$1.5 per 1M tokens
-		"command-r-plus": {Ratio: 3 * MilliTokensUsd, CompletionRatio: 5},   // $3/$15 per 1M tokens
-
-		// Internet-enabled variants (same pricing as base models)
-		"command-internet":               {Ratio: 15 * MilliTokensUsd, CompletionRatio: 2},
-		"command-nightly-internet":       {Ratio: 15 * MilliTokensUsd, CompletionRatio: 2},
-		"command-light-internet":         {Ratio: 0.3 * MilliTokensUsd, CompletionRatio: 2},
-		"command-light-nightly-internet": {Ratio: 0.3 * MilliTokensUsd, CompletionRatio: 2},
-		"command-r-internet":             {Ratio: 0.5 * MilliTokensUsd, CompletionRatio: 3},
-		"command-r-plus-internet":        {Ratio: 3 * MilliTokensUsd, CompletionRatio: 5},
-	}
+	return ModelRatios
 }
 
 func (a *Adaptor) GetModelRatio(modelName string) float64 {

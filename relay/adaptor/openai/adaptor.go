@@ -11,7 +11,6 @@ import (
 	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
 
-	""
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/common/logger"
@@ -389,8 +388,7 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 }
 
 func (a *Adaptor) GetModelList() []string {
-	_, modelList := GetCompatibleChannelMeta(a.ChannelType)
-	return modelList
+	return adaptor.GetModelListFromPricing(ModelRatios)
 }
 
 func (a *Adaptor) GetChannelName() string {
@@ -400,83 +398,7 @@ func (a *Adaptor) GetChannelName() string {
 
 // Pricing methods - OpenAI adapter manages its own model pricing
 func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
-	// Direct map definition - much easier to maintain and edit
-	// Note: Ratios are in quota units (USD * QuotaPerUsd) for direct use in quota calculations
-	return map[string]adaptor.ModelPrice{
-		// GPT-4.5 Models
-		"gpt-4.5-preview":            {Ratio: 75 * ratio.MilliTokensUsd, CompletionRatio: 2},
-		"gpt-4.5-preview-2025-02-27": {Ratio: 75 * ratio.MilliTokensUsd, CompletionRatio: 2},
-
-		// GPT-4 Models
-		"gpt-4":          {Ratio: 30 * ratio.MilliTokensUsd, CompletionRatio: 2},
-		"gpt-4-0314":     {Ratio: 30 * ratio.MilliTokensUsd, CompletionRatio: 2},
-		"gpt-4-0613":     {Ratio: 30 * ratio.MilliTokensUsd, CompletionRatio: 2},
-		"gpt-4-32k":      {Ratio: 60 * ratio.MilliTokensUsd, CompletionRatio: 2},
-		"gpt-4-32k-0314": {Ratio: 60 * ratio.MilliTokensUsd, CompletionRatio: 2},
-		"gpt-4-32k-0613": {Ratio: 60 * ratio.MilliTokensUsd, CompletionRatio: 2},
-
-		// GPT-4 Turbo Models
-		"gpt-4-1106-preview":        {Ratio: 10 * ratio.MilliTokensUsd, CompletionRatio: 3},
-		"gpt-4-0125-preview":        {Ratio: 10 * ratio.MilliTokensUsd, CompletionRatio: 3},
-		"gpt-4-turbo-preview":       {Ratio: 10 * ratio.MilliTokensUsd, CompletionRatio: 3},
-		"gpt-4-vision-preview":      {Ratio: 10 * ratio.MilliTokensUsd, CompletionRatio: 3},
-		"gpt-4-1106-vision-preview": {Ratio: 10 * ratio.MilliTokensUsd, CompletionRatio: 3},
-		"gpt-4-turbo":               {Ratio: 10 * ratio.MilliTokensUsd, CompletionRatio: 3},
-		"gpt-4-turbo-2024-04-09":    {Ratio: 10 * ratio.MilliTokensUsd, CompletionRatio: 3},
-
-		// GPT-4o Models
-		"gpt-4o":                 {Ratio: 5 * ratio.MilliTokensUsd, CompletionRatio: 3},
-		"gpt-4o-2024-05-13":      {Ratio: 5 * ratio.MilliTokensUsd, CompletionRatio: 3},
-		"gpt-4o-2024-08-06":      {Ratio: 2.5 * ratio.MilliTokensUsd, CompletionRatio: 3},
-		"gpt-4o-2024-11-20":      {Ratio: 2.5 * ratio.MilliTokensUsd, CompletionRatio: 3},
-		"gpt-4o-mini":            {Ratio: 0.15 * ratio.MilliTokensUsd, CompletionRatio: 4},
-		"gpt-4o-mini-2024-07-18": {Ratio: 0.15 * ratio.MilliTokensUsd, CompletionRatio: 4},
-
-		// GPT-4o Audio Models
-		"gpt-4o-audio-preview":                 {Ratio: 100 * ratio.MilliTokensUsd, CompletionRatio: 2},
-		"gpt-4o-audio-preview-2024-12-17":      {Ratio: 100 * ratio.MilliTokensUsd, CompletionRatio: 2},
-		"gpt-4o-audio-preview-2024-10-01":      {Ratio: 100 * ratio.MilliTokensUsd, CompletionRatio: 2},
-		"gpt-4o-mini-audio-preview":            {Ratio: 10 * ratio.MilliTokensUsd, CompletionRatio: 2},
-		"gpt-4o-mini-audio-preview-2024-12-17": {Ratio: 10 * ratio.MilliTokensUsd, CompletionRatio: 2},
-		"gpt-4o-transcribe":                    {Ratio: 6 * ratio.MilliTokensUsd, CompletionRatio: 1},
-		"gpt-4o-mini-transcribe":               {Ratio: 3 * ratio.MilliTokensUsd, CompletionRatio: 1},
-
-		// GPT-3.5 Models
-		"gpt-3.5-turbo":          {Ratio: 0.5 * ratio.MilliTokensUsd, CompletionRatio: 2},
-		"gpt-3.5-turbo-0301":     {Ratio: 1.5 * ratio.MilliTokensUsd, CompletionRatio: 2},
-		"gpt-3.5-turbo-0613":     {Ratio: 1.5 * ratio.MilliTokensUsd, CompletionRatio: 2},
-		"gpt-3.5-turbo-16k":      {Ratio: 3 * ratio.MilliTokensUsd, CompletionRatio: 2},
-		"gpt-3.5-turbo-16k-0613": {Ratio: 3 * ratio.MilliTokensUsd, CompletionRatio: 2},
-		"gpt-3.5-turbo-instruct": {Ratio: 1.5 * ratio.MilliTokensUsd, CompletionRatio: 2},
-		"gpt-3.5-turbo-1106":     {Ratio: 1 * ratio.MilliTokensUsd, CompletionRatio: 2},
-		"gpt-3.5-turbo-0125":     {Ratio: 0.5 * ratio.MilliTokensUsd, CompletionRatio: 2},
-
-		// Legacy Models
-		"text-davinci-003": {Ratio: 20 * ratio.MilliTokensUsd, CompletionRatio: 1},
-		"text-davinci-002": {Ratio: 20 * ratio.MilliTokensUsd, CompletionRatio: 1},
-		"code-davinci-002": {Ratio: 20 * ratio.MilliTokensUsd, CompletionRatio: 1},
-		"text-curie-001":   {Ratio: 2 * ratio.MilliTokensUsd, CompletionRatio: 1},
-		"text-babbage-001": {Ratio: 0.5 * ratio.MilliTokensUsd, CompletionRatio: 1},
-		"text-ada-001":     {Ratio: 0.4 * ratio.MilliTokensUsd, CompletionRatio: 1},
-		"davinci":          {Ratio: 20 * ratio.MilliTokensUsd, CompletionRatio: 1},
-		"curie":            {Ratio: 2 * ratio.MilliTokensUsd, CompletionRatio: 1},
-		"babbage":          {Ratio: 0.5 * ratio.MilliTokensUsd, CompletionRatio: 1},
-		"ada":              {Ratio: 0.4 * ratio.MilliTokensUsd, CompletionRatio: 1},
-
-		// Embedding Models
-		"text-embedding-ada-002": {Ratio: 0.1 * ratio.MilliTokensUsd, CompletionRatio: 1},
-		"text-embedding-3-small": {Ratio: 0.02 * ratio.MilliTokensUsd, CompletionRatio: 1},
-		"text-embedding-3-large": {Ratio: 0.13 * ratio.MilliTokensUsd, CompletionRatio: 1},
-
-		// Audio Models
-		"whisper-1": {Ratio: 6 * ratio.MilliTokensUsd, CompletionRatio: 1},
-		"tts-1":     {Ratio: 15 * ratio.MilliTokensUsd, CompletionRatio: 1},
-		"tts-1-hd":  {Ratio: 30 * ratio.MilliTokensUsd, CompletionRatio: 1},
-
-		// Image Models
-		"dall-e-2": {Ratio: 8 * ratio.ImageUsdPerPic, CompletionRatio: 1},
-		"dall-e-3": {Ratio: 40 * ratio.ImageUsdPerPic, CompletionRatio: 1},
-	}
+	return ModelRatios
 }
 
 func (a *Adaptor) GetModelRatio(modelName string) float64 {

@@ -79,7 +79,7 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Met
 }
 
 func (a *Adaptor) GetModelList() []string {
-	return ModelList
+	return adaptor.GetModelListFromPricing(ModelRatios)
 }
 
 func (a *Adaptor) GetChannelName() string {
@@ -92,21 +92,7 @@ func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
 
 	// Direct map definition - much easier to maintain and edit
 	// Pricing from https://www.xfyun.cn/doc/spark/Web.html#_1-%E6%8E%A5%E5%8F%A3%E8%AF%B4%E6%98%8E
-	return map[string]adaptor.ModelPrice{
-		// Spark Lite Models
-		"Spark-Lite": {Ratio: 0.3 * MilliRmb, CompletionRatio: 1},
-
-		// Spark Pro Models
-		"Spark-Pro":      {Ratio: 1.26 * MilliRmb, CompletionRatio: 1},
-		"Spark-Pro-128K": {Ratio: 1.26 * MilliRmb, CompletionRatio: 1},
-
-		// Spark Max Models
-		"Spark-Max":     {Ratio: 2.1 * MilliRmb, CompletionRatio: 1},
-		"Spark-Max-32K": {Ratio: 2.1 * MilliRmb, CompletionRatio: 1},
-
-		// Spark 4.0 Ultra Models
-		"Spark-4.0-Ultra": {Ratio: 5.6 * MilliRmb, CompletionRatio: 1},
-	}
+	return ModelRatios
 }
 
 func (a *Adaptor) GetModelRatio(modelName string) float64 {

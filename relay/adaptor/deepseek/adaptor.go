@@ -6,7 +6,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/relay/adaptor"
-	"github.com/songquanpeng/one-api/relay/billing/ratio"
 	"github.com/songquanpeng/one-api/relay/meta"
 	"github.com/songquanpeng/one-api/relay/model"
 )
@@ -20,19 +19,13 @@ func (a *Adaptor) GetChannelName() string {
 }
 
 func (a *Adaptor) GetModelList() []string {
-	return []string{
-		"deepseek-chat",
-		"deepseek-reasoner",
-	}
+	return adaptor.GetModelListFromPricing(ModelRatios)
 }
 
 // GetDefaultModelPricing returns the pricing information for DeepSeek models
 // Based on official DeepSeek pricing: https://platform.deepseek.com/api-docs/pricing/
 func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
-	return map[string]adaptor.ModelPrice{
-		"deepseek-chat":     {Ratio: 0.27 * ratio.MilliTokensUsd, CompletionRatio: 1.1 / 0.27},
-		"deepseek-reasoner": {Ratio: 0.55 * ratio.MilliTokensUsd, CompletionRatio: 2.19 / 0.55},
-	}
+	return ModelRatios
 }
 
 func (a *Adaptor) GetModelRatio(modelName string) float64 {

@@ -41,7 +41,7 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Met
 }
 
 func (a *Adaptor) GetModelList() []string {
-	return ModelList
+	return adaptor.GetModelListFromPricing(ModelRatios)
 }
 
 func (a *Adaptor) GetChannelName() string {
@@ -51,16 +51,7 @@ func (a *Adaptor) GetChannelName() string {
 // GetDefaultModelPricing returns the pricing information for AI360 models
 // Based on AI360 pricing
 func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
-	const MilliTokensUsd = 0.5 // 0.000001 * 500000 = 0.5 quota per milli-token
-	const MilliTokensRmb = 3.5 // 0.000007 * 500000 = 3.5 quota per milli-token
-
-	return map[string]adaptor.ModelPrice{
-		// AI360 Models - Based on historical pricing
-		"360GPT_S2_V9":              {Ratio: 0.8572 * MilliTokensUsd, CompletionRatio: 1}, // ¥0.012 / 1k tokens
-		"embedding-bert-512-v1":     {Ratio: 0.0715 * MilliTokensUsd, CompletionRatio: 1}, // ¥0.001 / 1k tokens
-		"embedding_s1_v1":           {Ratio: 0.0715 * MilliTokensUsd, CompletionRatio: 1}, // ¥0.001 / 1k tokens
-		"semantic_similarity_s1_v1": {Ratio: 0.0715 * MilliTokensUsd, CompletionRatio: 1}, // ¥0.001 / 1k tokens
-	}
+	return ModelRatios
 }
 
 func (a *Adaptor) GetModelRatio(modelName string) float64 {

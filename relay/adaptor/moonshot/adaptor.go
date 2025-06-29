@@ -6,7 +6,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/relay/adaptor"
-	"github.com/songquanpeng/one-api/relay/billing/ratio"
 	"github.com/songquanpeng/one-api/relay/meta"
 	"github.com/songquanpeng/one-api/relay/model"
 )
@@ -20,17 +19,13 @@ func (a *Adaptor) GetChannelName() string {
 }
 
 func (a *Adaptor) GetModelList() []string {
-	return ModelList
+	return adaptor.GetModelListFromPricing(ModelRatios)
 }
 
 // GetDefaultModelPricing returns the pricing information for Moonshot models
 // Based on official Moonshot pricing: https://platform.moonshot.cn/pricing
 func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
-	return map[string]adaptor.ModelPrice{
-		"moonshot-v1-8k":   {Ratio: 12 * ratio.MilliTokensRmb, CompletionRatio: 1},
-		"moonshot-v1-32k":  {Ratio: 24 * ratio.MilliTokensRmb, CompletionRatio: 1},
-		"moonshot-v1-128k": {Ratio: 60 * ratio.MilliTokensRmb, CompletionRatio: 1},
-	}
+	return ModelRatios
 }
 
 func (a *Adaptor) GetModelRatio(modelName string) float64 {

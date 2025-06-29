@@ -41,7 +41,7 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Met
 }
 
 func (a *Adaptor) GetModelList() []string {
-	return ModelList
+	return adaptor.GetModelListFromPricing(ModelRatios)
 }
 
 func (a *Adaptor) GetChannelName() string {
@@ -51,26 +51,7 @@ func (a *Adaptor) GetChannelName() string {
 // GetDefaultModelPricing returns the pricing information for Novita models
 // Based on Novita pricing: https://novita.ai/pricing
 func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
-	const MilliTokensUsd = 0.5 // 0.000001 * 500000 = 0.5 quota per milli-token
-
-	return map[string]adaptor.ModelPrice{
-		// Novita Models - Based on https://novita.ai/pricing
-		"meta-llama/llama-3.1-8b-instruct":        {Ratio: 0.2 * MilliTokensUsd, CompletionRatio: 1},
-		"meta-llama/llama-3.1-70b-instruct":       {Ratio: 0.9 * MilliTokensUsd, CompletionRatio: 1},
-		"meta-llama/llama-3.1-405b-instruct":      {Ratio: 5.0 * MilliTokensUsd, CompletionRatio: 1},
-		"meta-llama/llama-3-8b-instruct":          {Ratio: 0.2 * MilliTokensUsd, CompletionRatio: 1},
-		"meta-llama/llama-3-70b-instruct":         {Ratio: 0.9 * MilliTokensUsd, CompletionRatio: 1},
-		"mistralai/mistral-7b-instruct":           {Ratio: 0.2 * MilliTokensUsd, CompletionRatio: 1},
-		"mistralai/mixtral-8x7b-instruct":         {Ratio: 0.6 * MilliTokensUsd, CompletionRatio: 1},
-		"mistralai/mixtral-8x22b-instruct":        {Ratio: 1.2 * MilliTokensUsd, CompletionRatio: 1},
-		"qwen/qwen-2-72b-instruct":                {Ratio: 0.9 * MilliTokensUsd, CompletionRatio: 1},
-		"qwen/qwen-2-7b-instruct":                 {Ratio: 0.2 * MilliTokensUsd, CompletionRatio: 1},
-		"deepseek-ai/deepseek-coder-33b-instruct": {Ratio: 0.8 * MilliTokensUsd, CompletionRatio: 1},
-		"01-ai/yi-34b-chat":                       {Ratio: 0.8 * MilliTokensUsd, CompletionRatio: 1},
-		"01-ai/yi-6b-chat":                        {Ratio: 0.2 * MilliTokensUsd, CompletionRatio: 1},
-		"google/gemma-2-9b-it":                    {Ratio: 0.2 * MilliTokensUsd, CompletionRatio: 1},
-		"google/gemma-2-27b-it":                   {Ratio: 0.5 * MilliTokensUsd, CompletionRatio: 1},
-	}
+	return ModelRatios
 }
 
 func (a *Adaptor) GetModelRatio(modelName string) float64 {

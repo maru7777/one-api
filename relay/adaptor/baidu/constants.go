@@ -1,20 +1,43 @@
 package baidu
 
-var ModelList = []string{
-	"ERNIE-4.0-8K",
-	"ERNIE-3.5-8K",
-	"ERNIE-3.5-8K-0205",
-	"ERNIE-3.5-8K-1222",
-	"ERNIE-Bot-8K",
-	"ERNIE-3.5-4K-0205",
-	"ERNIE-Speed-8K",
-	"ERNIE-Speed-128K",
-	"ERNIE-Lite-8K-0922",
-	"ERNIE-Lite-8K-0308",
-	"ERNIE-Tiny-8K",
-	"BLOOMZ-7B",
-	"Embedding-V1",
-	"bge-large-zh",
-	"bge-large-en",
-	"tao-8k",
+import (
+	"github.com/songquanpeng/one-api/relay/adaptor"
+	"github.com/songquanpeng/one-api/relay/billing/ratio"
+)
+
+// ModelRatios contains all supported models and their pricing ratios
+// Model list is derived from the keys of this map, eliminating redundancy
+// Pricing from https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Blfmc9dlf
+var ModelRatios = map[string]adaptor.ModelPrice{
+	// ERNIE 4.0 Models
+	"ERNIE-4.0-8K": {Ratio: 12 * ratio.MilliTokensRmb, CompletionRatio: 1},
+
+	// ERNIE 3.5 Models
+	"ERNIE-3.5-8K":      {Ratio: 1.2 * ratio.MilliTokensRmb, CompletionRatio: 1},
+	"ERNIE-3.5-8K-0205": {Ratio: 1.2 * ratio.MilliTokensRmb, CompletionRatio: 1},
+	"ERNIE-3.5-8K-1222": {Ratio: 1.2 * ratio.MilliTokensRmb, CompletionRatio: 1},
+	"ERNIE-Bot-8K":      {Ratio: 1.2 * ratio.MilliTokensRmb, CompletionRatio: 1},
+	"ERNIE-3.5-4K-0205": {Ratio: 1.2 * ratio.MilliTokensRmb, CompletionRatio: 1},
+
+	// ERNIE Speed Models
+	"ERNIE-Speed-8K":   {Ratio: 0.4 * ratio.MilliTokensRmb, CompletionRatio: 1},
+	"ERNIE-Speed-128K": {Ratio: 0.4 * ratio.MilliTokensRmb, CompletionRatio: 1},
+
+	// ERNIE Lite Models
+	"ERNIE-Lite-8K-0922": {Ratio: 0.8 * ratio.MilliTokensRmb, CompletionRatio: 1},
+	"ERNIE-Lite-8K-0308": {Ratio: 0.8 * ratio.MilliTokensRmb, CompletionRatio: 1},
+
+	// ERNIE Tiny Models
+	"ERNIE-Tiny-8K": {Ratio: 0.4 * ratio.MilliTokensRmb, CompletionRatio: 1},
+
+	// Other Models
+	"BLOOMZ-7B": {Ratio: 0.4 * ratio.MilliTokensRmb, CompletionRatio: 1},
+
+	// Embedding Models
+	"Embedding-V1": {Ratio: 0.2 * ratio.MilliTokensRmb, CompletionRatio: 1},
+	"bge-large-zh": {Ratio: 0.2 * ratio.MilliTokensRmb, CompletionRatio: 1},
+	"bge-large-en": {Ratio: 0.2 * ratio.MilliTokensRmb, CompletionRatio: 1},
+
+	// TAO Models
+	"tao-8k": {Ratio: 0.8 * ratio.MilliTokensRmb, CompletionRatio: 1},
 }

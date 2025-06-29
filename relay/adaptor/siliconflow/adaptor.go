@@ -41,7 +41,7 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Met
 }
 
 func (a *Adaptor) GetModelList() []string {
-	return ModelList
+	return adaptor.GetModelListFromPricing(ModelRatios)
 }
 
 func (a *Adaptor) GetChannelName() string {
@@ -53,29 +53,7 @@ func (a *Adaptor) GetChannelName() string {
 func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
 	const MilliTokensUsd = 0.5 // 0.000001 * 500000 = 0.5 quota per milli-token
 
-	return map[string]adaptor.ModelPrice{
-		// SiliconFlow Models - Based on https://siliconflow.cn/pricing
-		"deepseek-chat":                           {Ratio: 0.14 * MilliTokensUsd, CompletionRatio: 1},
-		"deepseek-coder":                          {Ratio: 0.14 * MilliTokensUsd, CompletionRatio: 1},
-		"Qwen/Qwen2-72B-Instruct":                 {Ratio: 0.56 * MilliTokensUsd, CompletionRatio: 1},
-		"Qwen/Qwen2-7B-Instruct":                  {Ratio: 0.07 * MilliTokensUsd, CompletionRatio: 1},
-		"Qwen/Qwen2-1.5B-Instruct":                {Ratio: 0.14 * MilliTokensUsd, CompletionRatio: 1},
-		"Qwen/Qwen2-0.5B-Instruct":                {Ratio: 0.14 * MilliTokensUsd, CompletionRatio: 1},
-		"meta-llama/Meta-Llama-3-8B-Instruct":     {Ratio: 0.07 * MilliTokensUsd, CompletionRatio: 1},
-		"meta-llama/Meta-Llama-3-70B-Instruct":    {Ratio: 0.56 * MilliTokensUsd, CompletionRatio: 1},
-		"meta-llama/Meta-Llama-3.1-8B-Instruct":   {Ratio: 0.07 * MilliTokensUsd, CompletionRatio: 1},
-		"meta-llama/Meta-Llama-3.1-70B-Instruct":  {Ratio: 0.56 * MilliTokensUsd, CompletionRatio: 1},
-		"meta-llama/Meta-Llama-3.1-405B-Instruct": {Ratio: 2.8 * MilliTokensUsd, CompletionRatio: 1},
-		"mistralai/Mistral-7B-Instruct-v0.2":      {Ratio: 0.07 * MilliTokensUsd, CompletionRatio: 1},
-		"mistralai/Mixtral-8x7B-Instruct-v0.1":    {Ratio: 0.56 * MilliTokensUsd, CompletionRatio: 1},
-		"01-ai/Yi-1.5-9B-Chat-16K":                {Ratio: 0.14 * MilliTokensUsd, CompletionRatio: 1},
-		"01-ai/Yi-1.5-6B-Chat":                    {Ratio: 0.07 * MilliTokensUsd, CompletionRatio: 1},
-		"THUDM/glm-4-9b-chat":                     {Ratio: 0.14 * MilliTokensUsd, CompletionRatio: 1},
-		"THUDM/chatglm3-6b":                       {Ratio: 0.07 * MilliTokensUsd, CompletionRatio: 1},
-		"internlm/internlm2_5-7b-chat":            {Ratio: 0.07 * MilliTokensUsd, CompletionRatio: 1},
-		"google/gemma-2-9b-it":                    {Ratio: 0.14 * MilliTokensUsd, CompletionRatio: 1},
-		"google/gemma-2-27b-it":                   {Ratio: 0.28 * MilliTokensUsd, CompletionRatio: 1},
-	}
+	return ModelRatios
 }
 
 func (a *Adaptor) GetModelRatio(modelName string) float64 {
