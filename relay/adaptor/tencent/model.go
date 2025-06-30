@@ -67,13 +67,13 @@ type ResponseChoices struct {
 }
 
 type ChatResponse struct {
-	Choices []ResponseChoices `json:"Choices,omitempty"`   // 结果
-	Created int64             `json:"Created,omitempty"`   // unix 时间戳的字符串
-	Id      string            `json:"Id,omitempty"`        // 会话 id
-	Usage   Usage             `json:"Usage,omitempty"`     // token 数量
-	Error   Error             `json:"Error,omitempty"`     // 错误信息 注意：此字段可能返回 null，表示取不到有效值
-	Note    string            `json:"Note,omitempty"`      // 注释
-	ReqID   string            `json:"RequestId,omitempty"` // 唯一请求 Id，每次请求都会返回。用于反馈接口入参
+	Choices []ResponseChoices `json:"Choices,omitempty"`   // Results
+	Created int64             `json:"Created,omitempty"`   // Unix timestamp string
+	Id      string            `json:"Id,omitempty"`        // Session id
+	Usage   Usage             `json:"Usage,omitempty"`     // Token count
+	Error   Error             `json:"Error,omitempty"`     // Error message. Note: this field may return null, indicating no valid value can be obtained
+	Note    string            `json:"Note,omitempty"`      // Comment
+	ReqID   string            `json:"RequestId,omitempty"` // Unique request Id, returned with each request. Used for feedback interface parameters
 }
 
 type ChatResponseP struct {

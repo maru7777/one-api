@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"strconv"
 
-	"github.com/pkg/errors"
+	"github.com/Laisky/errors/v2"
 )
 
 // SaveTmpFile saves data to a temporary file. The filename would be apppended with a random string.

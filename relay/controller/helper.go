@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/ctxkey"
@@ -16,6 +16,7 @@ import (
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
+	"github.com/songquanpeng/one-api/relay/billing/ratio"
 	billingratio "github.com/songquanpeng/one-api/relay/billing/ratio"
 	"github.com/songquanpeng/one-api/relay/channeltype"
 	"github.com/songquanpeng/one-api/relay/constant/role"
@@ -47,6 +48,13 @@ func getAndValidateTextRequest(c *gin.Context, relayMode int) (*relaymodel.Gener
 func getPromptTokens(ctx context.Context, textRequest *relaymodel.GeneralOpenAIRequest, relayMode int) int {
 	switch relayMode {
 	case relaymode.ChatCompletions:
+		actualModel := textRequest.Model
+		// video request
+		if strings.HasPrefix(actualModel, "veo-") {
+			return ratio.TokensPerSec * 8
+		}
+
+		// text request
 		return openai.CountTokenMessages(ctx, textRequest.Messages, textRequest.Model)
 	case relaymode.Completions:
 		return openai.CountTokenInput(textRequest.Prompt, textRequest.Model)
@@ -61,7 +69,30 @@ func getPreConsumedQuota(textRequest *relaymodel.GeneralOpenAIRequest, promptTok
 	if textRequest.MaxTokens != 0 {
 		preConsumedTokens += int64(textRequest.MaxTokens)
 	}
-	return int64(float64(preConsumedTokens) * ratio)
+
+	baseQuota := int64(float64(preConsumedTokens) * ratio)
+
+	// Add estimated structured output cost if using JSON schema
+	// This ensures pre-consumption quota accounts for the additional structured output costs
+	if textRequest.ResponseFormat != nil &&
+		textRequest.ResponseFormat.Type == "json_schema" &&
+		textRequest.ResponseFormat.JsonSchema != nil {
+		// Estimate structured output cost based on max tokens (conservative approach)
+		estimatedCompletionTokens := textRequest.MaxTokens
+		if estimatedCompletionTokens == 0 {
+			// If no max tokens specified, use a conservative estimate
+			estimatedCompletionTokens = 1000
+		}
+
+		// Apply the same 25% multiplier used in post-consumption
+		// Note: We can't get exact model ratio here easily, so use the base ratio as approximation
+		estimatedStructuredCost := int64(float64(estimatedCompletionTokens) * 0.25 * ratio)
+		baseQuota += estimatedStructuredCost
+
+		logger.Debugf(context.Background(), "Pre-consumption: added estimated structured output cost %d for JSON schema request", estimatedStructuredCost)
+	}
+
+	return baseQuota
 }
 
 func preConsumeQuota(c *gin.Context, textRequest *relaymodel.GeneralOpenAIRequest, promptTokens int, ratio float64, meta *meta.Meta) (int64, *relaymodel.ErrorWithStatusCode) {

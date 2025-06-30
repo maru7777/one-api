@@ -24,6 +24,9 @@ const (
 	MilliRmb       float64 = MilliTokensUsd / USD2RMB
 	ImageUsdPerPic float64 = QuotaPerUsd / 1000
 	ImageRMBPerPic float64 = ImageUsdPerPic / USD2RMB //一个QuotaPerRmb代表1元人民币
+	TokensPerSec           = 1000
+	// VideoUsdPerSec 1000 tokens per second, used for video processing
+	VideoUsdPerSec float64 = QuotaPerUsd / TokensPerSec
 )
 
 var modelRatioLock sync.RWMutex
@@ -33,26 +36,33 @@ var modelRatioLock sync.RWMutex
 // -------------------------------------
 
 var AnthropicModelRatio = map[string]float64{
-	"claude-3-haiku-20240307":    0.25 * MilliTokensUsd,
-	"claude-3-5-haiku-20241022":  1.0 * MilliTokensUsd,
-	"claude-3-5-haiku-latest":    1.0 * MilliTokensUsd,
-	"claude-3-5-sonnet-20240620": 3.0 * MilliTokensUsd,
-	"claude-3-5-sonnet-20241022": 3.0 * MilliTokensUsd,
-	"claude-3-5-sonnet-latest":   3.0 * MilliTokensUsd,
+	"claude-opus-4-20250514":     15.0 * MilliTokensUsd,
+	"claude-sonnet-4-20250514":   3.0 * MilliTokensUsd,
 	"claude-3-7-sonnet-20250219": 3.0 * MilliTokensUsd,
 	"claude-3-7-sonnet-latest":   3.0 * MilliTokensUsd,
+	"claude-3-5-haiku-20241022":  0.80 * MilliTokensUsd,
+	"claude-3-5-haiku-latest":    0.80 * MilliTokensUsd,
+	"claude-3-5-sonnet-20241022": 3.0 * MilliTokensUsd,
+	"claude-3-5-sonnet-latest":   3.0 * MilliTokensUsd,
+	"claude-3-5-sonnet-20240620": 3.0 * MilliTokensUsd,
 	"claude-3-opus-20240229":     15.0 * MilliTokensUsd,
+	"claude-3-sonnet-20240229":   15.0 * MilliTokensUsd,
+	"claude-3-haiku-20240307":    0.25 * MilliTokensUsd,
 }
+
 var AnthropicCompletionRatio = map[string]float64{
-	"claude-3-haiku-20240307":    1.25 / 0.25,
-	"claude-3-5-haiku-20241022":  4.0 / 0.80,
-	"claude-3-5-haiku-latest":    4.0 / 0.80,
-	"claude-3-5-sonnet-20240620": 15.0 / 3.0,
-	"claude-3-5-sonnet-20241022": 15.0 / 3.0,
-	"claude-3-5-sonnet-latest":   15.0 / 3.0,
+	"claude-opus-4-20250514":     75.0 / 15.0,
+	"claude-sonnet-4-20250514":   15.0 / 3.0,
 	"claude-3-7-sonnet-20250219": 15.0 / 3.0,
 	"claude-3-7-sonnet-latest":   15.0 / 3.0,
+	"claude-3-5-haiku-20241022":  4.0 / 0.80,
+	"claude-3-5-haiku-latest":    4.0 / 0.80,
+	"claude-3-5-sonnet-20241022": 15.0 / 3.0,
+	"claude-3-5-sonnet-latest":   15.0 / 3.0,
+	"claude-3-5-sonnet-20240620": 15.0 / 3.0,
 	"claude-3-opus-20240229":     75.0 / 15.0,
+	"claude-3-sonnet-20240229":   75.0 / 15.0,
+	"claude-3-haiku-20240307":    1.25 / 0.25,
 }
 
 // -------------------------------------
@@ -83,18 +93,21 @@ var BaiduCompletionRatio = map[string]float64{
 // https://cloud.google.com/vertex-ai/generative-ai/pricing
 // -------------------------------------
 var GoogleModelRatio = map[string]float64{
-	"gemini-1.5-pro":           1.25 * MilliTokensUsd,
-	"gemini-1.5-flash":         0.075 * MilliTokensUsd,
-	"gemini-2.0-flash":         0.10 * MilliTokensUsd,
-	"gemini-2.0-flash-lite":    0.075 * MilliTokensUsd,
-	"gemini-2.5-pro-exp-03-25": 1.25 * MilliTokensUsd,
+	"gemini-2.5-pro":        0.10 * MilliTokensUsd, // 文本/图像/视频，音频输入0.70
+	"gemini-2.5-flash":      0.075 * MilliTokensUsd,
+	"gemini-2.0-flash-lite": 0.075 * MilliTokensUsd,
+	"gemini-2.0-flash":      0.075 * MilliTokensUsd,
+	"gemini-1.5-pro":        1.25 * MilliTokensUsd,
+	"gemini-1.5-flash":      0.0375 * MilliTokensUsd,
 }
+
 var GoogleCompletionRatio = map[string]float64{
-	"gemini-1.5-pro":           5.00 / 1.25,  //提示小于等于128,000 提示大于128,000 10.00/2.50
-	"gemini-1.5-flash":         0.30 / 0.075, //提示小于等于128,000 提示大于128,000 0.60/0.15
-	"gemini-2.0-flash":         0.40 / 0.10,  // 输入0.70 美元（音频）
-	"gemini-2.0-flash-lite":    0.30 / 0.075,
-	"gemini-2.5-pro-exp-03-25": 10.00 / 1.25, //提示小于等于20万个令牌 大于 15.00/2.50
+	"gemini-2.5-pro":        0.40 / 0.10,  // 文本/图像/视频，音频输出未明确
+	"gemini-2.5-flash":      0.30 / 0.075, // 提示<=128k，提示>128k 0.60/0.15
+	"gemini-2.0-flash-lite": 0.30 / 0.075,
+	"gemini-2.0-flash":      0.30 / 0.075,  // 提示<=128k，提示>128k 0.60/0.15
+	"gemini-1.5-pro":        5.00 / 1.25,   // 提示<=128k，提示>128k 10.00/2.50
+	"gemini-1.5-flash":      0.15 / 0.0375, // 提示<=128k，提示>128k 0.30/0.075
 }
 
 // -------------------------------------
@@ -358,6 +371,7 @@ var ReplicateModelRatio = map[string]float64{
 	"ibm-granite/granite-3.2-8b-instruct":       0.030 * MilliTokensUsd,
 	"ibm-granite/granite-8b-code-instruct-128k": 0.050 * MilliTokensUsd,
 	// picture
+	"black-forest-labs/flux-kontext-pro":            0.04 * ImageUsdPerPic,
 	"black-forest-labs/flux-1.1-pro":                0.04 * ImageUsdPerPic,
 	"black-forest-labs/flux-1.1-pro-ultra":          0.06 * ImageUsdPerPic,
 	"black-forest-labs/flux-canny-dev":              0.025 * ImageUsdPerPic,
@@ -392,29 +406,30 @@ var ReplicateCompletionRatio = map[string]float64{
 	"ibm-granite/granite-3.2-8b-instruct":       0.030 * MilliTokensUsd,
 	"ibm-granite/granite-8b-code-instruct-128k": 0.050 * MilliTokensUsd,
 	// picture
-	"black-forest-labs/flux-1.1-pro":                0.04 * ImageUsdPerPic,
-	"black-forest-labs/flux-1.1-pro-ultra":          0.06 * ImageUsdPerPic,
-	"black-forest-labs/flux-canny-dev":              0.025 * ImageUsdPerPic,
-	"black-forest-labs/flux-canny-pro":              0.05 * ImageUsdPerPic,
-	"black-forest-labs/flux-depth-dev":              0.025 * ImageUsdPerPic,
-	"black-forest-labs/flux-depth-pro":              0.05 * ImageUsdPerPic,
-	"black-forest-labs/flux-dev":                    0.025 * ImageUsdPerPic,
-	"black-forest-labs/flux-dev-lora":               0.032 * ImageUsdPerPic,
-	"black-forest-labs/flux-fill-dev":               0.04 * ImageUsdPerPic,
-	"black-forest-labs/flux-fill-pro":               0.05 * ImageUsdPerPic,
-	"black-forest-labs/flux-pro":                    0.055 * ImageUsdPerPic,
-	"black-forest-labs/flux-redux-dev":              0.025 * ImageUsdPerPic,
-	"black-forest-labs/flux-redux-schnell":          0.003 * ImageUsdPerPic,
-	"black-forest-labs/flux-schnell":                0.003 * ImageUsdPerPic,
-	"black-forest-labs/flux-schnell-lora":           0.02 * ImageUsdPerPic,
-	"ideogram-ai/ideogram-v2":                       0.08 * ImageUsdPerPic,
-	"ideogram-ai/ideogram-v2-turbo":                 0.05 * ImageUsdPerPic,
-	"recraft-ai/recraft-v3":                         0.04 * ImageUsdPerPic,
-	"recraft-ai/recraft-v3-svg":                     0.08 * ImageUsdPerPic,
-	"stability-ai/stable-diffusion-3":               0.035 * ImageUsdPerPic,
-	"stability-ai/stable-diffusion-3.5-large":       0.065 * ImageUsdPerPic,
-	"stability-ai/stable-diffusion-3.5-large-turbo": 0.04 * ImageUsdPerPic,
-	"stability-ai/stable-diffusion-3.5-medium":      0.035 * ImageUsdPerPic,
+	"black-forest-labs/flux-kontext-pro":            0.0,
+	"black-forest-labs/flux-1.1-pro":                0.0,
+	"black-forest-labs/flux-1.1-pro-ultra":          0.0,
+	"black-forest-labs/flux-canny-dev":              0.0,
+	"black-forest-labs/flux-canny-pro":              0.0,
+	"black-forest-labs/flux-depth-dev":              0.0,
+	"black-forest-labs/flux-depth-pro":              0.0,
+	"black-forest-labs/flux-dev":                    0.0,
+	"black-forest-labs/flux-dev-lora":               0.0,
+	"black-forest-labs/flux-fill-dev":               0.0,
+	"black-forest-labs/flux-fill-pro":               0.0,
+	"black-forest-labs/flux-pro":                    0.0,
+	"black-forest-labs/flux-redux-dev":              0.0,
+	"black-forest-labs/flux-redux-schnell":          0.0,
+	"black-forest-labs/flux-schnell":                0.0,
+	"black-forest-labs/flux-schnell-lora":           0.0,
+	"ideogram-ai/ideogram-v2":                       0.0,
+	"ideogram-ai/ideogram-v2-turbo":                 0.0,
+	"recraft-ai/recraft-v3":                         0.0,
+	"recraft-ai/recraft-v3-svg":                     0.0,
+	"stability-ai/stable-diffusion-3":               0.0,
+	"stability-ai/stable-diffusion-3.5-large":       0.0,
+	"stability-ai/stable-diffusion-3.5-large-turbo": 0.0,
+	"stability-ai/stable-diffusion-3.5-medium":      0.0,
 }
 
 // -------------------------------------
@@ -445,39 +460,31 @@ var ModelRatio = map[string]float64{
 	// OpenAI
 	// https://openai.com/pricing
 	// -------------------------------------
-	"gpt-4.1":                    2 * MilliTokensUsd,
-	"gpt-4.1-2025-04-14":         2 * MilliTokensUsd,
-	"gpt-4.1-mini":               0.4 * MilliTokensUsd,
-	"gpt-4.1-mini-2025-04-14":    0.4 * MilliTokensUsd,
-	"gpt-4.1-nano":               0.1 * MilliTokensUsd,
-	"gpt-4.1-nano-2025-04-14":    0.1 * MilliTokensUsd,
-	"o3":                         10 * MilliTokensUsd,
-	"o3-2025-04-16":              10 * MilliTokensUsd,
-	"o4-mini":                    1.1 * MilliTokensUsd,
-	"o4-mini-2025-04-16":         1.1 * MilliTokensUsd,
-	"gpt-4.5-preview":            75 * MilliTokensUsd,
-	"gpt-4.5-preview-2025-02-27": 75 * MilliTokensUsd,
-	"gpt-4":                      30 * MilliTokensUsd,
-	"gpt-4-0314":                 30 * MilliTokensUsd,
-	"gpt-4-0613":                 30 * MilliTokensUsd,
-	"gpt-4-32k":                  60 * MilliTokensUsd,
-	"gpt-4-32k-0314":             60 * MilliTokensUsd,
-	"gpt-4-32k-0613":             60 * MilliTokensUsd,
-	"gpt-4-1106-preview":         10 * MilliTokensUsd,
-	"gpt-4-0125-preview":         10 * MilliTokensUsd,
-	"gpt-4-turbo-preview":        10 * MilliTokensUsd,
-	"gpt-4-turbo":                10 * MilliTokensUsd,
-	"gpt-4-turbo-2024-04-09":     10 * MilliTokensUsd,
-	"gpt-4o":                     2.5 * MilliTokensUsd,
-	"chatgpt-4o-latest":          5 * MilliTokensUsd,
-	"gpt-4o-2024-05-13":          5 * MilliTokensUsd,
-	"gpt-4o-2024-08-06":          2.5 * MilliTokensUsd,
-	"gpt-4o-2024-11-20":          2.5 * MilliTokensUsd,
-	"gpt-4o-search-preview":      5 * MilliTokensUsd,
-	"gpt-4o-mini":                0.15 * MilliTokensUsd,
-	"gpt-4o-mini-2024-07-18":     0.15 * MilliTokensUsd,
-	"gpt-4o-mini-search-preview": 0.15 * MilliTokensUsd,
-	"gpt-4-vision-preview":       10 * MilliTokensUsd,
+	"gpt-4.5-preview":                       75 * MilliTokensUsd,
+	"gpt-4.5-preview-2025-02-27":            75 * MilliTokensUsd,
+	"gpt-4":                                 30 * MilliTokensUsd,
+	"gpt-4-0314":                            30 * MilliTokensUsd,
+	"gpt-4-0613":                            30 * MilliTokensUsd,
+	"gpt-4-32k":                             60 * MilliTokensUsd,
+	"gpt-4-32k-0314":                        60 * MilliTokensUsd,
+	"gpt-4-32k-0613":                        60 * MilliTokensUsd,
+	"gpt-4-1106-preview":                    10 * MilliTokensUsd,
+	"gpt-4-0125-preview":                    10 * MilliTokensUsd,
+	"gpt-4-turbo-preview":                   10 * MilliTokensUsd,
+	"gpt-4-turbo":                           10 * MilliTokensUsd,
+	"gpt-4-turbo-2024-04-09":                10 * MilliTokensUsd,
+	"gpt-4o":                                2.5 * MilliTokensUsd,
+	"chatgpt-4o-latest":                     5 * MilliTokensUsd,
+	"gpt-4o-2024-05-13":                     5 * MilliTokensUsd,
+	"gpt-4o-2024-08-06":                     2.5 * MilliTokensUsd,
+	"gpt-4o-2024-11-20":                     2.5 * MilliTokensUsd,
+	"gpt-4o-search-preview":                 5 * MilliTokensUsd,
+	"gpt-4o-search-preview-2025-03-11":      5 * MilliTokensUsd,
+	"gpt-4o-mini":                           0.15 * MilliTokensUsd,
+	"gpt-4o-mini-2024-07-18":                0.15 * MilliTokensUsd,
+	"gpt-4o-mini-search-preview":            0.15 * MilliTokensUsd,
+	"gpt-4o-mini-search-preview-2025-03-11": 0.15 * MilliTokensUsd,
+	"gpt-4-vision-preview":                  10 * MilliTokensUsd,
 	// Audio billing will mix text and audio tokens, the unit price is different.
 	// Here records the cost of text, the cost multiplier of audio
 	// relative to text is in AudioRatio
@@ -494,6 +501,12 @@ var ModelRatio = map[string]float64{
 	"gpt-3.5-turbo-instruct":               1.5 * MilliTokensUsd,
 	"gpt-3.5-turbo-1106":                   1 * MilliTokensUsd,
 	"gpt-3.5-turbo-0125":                   0.5 * MilliTokensUsd,
+	"gpt-4.1":                              2 * MilliTokensUsd,
+	"gpt-4.1-2025-04-14":                   2 * MilliTokensUsd,
+	"gpt-4.1-mini":                         0.4 * MilliTokensUsd,
+	"gpt-4.1-mini-2025-04-14":              0.4 * MilliTokensUsd,
+	"gpt-4.1-nano":                         0.1 * MilliTokensUsd,
+	"gpt-4.1-nano-2025-04-14":              0.1 * MilliTokensUsd,
 	"o1-pro":                               150 * MilliTokensUsd,
 	"o1-pro-2025-03-19":                    150 * MilliTokensUsd,
 	"o1":                                   15 * MilliTokensUsd,
@@ -504,6 +517,12 @@ var ModelRatio = map[string]float64{
 	"o1-mini-2024-09-12":                   1.1 * MilliTokensUsd,
 	"o3-mini":                              1.1 * MilliTokensUsd,
 	"o3-mini-2025-01-31":                   1.1 * MilliTokensUsd,
+	"o3":                                   2 * MilliTokensUsd,
+	"o3-2025-04-16":                        2 * MilliTokensUsd,
+	"o3-pro":                               20 * MilliTokensUsd,
+	"o3-pro-2025-06-10":                    20 * MilliTokensUsd,
+	"o4-mini":                              1.1 * MilliTokensUsd,
+	"o4-mini-2025-04-16":                   1.1 * MilliTokensUsd,
 	"davinci-002":                          2 * MilliTokensUsd,
 	"babbage-002":                          0.4 * MilliTokensUsd,
 	"text-ada-001":                         0.4 * MilliTokensUsd,
@@ -533,6 +552,7 @@ var ModelRatio = map[string]float64{
 	"text-moderation-latest":               0.2 * MilliTokensUsd,
 	"dall-e-2":                             0.02 * ImageUsdPerPic,
 	"dall-e-3":                             0.04 * ImageUsdPerPic,
+	"gpt-image-1":                          0.011 * ImageUsdPerPic,
 	// "deepseek-r1-distill-qwen-32b":  0.002 * KiloRmb,
 	"deepseek-r1-distill-llama-8b": 0.0005 * KiloRmb,
 	// "deepseek-r1-distill-llama-70b": 0.004 * KiloRmb,
@@ -634,47 +654,51 @@ var ModelRatio = map[string]float64{
 	"imagen-3.0-generate-002":      0.04 * ImageUsdPerPic,
 	"imagen-3.0-fast-generate-001": 0.02 * ImageUsdPerPic,
 	"imagen-3.0-capability-001":    0.04 * ImageUsdPerPic,
+	// https://cloud.google.com/vertex-ai/generative-ai/pricing#veo
+	"veo-2.0-generate-001":     0.5 * VideoUsdPerSec,
+	"veo-3.0-generate-preview": 0.75 * VideoUsdPerSec,
 	// -------------------------------------
 	//https://openrouter.ai/models
 	// -------------------------------------
-	"01-ai/yi-large":                 1.5,
-	"aetherwiing/mn-starcannon-12b":  0.6,
-	"ai21/jamba-1-5-large":           4.0,
-	"ai21/jamba-1-5-mini":            0.2,
-	"ai21/jamba-instruct":            0.35,
-	"aion-labs/aion-1.0":             6.0,
-	"aion-labs/aion-1.0-mini":        1.2,
-	"aion-labs/aion-rp-llama-3.1-8b": 0.1,
-	"allenai/llama-3.1-tulu-3-405b":  5.0,
-	"alpindale/goliath-120b":         4.6875,
-	"alpindale/magnum-72b":           1.125,
-	"amazon/nova-lite-v1":            0.12,
-	"amazon/nova-micro-v1":           0.07,
-	"amazon/nova-pro-v1":             1.6,
-	"anthracite-org/magnum-v2-72b":   1.5,
-	"anthracite-org/magnum-v4-72b":   1.125,
-	"anthropic/claude-2":             12.0,
-	"anthropic/claude-2.0":           12.0,
-	"anthropic/claude-2.0:beta":      12.0,
-	"anthropic/claude-2.1":           12.0,
-	"anthropic/claude-2.1:beta":      12.0,
-	"anthropic/claude-2:beta":        12.0,
-	"anthropic/claude-3-haiku":       0.625,
-	"anthropic/claude-3-haiku:beta":  0.625,
-	"anthropic/claude-3-opus":        37.5,
-	"anthropic/claude-3-opus:beta":   37.5,
-	"anthropic/claude-3-sonnet":      7.5,
-	"anthropic/claude-3-sonnet:beta": 7.5,
-	// "anthropic/claude-3.5-haiku":                      2.0,
-	"anthropic/claude-3.5-haiku-20241022":      2.0,
-	"anthropic/claude-3.5-haiku-20241022:beta": 2.0,
-	"anthropic/claude-3.5-haiku:beta":          2.0,
-	// "anthropic/claude-3.5-sonnet":                     7.5,
-	"anthropic/claude-3.5-sonnet-20240620":        7.5,
-	"anthropic/claude-3.5-sonnet-20240620:beta":   7.5,
-	"anthropic/claude-3.5-sonnet:beta":            7.5,
-	"cognitivecomputations/dolphin-mixtral-8x22b": 0.45,
-	"cognitivecomputations/dolphin-mixtral-8x7b":  0.25,
+	"01-ai/yi-large":                                  1.5,
+	"aetherwiing/mn-starcannon-12b":                   0.6,
+	"ai21/jamba-1-5-large":                            4.0,
+	"ai21/jamba-1-5-mini":                             0.2,
+	"ai21/jamba-instruct":                             0.35,
+	"aion-labs/aion-1.0":                              6.0,
+	"aion-labs/aion-1.0-mini":                         1.2,
+	"aion-labs/aion-rp-llama-3.1-8b":                  0.1,
+	"allenai/llama-3.1-tulu-3-405b":                   5.0,
+	"alpindale/goliath-120b":                          4.6875,
+	"alpindale/magnum-72b":                            1.125,
+	"amazon/nova-lite-v1":                             0.12,
+	"amazon/nova-micro-v1":                            0.07,
+	"amazon/nova-pro-v1":                              1.6,
+	"anthracite-org/magnum-v2-72b":                    1.5,
+	"anthracite-org/magnum-v4-72b":                    1.125,
+	"anthropic/claude-2":                              12.0,
+	"anthropic/claude-2.0":                            12.0,
+	"anthropic/claude-2.0:beta":                       12.0,
+	"anthropic/claude-2.1":                            12.0,
+	"anthropic/claude-2.1:beta":                       12.0,
+	"anthropic/claude-2:beta":                         12.0,
+	"anthropic/claude-3-haiku":                        0.625,
+	"anthropic/claude-3-haiku:beta":                   0.625,
+	"anthropic/claude-3.5-haiku-20241022":             2.0,
+	"anthropic/claude-3.5-haiku-20241022:beta":        2.0,
+	"anthropic/claude-3.5-haiku:beta":                 2.0,
+	"anthropic/claude-3-sonnet":                       7.5,
+	"anthropic/claude-3-sonnet:beta":                  7.5,
+	"anthropic/claude-3.5-sonnet:beta":                7.5,
+	"anthropic/claude-3.5-sonnet-20240620":            7.5,
+	"anthropic/claude-3.5-sonnet-20240620:beta":       7.5,
+	"anthropic/claude-3.7-sonnet:beta":                7.5,
+	"anthropic/claude-3-opus":                         37.5,
+	"anthropic/claude-3-opus:beta":                    37.5,
+	"anthropic/claude-4-opus":                         37.5,
+	"anthropic/claude-4-opus:beta":                    37.5,
+	"cognitivecomputations/dolphin-mixtral-8x22b":     0.45,
+	"cognitivecomputations/dolphin-mixtral-8x7b":      0.25,
 	"cohere/command":                                  0.95,
 	"cohere/command-r":                                0.7125,
 	"cohere/command-r-03-2024":                        0.7125,
@@ -1115,19 +1139,21 @@ func UpdateModelRatioByJSONString(jsonStr string) error {
 	return nil
 }
 
-func GetModelRatio(name string, channelType int) float64 {
+// GetModelRatio is used to get the model ratio for a given model name and channel type.
+func GetModelRatio(actualModelName string, channelType int) float64 {
 	modelRatioLock.RLock()
 	defer modelRatioLock.RUnlock()
-	if strings.HasPrefix(name, "qwen-") && strings.HasSuffix(name, "-internet") {
-		name = strings.TrimSuffix(name, "-internet")
+	if strings.HasPrefix(actualModelName, "qwen-") &&
+		strings.HasSuffix(actualModelName, "-internet") {
+		actualModelName = strings.TrimSuffix(actualModelName, "-internet")
 	}
-	if strings.HasPrefix(name, "command-") && strings.HasSuffix(name, "-internet") {
-		name = strings.TrimSuffix(name, "-internet")
+	if strings.HasPrefix(actualModelName, "command-") &&
+		strings.HasSuffix(actualModelName, "-internet") {
+		actualModelName = strings.TrimSuffix(actualModelName, "-internet")
 	}
 
-	model := fmt.Sprintf("%s(%d)", name, channelType)
-
-	for _, targetName := range []string{model, name} {
+	nameWithChannel := fmt.Sprintf("%s(%d)", actualModelName, channelType)
+	for _, targetName := range []string{nameWithChannel, actualModelName} {
 		for _, ratioMap := range []map[string]float64{
 			ModelRatio,
 			DefaultModelRatio,
@@ -1139,7 +1165,7 @@ func GetModelRatio(name string, channelType int) float64 {
 		}
 	}
 
-	logger.SysError("model ratio not found: " + name)
+	logger.SysError("model ratio not found: " + actualModelName)
 	return 2.5 * MilliTokensUsd
 }
 
@@ -1237,8 +1263,21 @@ func GetCompletionRatio(name string, channelType int) float64 {
 	if strings.HasPrefix(name, "mistral-") {
 		return 3
 	}
+
+	// https://cloud.google.com/vertex-ai/generative-ai/pricing
 	if strings.HasPrefix(name, "gemini-") {
-		return 4
+		switch {
+		case strings.HasPrefix(name, "gemini-2.5-pro-"):
+			return 8
+		case strings.HasPrefix(name, "gemini-2.5-flash-"):
+			return 3.5 / 0.15
+		case name == "gemini-2.5-pro":
+			return 10 / 1.25
+		case name == "gemini-2.5-flash":
+			return 2.5 / 0.3
+		default:
+			return 4
+		}
 	}
 
 	switch name {

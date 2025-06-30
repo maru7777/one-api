@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/Laisky/errors/v2"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/helper"
@@ -35,6 +35,15 @@ type Token struct {
 	UsedQuota      int64   `json:"used_quota" gorm:"bigint;default:0"` // used quota
 	Models         *string `json:"models" gorm:"type:text"`            // allowed models
 	Subnet         *string `json:"subnet" gorm:"default:''"`           // allowed subnet
+}
+
+func clearTokenCache(key string) {
+	if common.RedisEnabled {
+		err := common.RedisDel(fmt.Sprintf("token:%s", key))
+		if err != nil {
+			logger.SysError("failed to clear token cache: " + err.Error())
+		}
+	}
 }
 
 func GetAllUserTokens(userId int, startIdx int, num int, order string) ([]*Token, error) {
@@ -88,6 +97,13 @@ func ValidateUserToken(key string) (token *Token, err error) {
 			if err != nil {
 				logger.SysError("failed to update token status" + err.Error())
 			}
+		} else {
+			// If Redis is enabled, the cache will be updated by the next fetch
+			// or we can proactively delete it here.
+			// For consistency with other operations, let SelectUpdate handle it if it's called.
+			// However, SelectUpdate is only called if Redis is NOT enabled in this block.
+			// So, if Redis IS enabled, and token is expired, we should clear it.
+			clearTokenCache(token.Key)
 		}
 		return nil, errors.New("The token has expired")
 	}
@@ -99,6 +115,9 @@ func ValidateUserToken(key string) (token *Token, err error) {
 			if err != nil {
 				logger.SysError("failed to update token status" + err.Error())
 			}
+		} else {
+			// If Redis IS enabled, and token is exhausted, we should clear it.
+			clearTokenCache(token.Key)
 		}
 		return nil, errors.New("The token quota has been used up")
 	}
@@ -128,6 +147,9 @@ func GetTokenById(id int) (*Token, error) {
 func (t *Token) Insert() error {
 	var err error
 	err = DB.Create(t).Error
+	if err == nil {
+		clearTokenCache(t.Key)
+	}
 	return err
 }
 
@@ -135,17 +157,27 @@ func (t *Token) Insert() error {
 func (t *Token) Update() error {
 	var err error
 	err = DB.Model(t).Select("name", "status", "expired_time", "remain_quota", "unlimited_quota", "models", "subnet").Updates(t).Error
+	if err == nil {
+		clearTokenCache(t.Key)
+	}
 	return err
 }
 
 func (t *Token) SelectUpdate() error {
 	// This can update zero values
-	return DB.Model(t).Select("accessed_time", "status").Updates(t).Error
+	err := DB.Model(t).Select("accessed_time", "status").Updates(t).Error
+	if err == nil {
+		clearTokenCache(t.Key)
+	}
+	return err
 }
 
 func (t *Token) Delete() error {
 	var err error
 	err = DB.Delete(t).Error
+	if err == nil {
+		clearTokenCache(t.Key)
+	}
 	return err
 }
 
@@ -221,6 +253,19 @@ func increaseTokenQuota(id int, quota int64) (err error) {
 			"accessed_time": helper.GetTimestamp(),
 		},
 	).Error
+	if err == nil {
+		// We need the token key to clear the cache.
+		// Fetch the token first.
+		// This might be inefficient if BatchUpdateEnabled is false and this is called frequently.
+		// Consider if this function needs to clear cache directly or rely on eventual consistency.
+		// For now, let's fetch and clear.
+		token, fetchErr := GetTokenById(id)
+		if fetchErr == nil && token != nil {
+			clearTokenCache(token.Key)
+		} else if fetchErr != nil {
+			logger.SysError(fmt.Sprintf("failed to fetch token %d for cache clearing after quota increase: %s", id, fetchErr.Error()))
+		}
+	}
 	return err
 }
 
@@ -243,6 +288,15 @@ func decreaseTokenQuota(id int, quota int64) (err error) {
 			"accessed_time": helper.GetTimestamp(),
 		},
 	).Error
+	if err == nil {
+		// Similar to increaseTokenQuota, fetch the token to get its key for cache clearing.
+		token, fetchErr := GetTokenById(id)
+		if fetchErr == nil && token != nil {
+			clearTokenCache(token.Key)
+		} else if fetchErr != nil {
+			logger.SysError(fmt.Sprintf("failed to fetch token %d for cache clearing after quota decrease: %s", id, fetchErr.Error()))
+		}
+	}
 	return err
 }
 

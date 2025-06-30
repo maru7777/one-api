@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/Laisky/errors/v2"
 	"github.com/coze-dev/coze-go"
-	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/relay/adaptor/coze/constant/event"
 )
 

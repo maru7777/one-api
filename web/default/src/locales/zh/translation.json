@@ -108,6 +108,8 @@
       "proxy_url_placeholder": "此项可选，用于通过代理站来进行 API 调用，请输入代理站地址，格式为：https://domain.com。注意，这里所需要填入的代理地址仅会在实际请求时替换域名部分，如果你想填入 OpenAI SDK 中所要求的 Base URL，请使用 OpenAI 兼容渠道类型",
       "base_url": "Base URL",
       "base_url_placeholder": "OpenAPI SDK 中所要求的 Base URL",
+      "ratelimit": "渠道限速",
+      "ratelimit_placeholder": "为每个Token 的每个Channel限速 (3分钟), 默认0为不限速",
       "key": "密钥",
       "key_placeholder": "请输入密钥",
       "batch": "批量创建",

@@ -38,6 +38,7 @@ type Channel struct {
 	Priority           *int64  `json:"priority" gorm:"bigint;default:0"`
 	Config             string  `json:"config"`
 	SystemPrompt       *string `json:"system_prompt" gorm:"type:text"`
+	RateLimit          *int    `json:"ratelimit" gorm:"column:ratelimit;default:0"`
 }
 
 type ChannelConfig struct {
@@ -95,6 +96,7 @@ func BatchInsertChannels(channels []Channel) error {
 			return err
 		}
 	}
+	InitChannelCache()
 	return nil
 }
 
@@ -132,6 +134,9 @@ func (channel *Channel) Insert() error {
 		return err
 	}
 	err = channel.AddAbilities()
+	if err == nil {
+		InitChannelCache()
+	}
 	return err
 }
 
@@ -143,6 +148,9 @@ func (channel *Channel) Update() error {
 	}
 	DB.Model(channel).First(channel, "id = ?", channel.Id)
 	err = channel.UpdateAbilities()
+	if err == nil {
+		InitChannelCache()
+	}
 	return err
 }
 
@@ -173,6 +181,9 @@ func (channel *Channel) Delete() error {
 		return err
 	}
 	err = channel.DeleteAbilities()
+	if err == nil {
+		InitChannelCache()
+	}
 	return err
 }
 
@@ -197,6 +208,9 @@ func UpdateChannelStatusById(id int, status int) {
 	if err != nil {
 		logger.SysError("failed to update channel status: " + err.Error())
 	}
+	if err == nil {
+		InitChannelCache()
+	}
 }
 
 func UpdateChannelUsedQuota(id int, quota int64) {
@@ -216,10 +230,16 @@ func updateChannelUsedQuota(id int, quota int64) {
 
 func DeleteChannelByStatus(status int64) (int64, error) {
 	result := DB.Where("status = ?", status).Delete(&Channel{})
+	if result.Error == nil {
+		InitChannelCache()
+	}
 	return result.RowsAffected, result.Error
 }
 
 func DeleteDisabledChannel() (int64, error) {
 	result := DB.Where("status = ? or status = ?", ChannelStatusAutoDisabled, ChannelStatusManuallyDisabled).Delete(&Channel{})
+	if result.Error == nil {
+		InitChannelCache()
+	}
 	return result.RowsAffected, result.Error
 }

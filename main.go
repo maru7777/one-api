@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"runtime"
 	"strconv"
+	"time"
 
 	gmw "github.com/Laisky/gin-middlewares/v6"
 	glog "github.com/Laisky/go-utils/v5/log"
@@ -14,6 +16,7 @@ import (
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/client"
@@ -23,11 +26,13 @@ import (
 	"github.com/songquanpeng/one-api/controller"
 	"github.com/songquanpeng/one-api/middleware"
 	"github.com/songquanpeng/one-api/model"
+	"github.com/songquanpeng/one-api/monitor"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/router"
 )
 
 //go:embed web/build/*
+
 var buildFS embed.FS
 
 func main() {
@@ -95,6 +100,26 @@ func main() {
 	if config.EnableMetric {
 		logger.SysLog("metric enabled, will disable channel if too much request failed")
 	}
+
+	// Initialize Prometheus monitoring
+	if config.EnablePrometheusMetrics {
+		startTime := time.Unix(common.StartTime, 0)
+		if err := monitor.InitPrometheusMonitoring(common.Version, startTime.Format(time.RFC3339), runtime.Version(), startTime); err != nil {
+			logger.FatalLog("failed to initialize Prometheus monitoring: " + err.Error())
+		}
+		logger.SysLog("Prometheus monitoring initialized")
+
+		// Initialize database monitoring
+		if err := model.InitPrometheusDBMonitoring(); err != nil {
+			logger.FatalLog("failed to initialize database monitoring: " + err.Error())
+		}
+
+		// Initialize Redis monitoring if enabled
+		if common.RedisEnabled {
+			common.InitPrometheusRedisMonitoring()
+		}
+	}
+
 	openai.InitTokenEncoders()
 	client.Init()
 
@@ -122,6 +147,13 @@ func main() {
 	//server.Use(gzip.Gzip(gzip.DefaultCompression))
 	server.Use(middleware.RequestId())
 	server.Use(middleware.Language())
+
+	// Add Prometheus middleware if enabled
+	if config.EnablePrometheusMetrics {
+		server.Use(middleware.PrometheusMiddleware())
+		server.Use(middleware.PrometheusRateLimitMiddleware())
+	}
+
 	middleware.SetUpLogger(server)
 
 	// Initialize session store
@@ -144,6 +176,12 @@ func main() {
 		})
 	}
 	server.Use(sessions.Sessions("session", sessionStore))
+
+	// Add Prometheus metrics endpoint if enabled
+	if config.EnablePrometheusMetrics {
+		server.GET("/metrics", middleware.AdminAuth(), gin.WrapH(promhttp.Handler()))
+		logger.SysLog("Prometheus metrics endpoint available at /metrics")
+	}
 
 	router.SetRouter(server, buildFS)
 	var port = os.Getenv("PORT")

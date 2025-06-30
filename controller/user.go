@@ -288,7 +288,7 @@ func GetAllUsers(c *gin.Context) {
 	}
 
 	order := c.DefaultQuery("order", "")
-	users, err := model.GetAllUsers(p*config.ItemsPerPage, config.ItemsPerPage, order)
+	users, err := model.GetAllUsers(p*config.MaxItemsPerPage, config.MaxItemsPerPage, order)
 
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{

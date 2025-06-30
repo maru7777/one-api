@@ -1,4 +1,4 @@
-package geminiv2
+package geminiOpenaiCompatible
 
 import (
 	"fmt"

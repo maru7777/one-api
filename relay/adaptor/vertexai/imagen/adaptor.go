@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/relay/meta"
 	"github.com/songquanpeng/one-api/relay/model"

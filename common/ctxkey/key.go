@@ -25,9 +25,11 @@ const (
 	TokenName           = "token_name"
 	TokenQuota          = "token_quota"
 	TokenQuotaUnlimited = "token_quota_unlimited"
+	UserQuota           = "user_quota"
 	BaseURL             = "base_url"
 	AvailableModels     = "available_models"
 	KeyRequestBody      = gin.BodyBytesKey
 	SystemPrompt        = "system_prompt"
 	Meta                = "meta"
+	RateLimit           = "rate_limit"
 )

@@ -41,6 +41,9 @@ Also welcome to register and use my deployed one-api gateway, which supports var
     - [Support gemini-2.5-pro](#support-gemini-25-pro)
     - [Support o3 \& o4-mini \& gpt-4.1](#support-o3--o4-mini--gpt-41)
     - [Support gpt-image-1's image generation \& edits](#support-gpt-image-1s-image-generation--edits)
+    - [Support black-forest-labs/flux-kontext-pro](#support-black-forest-labsflux-kontext-pro)
+    - [Support o3-pro \& reasoning content](#support-o3-pro--reasoning-content)
+    - [Support GCP Vertex gloabl region and gemini-2.5-pro-preview-06-05](#support-gcp-vertex-gloabl-region-and-gemini-25-pro-preview-06-05)
   - [Bug fix](#bug-fix)
 
 ## Turtorial
@@ -66,16 +69,24 @@ oneapi:
     DISABLE_COOKIE_SECURE: "true"
     # (optional) ENFORCE_INCLUDE_USAGE require upstream API responses to include usage field
     ENFORCE_INCLUDE_USAGE: "true"
+    # (optional) MAX_ITEMS_PER_PAGE maximum items per page, default is 10
+    MAX_ITEMS_PER_PAGE: 10
     # (optional) GLOBAL_API_RATE_LIMIT maximum API requests per IP within three minutes, default is 1000
     GLOBAL_API_RATE_LIMIT: 1000
     # (optional) GLOBAL_WEB_RATE_LIMIT maximum web page requests per IP within three minutes, default is 1000
     GLOBAL_WEB_RATE_LIMIT: 1000
+    # (optional) /v1 API ratelimit for each token
+    GLOBAL_RELAY_RATE_LIMIT: 1000
+    # (optional) Whether to ratelimit for channel, 0 is unlimited, 1 is to enable the ratelimit
+    GLOBAL_CHANNEL_RATE_LIMIT: 1
     # (optional) REDIS_CONN_STRING set REDIS cache connection
     REDIS_CONN_STRING: redis://100.122.41.16:6379/1
     # (optional) FRONTEND_BASE_URL redirect page requests to specified address, server-side setting only
     FRONTEND_BASE_URL: https://oneapi.laisky.com
     # (optional) OPENROUTER_PROVIDER_SORT set sorting method for OpenRouter Providers, default is throughput
     OPENROUTER_PROVIDER_SORT: throughput
+    # (optional) CHANNEL_SUSPEND_SECONDS_FOR_429 set the duration for channel suspension when receiving 429 error, default is 60 seconds
+    CHANNEL_SUSPEND_SECONDS_FOR_429: 60
   volumes:
     - /var/lib/oneapi:/data
   ports:
@@ -255,6 +266,18 @@ support `gpt-4o-search-preview` & `gpt-4o-mini-search-preview`
 ![](https://s3.laisky.com/uploads/2025/04/gpt-image-1-3.png)
 
 ![](https://s3.laisky.com/uploads/2025/04/gpt-image-1-1.png)
+
+### Support black-forest-labs/flux-kontext-pro
+
+![](https://s3.laisky.com/uploads/2025/05/flux-kontext-pro.png)
+
+### Support o3-pro & reasoning content
+
+![](https://s3.laisky.com/uploads/2025/06/o3-pro.png)
+
+### Support GCP Vertex gloabl region and gemini-2.5-pro-preview-06-05
+
+![](https://s3.laisky.com/uploads/2025/06/gemini-2.5-pro-preview-06-05.png)
 
 ## Bug fix
 
