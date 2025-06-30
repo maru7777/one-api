@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/model"
+	"github.com/songquanpeng/one-api/relay"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -224,4 +225,71 @@ func TestDeepSeekModelsInDashboard(t *testing.T) {
 	}
 
 	t.Logf("✓ DeepSeek channel type %d has %d models: %v", DeepSeekChannelType, len(deepSeekModels), deepSeekModels)
+}
+
+func TestChannelDefaultPricing(t *testing.T) {
+	// This test verifies that the /api/channel/default-pricing endpoint works correctly
+	// for different channel types
+	model.InitDB()
+	gin.SetMode(gin.TestMode)
+
+	// Initialize global pricing manager for the test
+	relay.InitializeGlobalPricing()
+
+	router := gin.New()
+	router.GET("/api/channel/default-pricing", GetChannelDefaultPricing)
+
+	// Test Custom channel (should return global pricing from all adapters)
+	req1, _ := http.NewRequest("GET", "/api/channel/default-pricing?type=8", nil) // Custom = 8
+	w1 := httptest.NewRecorder()
+	router.ServeHTTP(w1, req1)
+
+	assert.Equal(t, http.StatusOK, w1.Code)
+
+	var customResponse struct {
+		Success bool `json:"success"`
+		Data    struct {
+			ModelRatio      string `json:"model_ratio"`
+			CompletionRatio string `json:"completion_ratio"`
+		} `json:"data"`
+	}
+	err1 := json.Unmarshal(w1.Body.Bytes(), &customResponse)
+	assert.NoError(t, err1)
+	assert.True(t, customResponse.Success)
+
+	// Parse the JSON strings to verify they contain models from multiple adapters
+	var customModelRatios map[string]float64
+	err1 = json.Unmarshal([]byte(customResponse.Data.ModelRatio), &customModelRatios)
+	assert.NoError(t, err1)
+	assert.NotEmpty(t, customModelRatios, "Custom channel should have model ratios")
+
+	// Test specific channel type (should return only that adapter's pricing)
+	req2, _ := http.NewRequest("GET", "/api/channel/default-pricing?type=40", nil) // DeepSeek = 40
+	w2 := httptest.NewRecorder()
+	router.ServeHTTP(w2, req2)
+
+	assert.Equal(t, http.StatusOK, w2.Code)
+
+	var deepseekResponse struct {
+		Success bool `json:"success"`
+		Data    struct {
+			ModelRatio      string `json:"model_ratio"`
+			CompletionRatio string `json:"completion_ratio"`
+		} `json:"data"`
+	}
+	err2 := json.Unmarshal(w2.Body.Bytes(), &deepseekResponse)
+	assert.NoError(t, err2)
+	assert.True(t, deepseekResponse.Success)
+
+	var deepseekModelRatios map[string]float64
+	err2 = json.Unmarshal([]byte(deepseekResponse.Data.ModelRatio), &deepseekModelRatios)
+	assert.NoError(t, err2)
+	assert.NotEmpty(t, deepseekModelRatios, "DeepSeek channel should have model ratios")
+
+	// Custom should have significantly more models since it includes all adapters
+	assert.Greater(t, len(customModelRatios), len(deepseekModelRatios),
+		"Custom channel should have more models than specific channel")
+
+	t.Logf("✓ Custom channel has %d models from global pricing", len(customModelRatios))
+	t.Logf("✓ Specific channel has %d models from its adapter", len(deepseekModelRatios))
 }

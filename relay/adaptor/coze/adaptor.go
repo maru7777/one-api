@@ -78,9 +78,32 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Met
 }
 
 func (a *Adaptor) GetModelList() []string {
-	return ModelList
+	return adaptor.GetModelListFromPricing(ModelRatios)
 }
 
 func (a *Adaptor) GetChannelName() string {
 	return "coze"
+}
+
+// GetDefaultModelPricing returns the pricing information for Coze models
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+	return ModelRatios
+}
+
+func (a *Adaptor) GetModelRatio(modelName string) float64 {
+	pricing := a.GetDefaultModelPricing()
+	if price, exists := pricing[modelName]; exists {
+		return price.Ratio
+	}
+	// Use default fallback from DefaultPricingMethods
+	return a.DefaultPricingMethods.GetModelRatio(modelName)
+}
+
+func (a *Adaptor) GetCompletionRatio(modelName string) float64 {
+	pricing := a.GetDefaultModelPricing()
+	if price, exists := pricing[modelName]; exists {
+		return price.CompletionRatio
+	}
+	// Use default fallback from DefaultPricingMethods
+	return a.DefaultPricingMethods.GetCompletionRatio(modelName)
 }

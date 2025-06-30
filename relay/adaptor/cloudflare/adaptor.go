@@ -92,7 +92,7 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Met
 }
 
 func (a *Adaptor) GetModelList() []string {
-	return ModelList
+	return adaptor.GetModelListFromPricing(ModelRatios)
 }
 
 func (a *Adaptor) GetChannelName() string {

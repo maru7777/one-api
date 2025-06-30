@@ -79,7 +79,8 @@ func GetCompatibleChannelMeta(channelType int) (string, []string) {
 	case channeltype.XunfeiV2:
 		return "xunfeiv2", xunfeiv2.ModelList
 	case channeltype.OpenRouter:
-		return "openrouter", openrouter.ModelList
+		adaptor := &openrouter.Adaptor{}
+		return "openrouter", adaptor.GetModelList()
 	case channeltype.AliBailian:
 		return "alibailian", alibailian.ModelList
 	case channeltype.GeminiOpenAICompatible:

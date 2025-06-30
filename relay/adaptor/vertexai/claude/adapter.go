@@ -6,22 +6,31 @@ import (
 	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common/ctxkey"
+	"github.com/songquanpeng/one-api/relay/adaptor"
 	"github.com/songquanpeng/one-api/relay/adaptor/anthropic"
+	"github.com/songquanpeng/one-api/relay/billing/ratio"
 	"github.com/songquanpeng/one-api/relay/meta"
 	"github.com/songquanpeng/one-api/relay/model"
 )
 
-var ModelList = []string{
-	"claude-3-haiku@20240307",
-	"claude-3-opus@20240229",
-	"claude-opus-4@20250514",
-	"claude-3-sonnet@20240229",
-	"claude-3-5-sonnet@20240620",
-	"claude-3-5-sonnet-v2@20241022",
-	"claude-3-5-haiku@20241022",
-	"claude-3-7-sonnet@20250219",
-	"claude-sonnet-4@20250514",
+// ModelRatios contains all supported models and their pricing ratios
+// Model list is derived from the keys of this map, eliminating redundancy
+// Based on VertexAI Claude pricing: https://cloud.google.com/vertex-ai/generative-ai/pricing
+var ModelRatios = map[string]adaptor.ModelPrice{
+	// Claude Models on VertexAI
+	"claude-3-haiku@20240307":       {Ratio: 0.25 * ratio.MilliTokensUsd, CompletionRatio: 5.0}, // $0.25/$1.25 per 1M tokens
+	"claude-3-opus@20240229":        {Ratio: 15.0 * ratio.MilliTokensUsd, CompletionRatio: 5.0}, // $15/$75 per 1M tokens
+	"claude-opus-4@20250514":        {Ratio: 15.0 * ratio.MilliTokensUsd, CompletionRatio: 5.0}, // $15/$75 per 1M tokens
+	"claude-3-sonnet@20240229":      {Ratio: 3.0 * ratio.MilliTokensUsd, CompletionRatio: 5.0},  // $3/$15 per 1M tokens
+	"claude-3-5-sonnet@20240620":    {Ratio: 3.0 * ratio.MilliTokensUsd, CompletionRatio: 5.0},  // $3/$15 per 1M tokens
+	"claude-3-5-sonnet-v2@20241022": {Ratio: 3.0 * ratio.MilliTokensUsd, CompletionRatio: 5.0},  // $3/$15 per 1M tokens
+	"claude-3-5-haiku@20241022":     {Ratio: 1.0 * ratio.MilliTokensUsd, CompletionRatio: 5.0},  // $1/$5 per 1M tokens
+	"claude-3-7-sonnet@20250219":    {Ratio: 3.0 * ratio.MilliTokensUsd, CompletionRatio: 5.0},  // $3/$15 per 1M tokens
+	"claude-sonnet-4@20250514":      {Ratio: 3.0 * ratio.MilliTokensUsd, CompletionRatio: 5.0},  // $3/$15 per 1M tokens
 }
+
+// ModelList derived from ModelRatios for backward compatibility
+var ModelList = adaptor.GetModelListFromPricing(ModelRatios)
 
 const anthropicVersion = "vertex-2023-10-16"
 

@@ -11,7 +11,9 @@ import (
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/relay"
+	"github.com/songquanpeng/one-api/relay/adaptor"
 	"github.com/songquanpeng/one-api/relay/channeltype"
+	"github.com/songquanpeng/one-api/relay/pricing"
 )
 
 func GetAllChannels(c *gin.Context) {
@@ -284,19 +286,27 @@ func GetChannelDefaultPricing(c *gin.Context) {
 		return
 	}
 
-	// Get adapter for this channel type and retrieve its default pricing
-	// Convert channel type to API type first
-	apiType := channeltype.ToAPIType(channelType)
-	adaptor := relay.GetAdaptor(apiType)
-	if adaptor == nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "Unsupported channel type",
-		})
-		return
-	}
+	var defaultPricing map[string]adaptor.ModelPrice
 
-	defaultPricing := adaptor.GetDefaultModelPricing()
+	// For Custom channels and OpenAI-compatible channels, use global pricing from all adapters
+	// This gives users access to pricing for all supported models
+	if channelType == channeltype.Custom || channelType == channeltype.OpenAICompatible {
+		// Use global pricing manager to get pricing from all adapters
+		defaultPricing = pricing.GetGlobalModelPricing()
+	} else {
+		// For specific channel types, use their adapter's default pricing
+		// Convert channel type to API type first
+		apiType := channeltype.ToAPIType(channelType)
+		adaptor := relay.GetAdaptor(apiType)
+		if adaptor == nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "Unsupported channel type",
+			})
+			return
+		}
+		defaultPricing = adaptor.GetDefaultModelPricing()
+	}
 
 	// Separate model ratios and completion ratios for UI compatibility
 	modelRatios := make(map[string]float64)
