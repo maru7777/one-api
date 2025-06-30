@@ -93,19 +93,20 @@
     - [Memory Management](#memory-management)
     - [Monitoring and Metrics](#monitoring-and-metrics)
       - [Key Metrics](#key-metrics)
-      - [Key Files](#key-files-6)
+      - [Monitoring Files](#monitoring-files)
+  - [Summary](#summary)
 
 ## Overview
 
 The One-API billing system is a comprehensive quota and pricing management system designed to handle multi-tenant API usage billing across various AI model providers. The system supports both user-level and token-level quota management, channel-specific pricing, and real-time billing calculations.
 
-**Current System Status (2025)**: The billing system now features comprehensive pricing coverage with 16+ adapters supporting 400+ models across major AI providers, implementing a sophisticated four-layer pricing resolution system with intelligent global fallback capabilities.
+**Current System Status (2025)**: The billing system now features comprehensive pricing coverage with 25+ adapters supporting 400+ models across major AI providers, implementing a sophisticated four-layer pricing resolution system with intelligent global fallback capabilities.
 
 ### Key Features
 
 - **Multi-tier Quota System**: User quotas, token quotas, and unlimited quota support
 - **Channel-specific Pricing**: Per-channel model pricing overrides
-- **Comprehensive Adapter Pricing**: 16+ channel adapters with native pricing implementations
+- **Comprehensive Adapter Pricing**: 25+ channel adapters with native pricing implementations
 - **Complete Pricing Coverage**: 400+ models across major AI providers with accurate pricing
 - **Four-Layer Pricing System**: Channel overrides → Adapter pricing → Global fallback → Final default
 - **Real-time Billing**: Pre-consumption and post-consumption quota management
@@ -260,16 +261,16 @@ graph TD
 
 #### Key Files
 
-- `relay/pricing/global.go` - Global pricing manager and three-layer pricing logic
+- `relay/pricing/global.go` - Global pricing manager and four-layer pricing logic
 - `relay/billing/ratio/model.go` - Audio/video pricing constants and legacy compatibility functions
 - `relay/adaptor/interface.go` - Adapter pricing interface
-- `relay/adaptor/*/adaptor.go` - Adapter-specific pricing implementations (13 adapters)
+- `relay/adaptor/*/constants.go` - Adapter-specific pricing implementations (25+ adapters)
 - `model/channel.go` - Channel-specific pricing storage
 - `controller/channel.go` - Channel pricing API endpoints
 
 ### 3. Adapter System
 
-Each channel adapter implements its own comprehensive pricing logic. As of the latest implementation, 13 major adapters have native pricing support:
+Each channel adapter implements its own comprehensive pricing logic. As of the latest implementation, 25+ major adapters have native pricing support:
 
 ```mermaid
 classDiagram
@@ -323,12 +324,12 @@ classDiagram
     Adaptor <|-- GeminiAdaptor
     Adaptor <|-- ReplicateAdaptor
 
-    note for Adaptor "16+ adapters with native pricing:\n• OpenAI (84 models)\n• Anthropic (15 models)\n• Zhipu (23 models)\n• Ali (89 models)\n• Baidu (16 models)\n• Tencent (6 models)\n• Gemini (26 models)\n• Xunfei (6 models)\n• VertexAI (34 models)\n• DeepSeek (2 models)\n• Groq (20+ models)\n• Mistral (10+ models)\n• Moonshot (3 models)\n• Cohere (12 models)\n• AI360 (4 models)\n• Doubao (20+ models)\n• Novita (40+ models)"
+    note for Adaptor "25+ adapters with native pricing:\n• OpenAI (84 models)\n• Anthropic (15 models)\n• Zhipu (23 models)\n• Ali (89 models)\n• Baidu (16 models)\n• Tencent (6 models)\n• Gemini (26 models)\n• Xunfei (6 models)\n• VertexAI (34 models)\n• DeepSeek (2 models)\n• Groq (20+ models)\n• Mistral (10+ models)\n• Moonshot (3 models)\n• Cohere (12 models)\n• AI360 (4 models)\n• Doubao (20+ models)\n• Novita (40+ models)\n• OpenRouter (100+ models)\n• Replicate (48 models)\n• AWS (31 models)\n• StepFun (3 models)\n• LingYi WanWu (3 models)\n• Minimax (3 models)\n• Baichuan (2 models)\n• TogetherAI (40+ models)\n• SiliconFlow (30+ models)"
 ```
 
 #### Adapter Pricing Implementation Status
 
-**✅ Adapters with Native Pricing (16 total)**:
+**✅ Adapters with Native Pricing (25+ total)**:
 
 - **OpenAI**: 84 models with comprehensive GPT pricing
 - **Anthropic**: 15 models with Claude pricing
@@ -347,6 +348,16 @@ classDiagram
 - **AI360**: 4 models with AI360 pricing
 - **Doubao**: 20+ models with Doubao pricing
 - **Novita**: 40+ models with Novita pricing
+- **OpenRouter**: 100+ models with comprehensive multi-provider pricing
+- **Replicate**: 48 models with image generation and language models
+- **AWS**: 31 models with Bedrock pricing
+- **StepFun**: 3 models with Step pricing
+- **LingYi WanWu**: 3 models with Yi pricing
+- **Minimax**: 3 models with abab pricing
+- **Baichuan**: 2 models with Baichuan pricing
+- **TogetherAI**: 40+ models with Together AI pricing
+- **SiliconFlow**: 30+ models with SiliconFlow pricing
+- **XAI**: 2 models with Grok pricing
 
 **❌ Adapters Using DefaultPricingMethods (3 remaining)**:
 
@@ -503,8 +514,8 @@ var DefaultGlobalPricingAdapters = []int{
 
 #### Key Functions
 
-- `GetModelRatioWithThreeLayers()` - Three-layer pricing resolution
-- `GetCompletionRatioWithThreeLayers()` - Three-layer completion ratio resolution
+- `GetModelRatioWithThreeLayers()` - Four-layer pricing resolution
+- `GetCompletionRatioWithThreeLayers()` - Four-layer completion ratio resolution
 - `SetContributingAdapters()` - Configure which adapters contribute to global pricing
 - `ReloadGlobalPricing()` - Force reload of global pricing from adapters
 - `GetGlobalPricingStats()` - Get statistics about global pricing coverage
@@ -830,7 +841,7 @@ graph TD
 
 #### Key Improvements
 
-1. **Expanded Adapter Coverage**: From 3 to 16+ adapters with native pricing
+1. **Expanded Adapter Coverage**: From 3 to 25+ adapters with native pricing
 2. **Model Coverage**: From ~70 to 400+ models with accurate pricing
 3. **UI Consistency**: All channel edit pages now display pricing information
 4. **Pricing Accuracy**: Based on official provider documentation
@@ -936,23 +947,33 @@ func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
 
 **Adapters with Native Pricing**:
 
-- `relay/adaptor/openai/adaptor.go` - 84 OpenAI GPT models
-- `relay/adaptor/anthropic/adaptor.go` - 15 Anthropic Claude models
-- `relay/adaptor/ali/adaptor.go` - 89 Alibaba Cloud models
-- `relay/adaptor/baidu/adaptor.go` - 16 Baidu ERNIE models
-- `relay/adaptor/tencent/adaptor.go` - 6 Tencent Hunyuan models
-- `relay/adaptor/gemini/adaptor.go` - 26 Google Gemini models
-- `relay/adaptor/xunfei/adaptor.go` - 6 iFlytek Spark models
+- `relay/adaptor/openai/constants.go` - 84 OpenAI GPT models
+- `relay/adaptor/anthropic/constants.go` - 15 Anthropic Claude models
+- `relay/adaptor/ali/constants.go` - 89 Alibaba Cloud models
+- `relay/adaptor/baidu/constants.go` - 16 Baidu ERNIE models
+- `relay/adaptor/tencent/constants.go` - 6 Tencent Hunyuan models
+- `relay/adaptor/geminiOpenaiCompatible/constants.go` - 26 Google Gemini models
+- `relay/adaptor/xunfei/constants.go` - 6 iFlytek Spark models
 - `relay/adaptor/vertexai/adaptor.go` - 34 Google Cloud VertexAI models
-- `relay/adaptor/zhipu/adaptor.go` - 23 Zhipu GLM models
-- `relay/adaptor/deepseek/adaptor.go` - 2 DeepSeek models
-- `relay/adaptor/groq/adaptor.go` - 20+ Groq models
-- `relay/adaptor/mistral/adaptor.go` - 10+ Mistral models
-- `relay/adaptor/moonshot/adaptor.go` - 3 Moonshot models
-- `relay/adaptor/cohere/adaptor.go` - 12 Cohere Command models
-- `relay/adaptor/ai360/adaptor.go` - 4 AI360 models
-- `relay/adaptor/doubao/adaptor.go` - 20+ Doubao models
-- `relay/adaptor/novita/adaptor.go` - 40+ Novita models
+- `relay/adaptor/zhipu/constants.go` - 23 Zhipu GLM models
+- `relay/adaptor/deepseek/constants.go` - 2 DeepSeek models
+- `relay/adaptor/groq/constants.go` - 20+ Groq models
+- `relay/adaptor/mistral/constants.go` - 10+ Mistral models
+- `relay/adaptor/moonshot/constants.go` - 3 Moonshot models
+- `relay/adaptor/cohere/constant.go` - 12 Cohere Command models
+- `relay/adaptor/ai360/constants.go` - 4 AI360 models
+- `relay/adaptor/doubao/constants.go` - 20+ Doubao models
+- `relay/adaptor/novita/constants.go` - 40+ Novita models
+- `relay/adaptor/openrouter/adaptor.go` - 100+ OpenRouter models
+- `relay/adaptor/replicate/constant.go` - 48 Replicate models
+- `relay/adaptor/aws/adaptor.go` - 31 AWS Bedrock models
+- `relay/adaptor/stepfun/constants.go` - 3 StepFun models
+- `relay/adaptor/lingyiwanwu/constants.go` - 3 LingYi WanWu models
+- `relay/adaptor/minimax/constants.go` - 3 Minimax models
+- `relay/adaptor/baichuan/constants.go` - 2 Baichuan models
+- `relay/adaptor/togetherai/constants.go` - 40+ TogetherAI models
+- `relay/adaptor/siliconflow/constants.go` - 30+ SiliconFlow models
+- `relay/adaptor/xai/constants.go` - 2 XAI Grok models
 
 ### Global Pricing Enhancement and Clean Architecture
 
@@ -984,7 +1005,7 @@ graph TD
 
 #### What Was Enhanced
 
-1. **Adapter Coverage** - Expanded from 3 to 16+ adapters with native pricing
+1. **Adapter Coverage** - Expanded from 3 to 25+ adapters with native pricing
 2. **Global Pricing System** - Smart merging from selected adapters instead of static maps
 3. **Model Coverage** - Increased from ~70 to 400+ models with accurate pricing
 4. **Pricing Resolution** - Four-layer system with comprehensive fallback coverage
@@ -998,7 +1019,7 @@ graph TD
 
 #### Benefits Achieved
 
-1. **Comprehensive Coverage**: 400+ models across 16+ adapters with accurate pricing
+1. **Comprehensive Coverage**: 400+ models across 25+ adapters with accurate pricing
 2. **Smart Fallback**: Global pricing system merges from selected adapters automatically
 3. **Maintainability**: Each adapter manages its own pricing independently
 4. **Flexibility**: Four-layer system handles any pricing scenario
@@ -1009,6 +1030,25 @@ graph TD
 9. **Performance**: Efficient pricing lookups with caching and smart resolution
 
 ## Implementation Details
+
+### Current Implementation Status
+
+**✅ Fully Implemented Features**:
+
+- **Four-Layer Pricing System**: Complete implementation with channel overrides → adapter pricing → global fallback → final default
+- **25+ Adapter Pricing**: All major adapters have native pricing in their `constants.go` files
+- **Global Pricing Manager**: Automatic merging from 13 selected adapters for comprehensive fallback coverage
+- **Legacy Compatibility**: Backward compatibility maintained through legacy functions in `relay/billing/ratio/model.go`
+- **Real-time Usage**: Active usage in `relay/controller/text.go`, `relay/controller/audio.go`, and `controller/channel-test.go`
+
+**📍 Current Usage Pattern**:
+
+```go
+// Modern approach used throughout the codebase
+pricingAdaptor := relay.GetAdaptor(meta.ChannelType)
+modelRatio := pricing.GetModelRatioWithThreeLayers(textRequest.Model, channelModelRatio, pricingAdaptor)
+completionRatio := pricing.GetCompletionRatioWithThreeLayers(textRequest.Model, channelCompletionRatio, pricingAdaptor)
+```
 
 ### Four-Layer Pricing Resolution
 
@@ -1165,7 +1205,20 @@ The system includes comprehensive monitoring:
 - Channel utilization
 - Error rates and types
 
-#### Key Files
+#### Monitoring Files
 
 - `common/metrics/` - Metrics collection
 - Monitoring integration in controller files
+
+## Summary
+
+The One-API billing system has evolved into a sophisticated, multi-layered pricing and quota management system that provides:
+
+**✅ Complete Pricing Coverage**: 25+ adapters with 400+ models across all major AI providers
+**✅ Intelligent Fallback**: Four-layer pricing resolution ensures no model is left without pricing
+**✅ Flexible Configuration**: Channel-specific overrides, adapter defaults, and global fallbacks
+**✅ High Performance**: Caching, batch processing, and optimized database operations
+**✅ Legacy Compatibility**: Smooth migration path from old centralized pricing system
+**✅ Real-time Billing**: Pre-consumption and post-consumption quota management with refund capabilities
+
+The system successfully migrated from a centralized model ratio approach to a distributed adapter-based pricing system while maintaining full backward compatibility and adding comprehensive global pricing fallback capabilities.
