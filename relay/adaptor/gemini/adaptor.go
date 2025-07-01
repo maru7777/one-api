@@ -96,9 +96,36 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Met
 }
 
 func (a *Adaptor) GetModelList() []string {
-	return ModelList
+	return channelhelper.GetModelListFromPricing(ModelRatios)
 }
 
 func (a *Adaptor) GetChannelName() string {
 	return "google gemini"
+}
+
+// Pricing methods - Gemini adapter manages its own model pricing
+func (a *Adaptor) GetDefaultModelPricing() map[string]channelhelper.ModelPrice {
+	const MilliTokensUsd = 0.000001
+
+	// Direct map definition - much easier to maintain and edit
+	// Pricing from https://ai.google.dev/pricing
+	return ModelRatios
+}
+
+func (a *Adaptor) GetModelRatio(modelName string) float64 {
+	pricing := a.GetDefaultModelPricing()
+	if price, exists := pricing[modelName]; exists {
+		return price.Ratio
+	}
+	// Default Gemini pricing
+	return 0.5 * 0.000001 // Default USD pricing
+}
+
+func (a *Adaptor) GetCompletionRatio(modelName string) float64 {
+	pricing := a.GetDefaultModelPricing()
+	if price, exists := pricing[modelName]; exists {
+		return price.CompletionRatio
+	}
+	// Default completion ratio for Gemini
+	return 3.0
 }

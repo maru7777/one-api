@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -26,19 +27,21 @@ import (
 	"github.com/songquanpeng/one-api/monitor"
 	"github.com/songquanpeng/one-api/relay"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
+
 	"github.com/songquanpeng/one-api/relay/channeltype"
 	"github.com/songquanpeng/one-api/relay/controller"
 	"github.com/songquanpeng/one-api/relay/meta"
 	relaymodel "github.com/songquanpeng/one-api/relay/model"
+	"github.com/songquanpeng/one-api/relay/pricing"
 	"github.com/songquanpeng/one-api/relay/relaymode"
 )
 
 func buildTestRequest(model string) *relaymodel.GeneralOpenAIRequest {
 	if model == "" {
-		model = "gpt-3.5-turbo"
+		model = "gpt-4o-mini"
 	}
 	testRequest := &relaymodel.GeneralOpenAIRequest{
-		MaxTokens: 2,
+		MaxTokens: 1024,
 		Model:     model,
 	}
 	testMessage := relaymodel.Message{
@@ -63,6 +66,34 @@ func parseTestResponse(resp string) (*openai.TextResponse, string, error) {
 		return nil, "", errors.New("response content is not string")
 	}
 	return &response, stringContent, nil
+}
+
+// calculateTestCost calculates the actual cost that would have been charged for a test request
+// This is used for informational purposes to track the real cost of testing operations
+func calculateTestCost(usage *relaymodel.Usage, meta *meta.Meta, request *relaymodel.GeneralOpenAIRequest) int64 {
+	if usage == nil {
+		return 0
+	}
+
+	// Get model ratio and completion ratio using three-layer pricing system
+	pricingAdaptor := relay.GetAdaptor(meta.ChannelType)
+	modelRatio := pricing.GetModelRatioWithThreeLayers(request.Model, nil, pricingAdaptor)
+	completionRatio := pricing.GetCompletionRatioWithThreeLayers(request.Model, nil, pricingAdaptor)
+
+	// Use the same group ratio as set in the context (typically 1.0 for tests)
+	groupRatio := 1.0 // Default group ratio for tests
+
+	// Calculate cost using the same formula as postConsumeQuota
+	promptTokens := usage.PromptTokens
+	completionTokens := usage.CompletionTokens
+	ratio := modelRatio * groupRatio
+
+	quota := int64(math.Ceil((float64(promptTokens)+float64(completionTokens)*completionRatio)*ratio)) + usage.ToolsCost
+	if ratio != 0 && quota <= 0 {
+		quota = 1
+	}
+
+	return quota
 }
 
 func testChannel(ctx context.Context, channel *model.Channel, request *relaymodel.GeneralOpenAIRequest) (responseMessage string, err error, openaiErr *relaymodel.Error) {
@@ -112,6 +143,9 @@ func testChannel(ctx context.Context, channel *model.Channel, request *relaymode
 	if err != nil {
 		return "", err, nil
 	}
+
+	// Capture usage information for accurate test logging
+	var actualUsage *relaymodel.Usage
 	defer func() {
 		logContent := fmt.Sprintf("渠道 %s 测试成功，响应：%s", channel.Name, responseMessage)
 		if err != nil || openaiErr != nil {
@@ -123,12 +157,27 @@ func testChannel(ctx context.Context, channel *model.Channel, request *relaymode
 			}
 			logContent = fmt.Sprintf("渠道 %s 测试失败，错误：%s", channel.Name, errorMessage)
 		}
-		go model.RecordTestLog(ctx, &model.Log{
+
+		// Create test log with actual usage information if available
+		testLog := &model.Log{
 			ChannelId:   channel.Id,
 			ModelName:   modelName,
 			Content:     logContent,
 			ElapsedTime: helper.CalcElapsedTime(startTime),
-		})
+		}
+
+		// Include actual token usage and calculated cost in test logs for accurate cost tracking
+		if actualUsage != nil {
+			testLog.PromptTokens = actualUsage.PromptTokens
+			testLog.CompletionTokens = actualUsage.CompletionTokens
+
+			// Calculate the actual cost that would have been charged (for informational purposes)
+			// This helps with cost tracking and budgeting while keeping tests free for users
+			actualCost := calculateTestCost(actualUsage, meta, request)
+			testLog.Quota = int(actualCost)
+		}
+
+		go model.RecordTestLog(ctx, testLog)
 	}()
 	logger.SysLog(string(jsonData))
 	requestBody := bytes.NewBuffer(jsonData)
@@ -156,6 +205,9 @@ func testChannel(ctx context.Context, channel *model.Channel, request *relaymode
 		err = errors.New("usage is nil")
 		return "", err, nil
 	}
+
+	// Capture usage for test logging
+	actualUsage = usage
 	rawResponse := w.Body.String()
 	_, responseMessage, err = parseTestResponse(rawResponse)
 	if err != nil {

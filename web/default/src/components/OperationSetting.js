@@ -6,7 +6,6 @@ import {
   showError,
   showSuccess,
   timestamp2string,
-  verifyJSON,
 } from '../helpers';
 
 const OperationSetting = () => {
@@ -18,9 +17,6 @@ const OperationSetting = () => {
     QuotaForInvitee: 0,
     QuotaRemindThreshold: 0,
     PreConsumedQuota: 0,
-    ModelRatio: '',
-    CompletionRatio: '',
-    GroupRatio: '',
     TopUpLink: '',
     ChatLink: '',
     QuotaPerUnit: 0,
@@ -45,13 +41,6 @@ const OperationSetting = () => {
     if (success) {
       let newInputs = {};
       data.forEach((item) => {
-        if (
-          item.key === 'ModelRatio' ||
-          item.key === 'GroupRatio' ||
-          item.key === 'CompletionRatio'
-        ) {
-          item.value = JSON.stringify(JSON.parse(item.value), null, 2);
-        }
         if (item.value === '{}') {
           item.value = '';
         }
@@ -113,29 +102,6 @@ const OperationSetting = () => {
             'QuotaRemindThreshold',
             inputs.QuotaRemindThreshold
           );
-        }
-        break;
-      case 'ratio':
-        if (originInputs['ModelRatio'] !== inputs.ModelRatio) {
-          if (!verifyJSON(inputs.ModelRatio)) {
-            showError('Model rate is not a valid JSON string');
-            return;
-          }
-          await updateOption('ModelRatio', inputs.ModelRatio);
-        }
-        if (originInputs['GroupRatio'] !== inputs.GroupRatio) {
-          if (!verifyJSON(inputs.GroupRatio)) {
-            showError('Group rate is not a valid JSON string');
-            return;
-          }
-          await updateOption('GroupRatio', inputs.GroupRatio);
-        }
-        if (originInputs['CompletionRatio'] !== inputs.CompletionRatio) {
-          if (!verifyJSON(inputs.CompletionRatio)) {
-            showError('Completion ratio is not a valid JSON string');
-            return;
-          }
-          await updateOption('CompletionRatio', inputs.CompletionRatio);
         }
         break;
       case 'quota':
@@ -239,48 +205,6 @@ const OperationSetting = () => {
             }}
           >
             {t('setting.operation.quota.buttons.save')}
-          </Form.Button>
-          <Divider />
-          <Header as='h3'>{t('setting.operation.ratio.title')}</Header>
-          <Form.Group widths='equal'>
-            <Form.TextArea
-              label={t('setting.operation.ratio.model.title')}
-              name='ModelRatio'
-              onChange={handleInputChange}
-              style={{ minHeight: 250, fontFamily: 'JetBrains Mono, Consolas' }}
-              autoComplete='new-password'
-              value={inputs.ModelRatio}
-              placeholder={t('setting.operation.ratio.model.placeholder')}
-            />
-          </Form.Group>
-          <Form.Group widths='equal'>
-            <Form.TextArea
-              label={t('setting.operation.ratio.completion.title')}
-              name='CompletionRatio'
-              onChange={handleInputChange}
-              style={{ minHeight: 250, fontFamily: 'JetBrains Mono, Consolas' }}
-              autoComplete='new-password'
-              value={inputs.CompletionRatio}
-              placeholder={t('setting.operation.ratio.completion.placeholder')}
-            />
-          </Form.Group>
-          <Form.Group widths='equal'>
-            <Form.TextArea
-              label={t('setting.operation.ratio.group.title')}
-              name='GroupRatio'
-              onChange={handleInputChange}
-              style={{ minHeight: 250, fontFamily: 'JetBrains Mono, Consolas' }}
-              autoComplete='new-password'
-              value={inputs.GroupRatio}
-              placeholder={t('setting.operation.ratio.group.placeholder')}
-            />
-          </Form.Group>
-          <Form.Button
-            onClick={() => {
-              submitConfig('ratio').then();
-            }}
-          >
-            {t('setting.operation.ratio.buttons.save')}
           </Form.Button>
           <Divider />
           <Header as='h3'>{t('setting.operation.log.title')}</Header>

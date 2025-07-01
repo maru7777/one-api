@@ -142,9 +142,34 @@ func ConvertEmbeddingRequest(request model.GeneralOpenAIRequest) (*EmbeddingRequ
 }
 
 func (a *Adaptor) GetModelList() []string {
-	return ModelList
+	return adaptor.GetModelListFromPricing(ModelRatios)
 }
 
 func (a *Adaptor) GetChannelName() string {
 	return "zhipu"
+}
+
+// Pricing methods - Zhipu adapter manages its own model pricing
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+	const MilliRmb = 0.0001
+
+	// Direct map definition - much easier to maintain and edit
+	return ModelRatios
+}
+
+func (a *Adaptor) GetModelRatio(modelName string) float64 {
+	pricing := a.GetDefaultModelPricing()
+	if price, exists := pricing[modelName]; exists {
+		return price.Ratio
+	}
+	// Default Zhipu pricing
+	return 0.001 * 0.0001 // Default RMB pricing
+}
+
+func (a *Adaptor) GetCompletionRatio(modelName string) float64 {
+	pricing := a.GetDefaultModelPricing()
+	if price, exists := pricing[modelName]; exists {
+		return price.CompletionRatio
+	}
+	return 1.0 // Default completion ratio for Zhipu
 }

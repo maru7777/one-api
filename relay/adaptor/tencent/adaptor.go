@@ -96,9 +96,36 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Met
 }
 
 func (a *Adaptor) GetModelList() []string {
-	return ModelList
+	return adaptor.GetModelListFromPricing(ModelRatios)
 }
 
 func (a *Adaptor) GetChannelName() string {
 	return "tencent"
+}
+
+// Pricing methods - Tencent adapter manages its own model pricing
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+	const MilliRmb = 0.0001
+
+	// Direct map definition - much easier to maintain and edit
+	// Pricing from https://cloud.tencent.com/document/product/1729/97731
+	return ModelRatios
+}
+
+func (a *Adaptor) GetModelRatio(modelName string) float64 {
+	pricing := a.GetDefaultModelPricing()
+	if price, exists := pricing[modelName]; exists {
+		return price.Ratio
+	}
+	// Default Tencent pricing
+	return 4.5 * 0.0001 // Default RMB pricing
+}
+
+func (a *Adaptor) GetCompletionRatio(modelName string) float64 {
+	pricing := a.GetDefaultModelPricing()
+	if price, exists := pricing[modelName]; exists {
+		return price.CompletionRatio
+	}
+	// Default completion ratio for Tencent
+	return 1.0
 }

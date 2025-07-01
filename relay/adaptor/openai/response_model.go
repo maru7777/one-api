@@ -14,7 +14,8 @@ import (
 // to return true for specific models that only support ChatCompletion API.
 func IsModelsOnlySupportedByChatCompletionAPI(actualModel string) bool {
 	switch {
-	case strings.Contains(actualModel, "gpt") && strings.Contains(actualModel, "-search-"):
+	case strings.Contains(actualModel, "gpt") && strings.Contains(actualModel, "-search-"),
+		strings.Contains(actualModel, "gpt") && strings.Contains(actualModel, "-audio-"):
 		return true
 	default:
 		return false

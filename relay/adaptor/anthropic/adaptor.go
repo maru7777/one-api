@@ -75,9 +75,32 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Met
 }
 
 func (a *Adaptor) GetModelList() []string {
-	return ModelList
+	return adaptor.GetModelListFromPricing(ModelRatios)
 }
 
 func (a *Adaptor) GetChannelName() string {
 	return "anthropic"
+}
+
+// Pricing methods - Anthropic adapter manages its own model pricing
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+	return ModelRatios
+}
+
+func (a *Adaptor) GetModelRatio(modelName string) float64 {
+	pricing := a.GetDefaultModelPricing()
+	if price, exists := pricing[modelName]; exists {
+		return price.Ratio
+	}
+	// Fallback to global pricing for unknown models
+	return 3 * 0.000001 // Default Anthropic pricing
+}
+
+func (a *Adaptor) GetCompletionRatio(modelName string) float64 {
+	pricing := a.GetDefaultModelPricing()
+	if price, exists := pricing[modelName]; exists {
+		return price.CompletionRatio
+	}
+	// Default completion ratio for Anthropic
+	return 5.0
 }

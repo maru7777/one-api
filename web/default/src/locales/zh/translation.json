@@ -121,6 +121,12 @@
       },
       "oauth_jwt_config": "OAuth JWT Config",
       "oauth_jwt_config_placeholder": "请输入 OAuth JWT Config 配置信息",
+      "model_ratio": "模型定价",
+      "model_ratio_placeholder": "可选，渠道专用模型定价，JSON 格式。留空则使用默认定价。",
+      "model_ratio_help": "JSON 格式：{\"模型名称\": 价格倍率}。价格倍率乘以 token 数量计算费用。",
+      "completion_ratio": "输出定价",
+      "completion_ratio_placeholder": "可选，渠道专用输出 token 定价倍率，JSON 格式。",
+      "completion_ratio_help": "JSON 格式：{\"模型名称\": 输出倍率}。输出倍率乘以输出 token 数量。",
       "buttons": {
         "cancel": "取消",
         "submit": "提交",
@@ -128,12 +134,15 @@
         "fill_all": "填入所有模型",
         "clear": "清除所有模型",
         "add_custom": "填入",
-        "custom_placeholder": "输入自定义模型名称"
+        "custom_placeholder": "输入自定义模型名称",
+        "load_defaults": "加载默认值"
       },
       "messages": {
         "name_required": "请填写渠道名称和渠道密钥！",
         "models_required": "请至少选择一个模型！",
         "model_mapping_invalid": "模型映射必须是合法的 JSON 格式！",
+        "model_ratio_invalid": "模型定价必须是合法的 JSON 格式！",
+        "completion_ratio_invalid": "输出定价必须是合法的 JSON 格式！",
         "update_success": "渠道更新成功！",
         "create_success": "渠道创建成功！",
         "oauth_jwt_config_invalid_format": "OAuth JWT Config 必须是是合法的 JSON 格式！",

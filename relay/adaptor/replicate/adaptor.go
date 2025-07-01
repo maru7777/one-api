@@ -180,9 +180,98 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Met
 }
 
 func (a *Adaptor) GetModelList() []string {
-	return ModelList
+	return adaptor.GetModelListFromPricing(ModelRatios)
 }
 
 func (a *Adaptor) GetChannelName() string {
 	return "replicate"
+}
+
+// Pricing methods - Replicate adapter manages its own model pricing
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+	const MilliTokensUsd = 0.000001
+
+	// Direct map definition - much easier to maintain and edit
+	// Pricing from https://replicate.com/pricing
+	return map[string]adaptor.ModelPrice{
+		// Image Generation Models - FLUX
+		"black-forest-labs/flux-kontext-pro":   {Ratio: 0.055, CompletionRatio: 1}, // $0.055 per image
+		"black-forest-labs/flux-1.1-pro":       {Ratio: 0.04, CompletionRatio: 1},  // $0.04 per image
+		"black-forest-labs/flux-1.1-pro-ultra": {Ratio: 0.12, CompletionRatio: 1},  // $0.12 per image
+		"black-forest-labs/flux-canny-dev":     {Ratio: 0.003, CompletionRatio: 1}, // $0.003 per image
+		"black-forest-labs/flux-canny-pro":     {Ratio: 0.055, CompletionRatio: 1}, // $0.055 per image
+		"black-forest-labs/flux-depth-dev":     {Ratio: 0.003, CompletionRatio: 1}, // $0.003 per image
+		"black-forest-labs/flux-depth-pro":     {Ratio: 0.055, CompletionRatio: 1}, // $0.055 per image
+		"black-forest-labs/flux-dev":           {Ratio: 0.003, CompletionRatio: 1}, // $0.003 per image
+		"black-forest-labs/flux-dev-lora":      {Ratio: 0.003, CompletionRatio: 1}, // $0.003 per image
+		"black-forest-labs/flux-fill-dev":      {Ratio: 0.003, CompletionRatio: 1}, // $0.003 per image
+		"black-forest-labs/flux-fill-pro":      {Ratio: 0.055, CompletionRatio: 1}, // $0.055 per image
+		"black-forest-labs/flux-pro":           {Ratio: 0.055, CompletionRatio: 1}, // $0.055 per image
+		"black-forest-labs/flux-redux-dev":     {Ratio: 0.003, CompletionRatio: 1}, // $0.003 per image
+		"black-forest-labs/flux-redux-schnell": {Ratio: 0.003, CompletionRatio: 1}, // $0.003 per image
+		"black-forest-labs/flux-schnell":       {Ratio: 0.003, CompletionRatio: 1}, // $0.003 per image
+		"black-forest-labs/flux-schnell-lora":  {Ratio: 0.003, CompletionRatio: 1}, // $0.003 per image
+
+		// Image Generation Models - Other
+		"ideogram-ai/ideogram-v2":                       {Ratio: 0.08, CompletionRatio: 1},  // $0.08 per image
+		"ideogram-ai/ideogram-v2-turbo":                 {Ratio: 0.04, CompletionRatio: 1},  // $0.04 per image
+		"recraft-ai/recraft-v3":                         {Ratio: 0.05, CompletionRatio: 1},  // $0.05 per image
+		"recraft-ai/recraft-v3-svg":                     {Ratio: 0.05, CompletionRatio: 1},  // $0.05 per image
+		"stability-ai/stable-diffusion-3":               {Ratio: 0.035, CompletionRatio: 1}, // $0.035 per image
+		"stability-ai/stable-diffusion-3.5-large":       {Ratio: 0.065, CompletionRatio: 1}, // $0.065 per image
+		"stability-ai/stable-diffusion-3.5-large-turbo": {Ratio: 0.04, CompletionRatio: 1},  // $0.04 per image
+		"stability-ai/stable-diffusion-3.5-medium":      {Ratio: 0.035, CompletionRatio: 1}, // $0.035 per image
+
+		// Language Models - Claude
+		"anthropic/claude-3.5-haiku":  {Ratio: 1 * MilliTokensUsd, CompletionRatio: 5}, // $1/$5 per 1M tokens
+		"anthropic/claude-3.5-sonnet": {Ratio: 3 * MilliTokensUsd, CompletionRatio: 5}, // $3/$15 per 1M tokens
+		"anthropic/claude-3.7-sonnet": {Ratio: 3 * MilliTokensUsd, CompletionRatio: 5}, // $3/$15 per 1M tokens
+
+		// Language Models - DeepSeek
+		"deepseek-ai/deepseek-r1": {Ratio: 0.55 * MilliTokensUsd, CompletionRatio: 2.18}, // $0.55/$1.2 per 1M tokens
+
+		// Language Models - IBM Granite
+		"ibm-granite/granite-20b-code-instruct-8k":  {Ratio: 1 * MilliTokensUsd, CompletionRatio: 1},   // $1 per 1M tokens
+		"ibm-granite/granite-3.0-2b-instruct":       {Ratio: 0.1 * MilliTokensUsd, CompletionRatio: 1}, // $0.1 per 1M tokens
+		"ibm-granite/granite-3.0-8b-instruct":       {Ratio: 0.3 * MilliTokensUsd, CompletionRatio: 1}, // $0.3 per 1M tokens
+		"ibm-granite/granite-3.1-2b-instruct":       {Ratio: 0.1 * MilliTokensUsd, CompletionRatio: 1}, // $0.1 per 1M tokens
+		"ibm-granite/granite-3.1-8b-instruct":       {Ratio: 0.3 * MilliTokensUsd, CompletionRatio: 1}, // $0.3 per 1M tokens
+		"ibm-granite/granite-3.2-8b-instruct":       {Ratio: 0.3 * MilliTokensUsd, CompletionRatio: 1}, // $0.3 per 1M tokens
+		"ibm-granite/granite-8b-code-instruct-128k": {Ratio: 0.3 * MilliTokensUsd, CompletionRatio: 1}, // $0.3 per 1M tokens
+
+		// Language Models - Meta Llama
+		"meta/llama-2-13b":                  {Ratio: 0.1 * MilliTokensUsd, CompletionRatio: 1},  // $0.1 per 1M tokens
+		"meta/llama-2-13b-chat":             {Ratio: 0.1 * MilliTokensUsd, CompletionRatio: 1},  // $0.1 per 1M tokens
+		"meta/llama-2-70b":                  {Ratio: 0.65 * MilliTokensUsd, CompletionRatio: 1}, // $0.65 per 1M tokens
+		"meta/llama-2-70b-chat":             {Ratio: 0.65 * MilliTokensUsd, CompletionRatio: 1}, // $0.65 per 1M tokens
+		"meta/llama-2-7b":                   {Ratio: 0.05 * MilliTokensUsd, CompletionRatio: 1}, // $0.05 per 1M tokens
+		"meta/llama-2-7b-chat":              {Ratio: 0.05 * MilliTokensUsd, CompletionRatio: 1}, // $0.05 per 1M tokens
+		"meta/meta-llama-3.1-405b-instruct": {Ratio: 9.5 * MilliTokensUsd, CompletionRatio: 1},  // $9.5 per 1M tokens
+		"meta/meta-llama-3-70b":             {Ratio: 0.65 * MilliTokensUsd, CompletionRatio: 1}, // $0.65 per 1M tokens
+		"meta/meta-llama-3-70b-instruct":    {Ratio: 0.65 * MilliTokensUsd, CompletionRatio: 1}, // $0.65 per 1M tokens
+		"meta/meta-llama-3-8b":              {Ratio: 0.05 * MilliTokensUsd, CompletionRatio: 1}, // $0.05 per 1M tokens
+		"meta/meta-llama-3-8b-instruct":     {Ratio: 0.05 * MilliTokensUsd, CompletionRatio: 1}, // $0.05 per 1M tokens
+
+		// Language Models - Mistral
+		"mistralai/mistral-7b-instruct-v0.2": {Ratio: 0.05 * MilliTokensUsd, CompletionRatio: 1}, // $0.05 per 1M tokens
+		"mistralai/mistral-7b-v0.1":          {Ratio: 0.05 * MilliTokensUsd, CompletionRatio: 1}, // $0.05 per 1M tokens
+	}
+}
+
+func (a *Adaptor) GetModelRatio(modelName string) float64 {
+	pricing := a.GetDefaultModelPricing()
+	if price, exists := pricing[modelName]; exists {
+		return price.Ratio
+	}
+	// Default Replicate pricing (image generation)
+	return 0.05 // Default $0.05 per image/request
+}
+
+func (a *Adaptor) GetCompletionRatio(modelName string) float64 {
+	pricing := a.GetDefaultModelPricing()
+	if price, exists := pricing[modelName]; exists {
+		return price.CompletionRatio
+	}
+	// Default completion ratio for Replicate
+	return 1.0
 }

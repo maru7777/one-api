@@ -79,9 +79,36 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Met
 }
 
 func (a *Adaptor) GetModelList() []string {
-	return ModelList
+	return adaptor.GetModelListFromPricing(ModelRatios)
 }
 
 func (a *Adaptor) GetChannelName() string {
 	return "xunfei"
+}
+
+// Pricing methods - Xunfei adapter manages its own model pricing
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+	const MilliRmb = 0.0001
+
+	// Direct map definition - much easier to maintain and edit
+	// Pricing from https://www.xfyun.cn/doc/spark/Web.html#_1-%E6%8E%A5%E5%8F%A3%E8%AF%B4%E6%98%8E
+	return ModelRatios
+}
+
+func (a *Adaptor) GetModelRatio(modelName string) float64 {
+	pricing := a.GetDefaultModelPricing()
+	if price, exists := pricing[modelName]; exists {
+		return price.Ratio
+	}
+	// Default Xunfei pricing
+	return 1.26 * 0.0001 // Default RMB pricing
+}
+
+func (a *Adaptor) GetCompletionRatio(modelName string) float64 {
+	pricing := a.GetDefaultModelPricing()
+	if price, exists := pricing[modelName]; exists {
+		return price.CompletionRatio
+	}
+	// Default completion ratio for Xunfei
+	return 1.0
 }

@@ -20,13 +20,14 @@ import (
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/model"
+	"github.com/songquanpeng/one-api/relay"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/relay/billing"
 	"github.com/songquanpeng/one-api/relay/billing/ratio"
-	billingratio "github.com/songquanpeng/one-api/relay/billing/ratio"
 	"github.com/songquanpeng/one-api/relay/channeltype"
 	"github.com/songquanpeng/one-api/relay/meta"
 	relaymodel "github.com/songquanpeng/one-api/relay/model"
+	"github.com/songquanpeng/one-api/relay/pricing"
 	"github.com/songquanpeng/one-api/relay/relaymode"
 )
 
@@ -86,7 +87,17 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 		}
 	}
 
-	modelRatio := billingratio.GetModelRatio(audioModel, channelType)
+	// get channel-specific pricing if available
+	var channelModelRatio map[string]float64
+	if channelModel, ok := c.Get(ctxkey.ChannelModel); ok {
+		if channel, ok := channelModel.(*model.Channel); ok {
+			channelModelRatio = channel.GetModelRatio()
+		}
+	}
+
+	// Use three-layer pricing system
+	pricingAdaptor := relay.GetAdaptor(channelType)
+	modelRatio := pricing.GetModelRatioWithThreeLayers(audioModel, channelModelRatio, pricingAdaptor)
 	// groupRatio := billingratio.GetGroupRatio(group)
 	groupRatio := c.GetFloat64(ctxkey.ChannelRatio)
 	ratio := modelRatio * groupRatio

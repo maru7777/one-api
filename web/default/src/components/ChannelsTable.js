@@ -15,6 +15,7 @@ import {
 
 import {CHANNEL_OPTIONS, ITEMS_PER_PAGE} from '../constants';
 import {renderGroup, renderNumber} from '../helpers/render';
+import PricingModal from './PricingModal';
 
 function renderTimestamp(timestamp) {
   return <>{timestamp2string(timestamp)}</>;
@@ -87,6 +88,8 @@ const ChannelsTable = () => {
   const [updatingBalance, setUpdatingBalance] = useState(false);
   const [showPrompt, setShowPrompt] = useState(shouldShowPrompt(promptID));
   const [showDetail, setShowDetail] = useState(isShowDetail());
+  const [pricingModalOpen, setPricingModalOpen] = useState(false);
+  const [selectedChannel, setSelectedChannel] = useState(null);
 
   const processChannelData = (channel) => {
     if (channel.models === '') {
@@ -410,6 +413,16 @@ const ChannelsTable = () => {
     setLoading(false);
   };
 
+  const openPricingModal = (channel) => {
+    setSelectedChannel(channel);
+    setPricingModalOpen(true);
+  };
+
+  const closePricingModal = () => {
+    setPricingModalOpen(false);
+    setSelectedChannel(null);
+  };
+
   return (
     <>
       <Form onSubmit={searchChannels}>
@@ -655,6 +668,13 @@ const ChannelsTable = () => {
                       >
                         {t('channel.buttons.edit')}
                       </Button>
+                      <Button
+                        size={'tiny'}
+                        color='orange'
+                        onClick={() => openPricingModal(channel)}
+                      >
+                        Pricing
+                      </Button>
                     </div>
                   </Table.Cell>
                 </Table.Row>
@@ -728,6 +748,13 @@ const ChannelsTable = () => {
           </Table.Row>
         </Table.Footer>
       </Table>
+      <PricingModal
+        open={pricingModalOpen}
+        onClose={closePricingModal}
+        channelId={selectedChannel?.id}
+        channelName={selectedChannel?.name}
+        channelType={selectedChannel?.type}
+      />
     </>
   );
 };

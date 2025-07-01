@@ -14,6 +14,7 @@ import (
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/common/logger"
+	dbmodel "github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/relay/adaptor"
 	"github.com/songquanpeng/one-api/relay/adaptor/alibailian"
 	"github.com/songquanpeng/one-api/relay/adaptor/baiduv2"
@@ -21,7 +22,6 @@ import (
 	"github.com/songquanpeng/one-api/relay/adaptor/geminiOpenaiCompatible"
 	"github.com/songquanpeng/one-api/relay/adaptor/minimax"
 	"github.com/songquanpeng/one-api/relay/adaptor/novita"
-	"github.com/songquanpeng/one-api/relay/adaptor/openrouter"
 	"github.com/songquanpeng/one-api/relay/billing/ratio"
 	"github.com/songquanpeng/one-api/relay/channeltype"
 	"github.com/songquanpeng/one-api/relay/meta"
@@ -148,7 +148,7 @@ func (a *Adaptor) applyRequestTransformations(meta *meta.Meta, request *model.Ge
 		if request.Provider == nil || request.Provider.Sort == "" &&
 			config.OpenrouterProviderSort != "" {
 			if request.Provider == nil {
-				request.Provider = &openrouter.RequestProvider{}
+				request.Provider = &model.RequestProvider{}
 			}
 
 			request.Provider.Sort = config.OpenrouterProviderSort
@@ -334,7 +334,17 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 					// Apply structured output cost multiplier
 					// For structured output, there's typically an additional cost based on completion tokens
 					// Using a conservative estimate of 25% additional cost for structured output
-					structuredOutputCost := int64(math.Ceil(float64(usage.CompletionTokens) * 0.25 * ratio.GetModelRatio(meta.ActualModelName, meta.ChannelType)))
+
+					// get channel-specific pricing if available
+					var channelModelRatio map[string]float64
+					if channelModel, ok := c.Get(ctxkey.ChannelModel); ok {
+						if channel, ok := channelModel.(*dbmodel.Channel); ok {
+							channelModelRatio = channel.GetModelRatio()
+						}
+					}
+
+					modelRatio := ratio.GetModelRatioWithChannel(meta.ActualModelName, meta.ChannelType, channelModelRatio)
+					structuredOutputCost := int64(math.Ceil(float64(usage.CompletionTokens) * 0.25 * modelRatio))
 					usage.ToolsCost += structuredOutputCost
 
 					// Log structured output cost application for debugging
@@ -352,7 +362,17 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 						req.ResponseFormat.Type == "json_schema" &&
 						req.ResponseFormat.JsonSchema != nil {
 						// Apply structured output cost multiplier
-						structuredOutputCost := int64(math.Ceil(float64(usage.CompletionTokens) * 0.25 * ratio.GetModelRatio(meta.ActualModelName, meta.ChannelType)))
+
+						// get channel-specific pricing if available
+						var channelModelRatio map[string]float64
+						if channelModel, ok := c.Get(ctxkey.ChannelModel); ok {
+							if channel, ok := channelModel.(*dbmodel.Channel); ok {
+								channelModelRatio = channel.GetModelRatio()
+							}
+						}
+
+						modelRatio := ratio.GetModelRatioWithChannel(meta.ActualModelName, meta.ChannelType, channelModelRatio)
+						structuredOutputCost := int64(math.Ceil(float64(usage.CompletionTokens) * 0.25 * modelRatio))
 						usage.ToolsCost += structuredOutputCost
 
 						// Log structured output cost application for debugging
@@ -368,11 +388,33 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 }
 
 func (a *Adaptor) GetModelList() []string {
-	_, modelList := GetCompatibleChannelMeta(a.ChannelType)
-	return modelList
+	return adaptor.GetModelListFromPricing(ModelRatios)
 }
 
 func (a *Adaptor) GetChannelName() string {
 	channelName, _ := GetCompatibleChannelMeta(a.ChannelType)
 	return channelName
+}
+
+// Pricing methods - OpenAI adapter manages its own model pricing
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+	return ModelRatios
+}
+
+func (a *Adaptor) GetModelRatio(modelName string) float64 {
+	pricing := a.GetDefaultModelPricing()
+	if price, exists := pricing[modelName]; exists {
+		return price.Ratio
+	}
+	// Fallback to global pricing for unknown models
+	return ratio.GetModelRatio(modelName, a.ChannelType)
+}
+
+func (a *Adaptor) GetCompletionRatio(modelName string) float64 {
+	pricing := a.GetDefaultModelPricing()
+	if price, exists := pricing[modelName]; exists {
+		return price.CompletionRatio
+	}
+	// Fallback to global pricing for unknown models
+	return ratio.GetCompletionRatio(modelName, a.ChannelType)
 }

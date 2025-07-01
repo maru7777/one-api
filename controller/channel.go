@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
@@ -9,6 +10,10 @@ import (
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/model"
+	"github.com/songquanpeng/one-api/relay"
+	"github.com/songquanpeng/one-api/relay/adaptor"
+	"github.com/songquanpeng/one-api/relay/channeltype"
+	"github.com/songquanpeng/one-api/relay/pricing"
 )
 
 func GetAllChannels(c *gin.Context) {
@@ -170,4 +175,174 @@ func UpdateChannel(c *gin.Context) {
 		"data":    channel,
 	})
 	return
+}
+
+func GetChannelPricing(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	channel, err := model.GetChannelById(id, false)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	modelRatio := channel.GetModelRatio()
+	completionRatio := channel.GetCompletionRatio()
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data": gin.H{
+			"model_ratio":      modelRatio,
+			"completion_ratio": completionRatio,
+		},
+	})
+	return
+}
+
+func UpdateChannelPricing(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	var request struct {
+		ModelRatio      map[string]float64 `json:"model_ratio"`
+		CompletionRatio map[string]float64 `json:"completion_ratio"`
+	}
+
+	err = c.ShouldBindJSON(&request)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	channel, err := model.GetChannelById(id, false)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	err = channel.SetModelRatio(request.ModelRatio)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Failed to set model ratio: " + err.Error(),
+		})
+		return
+	}
+
+	err = channel.SetCompletionRatio(request.CompletionRatio)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Failed to set completion ratio: " + err.Error(),
+		})
+		return
+	}
+
+	err = channel.Update()
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+	})
+	return
+}
+
+func GetChannelDefaultPricing(c *gin.Context) {
+	channelType, err := strconv.Atoi(c.Query("type"))
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Invalid channel type: " + err.Error(),
+		})
+		return
+	}
+
+	var defaultPricing map[string]adaptor.ModelPrice
+
+	// For Custom channels and OpenAI-compatible channels, use global pricing from all adapters
+	// This gives users access to pricing for all supported models
+	if channelType == channeltype.Custom || channelType == channeltype.OpenAICompatible {
+		// Use global pricing manager to get pricing from all adapters
+		defaultPricing = pricing.GetGlobalModelPricing()
+	} else {
+		// For specific channel types, use their adapter's default pricing
+		// Convert channel type to API type first
+		apiType := channeltype.ToAPIType(channelType)
+		adaptor := relay.GetAdaptor(apiType)
+		if adaptor == nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "Unsupported channel type",
+			})
+			return
+		}
+		defaultPricing = adaptor.GetDefaultModelPricing()
+	}
+
+	// Separate model ratios and completion ratios for UI compatibility
+	modelRatios := make(map[string]float64)
+	completionRatios := make(map[string]float64)
+
+	for model, price := range defaultPricing {
+		modelRatios[model] = price.Ratio
+		// Include all completion ratios, including 0 (which is valid pricing info)
+		completionRatios[model] = price.CompletionRatio
+	}
+
+	// Convert to JSON
+	modelRatioJSON, err := json.Marshal(modelRatios)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Failed to serialize model ratios: " + err.Error(),
+		})
+		return
+	}
+
+	completionRatioJSON, err := json.Marshal(completionRatios)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Failed to serialize completion ratios: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data": gin.H{
+			"model_ratio":      string(modelRatioJSON),
+			"completion_ratio": string(completionRatioJSON),
+		},
+	})
 }

@@ -14,6 +14,7 @@ import (
 type Adaptor struct {
 	meta       *meta.Meta
 	promptText string
+	adaptor.DefaultPricingMethods
 }
 
 func (a *Adaptor) Init(meta *meta.Meta) {

@@ -80,8 +80,11 @@ func SetApiRouter(router *gin.Engine) {
 			channelRoute.GET("/test/:id", controller.TestChannel)
 			channelRoute.GET("/update_balance", controller.UpdateAllChannelsBalance)
 			channelRoute.GET("/update_balance/:id", controller.UpdateChannelBalance)
+			channelRoute.GET("/pricing/:id", controller.GetChannelPricing)
+			channelRoute.GET("/default-pricing", controller.GetChannelDefaultPricing)
 			channelRoute.POST("/", controller.AddChannel)
 			channelRoute.PUT("/", controller.UpdateChannel)
+			channelRoute.PUT("/pricing/:id", controller.UpdateChannelPricing)
 			channelRoute.DELETE("/disabled", controller.DeleteDisabledChannel)
 			channelRoute.DELETE("/:id", controller.DeleteChannel)
 		}

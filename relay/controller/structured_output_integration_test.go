@@ -57,8 +57,8 @@ func TestPostConsumeQuotaWithStructuredOutput(t *testing.T) {
 			}
 
 			// Get model ratio and calculate expected quota
-			modelRatio := ratio.GetModelRatio(tt.modelName, channeltype.OpenAI)
-			completionRatio := ratio.GetCompletionRatio(tt.modelName, channeltype.OpenAI)
+			modelRatio := ratio.GetModelRatioWithChannel(tt.modelName, channeltype.OpenAI, nil)
+			completionRatio := ratio.GetCompletionRatioWithChannel(tt.modelName, channeltype.OpenAI, nil)
 
 			// Calculate quota manually (similar to postConsumeQuota logic)
 			calculatedQuota := int64(float64(usage.PromptTokens)+float64(usage.CompletionTokens)*completionRatio) + usage.ToolsCost
@@ -103,7 +103,7 @@ func TestStructuredOutputCostIntegration(t *testing.T) {
 
 	// Simulate usage that would come from the adaptor with structured output cost
 	completionTokens := 1000
-	modelRatio := ratio.GetModelRatio("gpt-4o", channeltype.OpenAI)
+	modelRatio := ratio.GetModelRatioWithChannel("gpt-4o", channeltype.OpenAI, nil)
 	expectedStructuredCost := int64(float64(completionTokens) * 0.25 * modelRatio)
 
 	usage := &relaymodel.Usage{
@@ -114,7 +114,7 @@ func TestStructuredOutputCostIntegration(t *testing.T) {
 	}
 
 	// Calculate final quota as postConsumeQuota would
-	completionRatio := ratio.GetCompletionRatio("gpt-4o", channeltype.OpenAI)
+	completionRatio := ratio.GetCompletionRatioWithChannel("gpt-4o", channeltype.OpenAI, nil)
 	quota := int64(float64(usage.PromptTokens)+float64(usage.CompletionTokens)*completionRatio) + usage.ToolsCost
 
 	// Verify structured output cost is included in final quota
