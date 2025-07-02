@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	claude "github.com/songquanpeng/one-api/relay/adaptor/aws/claude"
 	"io"
 	"math"
 	"net/http"
@@ -131,8 +132,14 @@ func testChannel(ctx context.Context, channel *model.Channel, request *relaymode
 	if modelMap != nil && modelMap[modelName] != "" {
 		modelName = modelMap[modelName]
 	}
+	// aws bedrock sp Model meta.Config.AK,
+	arn := claude.FastClaudeModelTransArn(meta.Config.AK, modelName, meta.Config.Region)
 	meta.OriginModelName, meta.ActualModelName = request.Model, modelName
 	request.Model = modelName
+	// for aws tag arn
+	if arn != "" {
+		meta.ActualModelName = arn
+	}
 	convertedRequest, err := adaptor.ConvertRequest(c, relaymode.ChatCompletions, request)
 	if err != nil {
 		return "", err, nil
