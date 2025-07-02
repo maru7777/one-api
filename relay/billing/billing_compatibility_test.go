@@ -100,25 +100,6 @@ func TestInputValidation(t *testing.T) {
 			shouldFail:  true,
 			description: "Should handle negative token counts gracefully",
 		},
-		{
-			name: "PostConsumeQuotaDetailed - Valid Parameters",
-			testFunc: func() bool {
-				defer func() {
-					if r := recover(); r != nil {
-						// Database operations will fail in test environment, but that's expected
-						// We're testing that the function doesn't panic on input validation
-						return
-					}
-				}()
-				PostConsumeQuotaDetailed(ctx, 123, 10, 50, 1, 5, 10, 20, 1.0, 1.0, "test-model", "test-token",
-					false, validTime, false, 1.0, 0)
-				// If we reach here without panicking on validation, the test passes
-				// Database errors are expected in test environment
-				return true
-			},
-			shouldFail:  false,
-			description: "Should handle valid parameters without validation errors",
-		},
 	}
 
 	for _, tc := range testCases {

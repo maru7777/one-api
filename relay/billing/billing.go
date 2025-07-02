@@ -58,18 +58,21 @@ func PostConsumeQuota(ctx context.Context, tokenId int, quotaDelta int64, totalQ
 		logger.SysError("error update user quota cache: " + err.Error())
 	}
 	// totalQuota is total quota consumed
-	if totalQuota != 0 {
-		logContent := fmt.Sprintf("model rate %.2f, group rate %.2f", modelRatio, groupRatio)
-		model.RecordConsumeLog(ctx, &model.Log{
-			UserId:           userId,
-			ChannelId:        channelId,
-			PromptTokens:     int(totalQuota), // NOTE: For Audio API, total quota is logged as prompt tokens
-			CompletionTokens: 0,               // NOTE: Audio API doesn't have separate completion tokens
-			ModelName:        modelName,
-			TokenName:        tokenName,
-			Quota:            int(totalQuota),
-			Content:          logContent,
-		})
+	// Always log the request for tracking purposes, regardless of quota amount
+	logContent := fmt.Sprintf("model rate %.2f, group rate %.2f", modelRatio, groupRatio)
+	model.RecordConsumeLog(ctx, &model.Log{
+		UserId:           userId,
+		ChannelId:        channelId,
+		PromptTokens:     int(totalQuota), // NOTE: For Audio API, total quota is logged as prompt tokens
+		CompletionTokens: 0,               // NOTE: Audio API doesn't have separate completion tokens
+		ModelName:        modelName,
+		TokenName:        tokenName,
+		Quota:            int(totalQuota),
+		Content:          logContent,
+	})
+
+	// Only update quotas when totalQuota > 0
+	if totalQuota > 0 {
 		model.UpdateUserUsedQuotaAndRequestCount(userId, totalQuota)
 		model.UpdateChannelUsedQuota(channelId, totalQuota)
 	}
@@ -124,26 +127,29 @@ func PostConsumeQuotaDetailed(ctx context.Context, tokenId int, quotaDelta int64
 	}
 
 	// totalQuota is total quota consumed
-	if totalQuota != 0 {
-		var logContent string
-		if toolsCost == 0 {
-			logContent = fmt.Sprintf("model rate %.2f, group rate %.2f, completion rate %.2f", modelRatio, groupRatio, completionRatio)
-		} else {
-			logContent = fmt.Sprintf("model rate %.2f, group rate %.2f, completion rate %.2f, tools cost %d", modelRatio, groupRatio, completionRatio, toolsCost)
-		}
-		model.RecordConsumeLog(ctx, &model.Log{
-			UserId:            userId,
-			ChannelId:         channelId,
-			PromptTokens:      promptTokens,
-			CompletionTokens:  completionTokens,
-			ModelName:         modelName,
-			TokenName:         tokenName,
-			Quota:             int(totalQuota),
-			Content:           logContent,
-			IsStream:          isStream,
-			ElapsedTime:       helper.CalcElapsedTime(startTime),
-			SystemPromptReset: systemPromptReset,
-		})
+	// Always log the request for tracking purposes, regardless of quota amount
+	var logContent string
+	if toolsCost == 0 {
+		logContent = fmt.Sprintf("model rate %.2f, group rate %.2f, completion rate %.2f", modelRatio, groupRatio, completionRatio)
+	} else {
+		logContent = fmt.Sprintf("model rate %.2f, group rate %.2f, completion rate %.2f, tools cost %d", modelRatio, groupRatio, completionRatio, toolsCost)
+	}
+	model.RecordConsumeLog(ctx, &model.Log{
+		UserId:            userId,
+		ChannelId:         channelId,
+		PromptTokens:      promptTokens,
+		CompletionTokens:  completionTokens,
+		ModelName:         modelName,
+		TokenName:         tokenName,
+		Quota:             int(totalQuota),
+		Content:           logContent,
+		IsStream:          isStream,
+		ElapsedTime:       helper.CalcElapsedTime(startTime),
+		SystemPromptReset: systemPromptReset,
+	})
+
+	// Only update quotas when totalQuota > 0
+	if totalQuota > 0 {
 		model.UpdateUserUsedQuotaAndRequestCount(userId, totalQuota)
 		model.UpdateChannelUsedQuota(channelId, totalQuota)
 	}
