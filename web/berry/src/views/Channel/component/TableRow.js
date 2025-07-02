@@ -227,7 +227,7 @@ export default function ChannelTableRow({
         <MenuItem
           onClick={() => {
             handleCloseMenu();
-            handleOpenPricingModal(item.id, item.name);
+            handleOpenPricingModal(item.id, item.name, item.type);
           }}
         >
           <IconCurrencyDollar style={{ marginRight: "16px" }} />

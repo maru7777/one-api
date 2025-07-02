@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Divider, Form, Grid, Header } from 'semantic-ui-react';
-import { API, showError, showSuccess, timestamp2string, verifyJSON } from '../helpers';
+import { API, showError, showSuccess, timestamp2string } from '../helpers';
 
 const OperationSetting = () => {
   let now = new Date();
@@ -10,9 +10,6 @@ const OperationSetting = () => {
     QuotaForInvitee: 0,
     QuotaRemindThreshold: 0,
     PreConsumedQuota: 0,
-    ModelRatio: '',
-    CompletionRatio: '',
-    GroupRatio: '',
     TopUpLink: '',
     ChatLink: '',
     QuotaPerUnit: 0,
@@ -35,9 +32,6 @@ const OperationSetting = () => {
     if (success) {
       let newInputs = {};
       data.forEach((item) => {
-        if (item.key === 'ModelRatio' || item.key === 'GroupRatio' || item.key === 'CompletionRatio') {
-          item.value = JSON.stringify(JSON.parse(item.value), null, 2);
-        }
         if (item.value === '{}') {
           item.value = '';
         }
@@ -90,29 +84,7 @@ const OperationSetting = () => {
           await updateOption('QuotaRemindThreshold', inputs.QuotaRemindThreshold);
         }
         break;
-      case 'ratio':
-        if (originInputs['ModelRatio'] !== inputs.ModelRatio) {
-          if (!verifyJSON(inputs.ModelRatio)) {
-            showError('模型倍率不是合法的 JSON 字符串');
-            return;
-          }
-          await updateOption('ModelRatio', inputs.ModelRatio);
-        }
-        if (originInputs['GroupRatio'] !== inputs.GroupRatio) {
-          if (!verifyJSON(inputs.GroupRatio)) {
-            showError('分组倍率不是合法的 JSON 字符串');
-            return;
-          }
-          await updateOption('GroupRatio', inputs.GroupRatio);
-        }
-        if (originInputs['CompletionRatio'] !== inputs.CompletionRatio) {
-          if (!verifyJSON(inputs.CompletionRatio)) {
-            showError('补全倍率不是合法的 JSON 字符串');
-            return;
-          }
-          await updateOption('CompletionRatio', inputs.CompletionRatio);
-        }
-        break;
+
       case 'quota':
         if (originInputs['QuotaForNewUser'] !== inputs.QuotaForNewUser) {
           await updateOption('QuotaForNewUser', inputs.QuotaForNewUser);
@@ -340,46 +312,7 @@ const OperationSetting = () => {
           <Form.Button onClick={() => {
             submitConfig('quota').then();
           }}>保存额度设置</Form.Button>
-          <Divider />
-          <Header as='h3'>
-            倍率设置
-          </Header>
-          <Form.Group widths='equal'>
-            <Form.TextArea
-              label='模型倍率'
-              name='ModelRatio'
-              onChange={handleInputChange}
-              style={{ minHeight: 250, fontFamily: 'JetBrains Mono, Consolas' }}
-              autoComplete='new-password'
-              value={inputs.ModelRatio}
-              placeholder='为一个 JSON 文本，键为模型名称，值为倍率'
-            />
-          </Form.Group>
-          <Form.Group widths='equal'>
-            <Form.TextArea
-              label='补全倍率'
-              name='CompletionRatio'
-              onChange={handleInputChange}
-              style={{ minHeight: 250, fontFamily: 'JetBrains Mono, Consolas' }}
-              autoComplete='new-password'
-              value={inputs.CompletionRatio}
-              placeholder='为一个 JSON 文本，键为模型名称，值为倍率，此处的倍率设置是模型补全倍率相较于提示倍率的比例，使用该设置可强制覆盖 One API 的内部比例'
-            />
-          </Form.Group>
-          <Form.Group widths='equal'>
-            <Form.TextArea
-              label='分组倍率'
-              name='GroupRatio'
-              onChange={handleInputChange}
-              style={{ minHeight: 250, fontFamily: 'JetBrains Mono, Consolas' }}
-              autoComplete='new-password'
-              value={inputs.GroupRatio}
-              placeholder='为一个 JSON 文本，键为分组名称，值为倍率'
-            />
-          </Form.Group>
-          <Form.Button onClick={() => {
-            submitConfig('ratio').then();
-          }}>保存倍率设置</Form.Button>
+
         </Form>
       </Grid.Column>
     </Grid>

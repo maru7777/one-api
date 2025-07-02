@@ -91,7 +91,7 @@ const PricingModal = ({ open, onClose, channelId, channelName, channelType }) =>
     if (newModelName && newModelPrice) {
       setModelRatio(prev => ({
         ...prev,
-        [newModelName]: parseFloat(newModelPrice)
+        [newModelName]: convertToRatio(newModelPrice)
       }));
       setNewModelName('');
       setNewModelPrice('');
@@ -102,7 +102,7 @@ const PricingModal = ({ open, onClose, channelId, channelName, channelType }) =>
     if (newCompletionName && newCompletionPrice) {
       setCompletionRatio(prev => ({
         ...prev,
-        [newCompletionName]: parseFloat(newCompletionPrice)
+        [newCompletionName]: convertToRatio(newCompletionPrice)
       }));
       setNewCompletionName('');
       setNewCompletionPrice('');
@@ -128,15 +128,28 @@ const PricingModal = ({ open, onClose, channelId, channelName, channelType }) =>
   const updateModelRatio = (modelName, value) => {
     setModelRatio(prev => ({
       ...prev,
-      [modelName]: parseFloat(value) || 0
+      [modelName]: convertToRatio(value)
     }));
   };
 
   const updateCompletionRatio = (modelName, value) => {
     setCompletionRatio(prev => ({
       ...prev,
-      [modelName]: parseFloat(value) || 0
+      [modelName]: convertToRatio(value)
     }));
+  };
+
+  // Convert ratio to price per 1M tokens for display
+  const formatPricePerMillion = (ratio) => {
+    if (!ratio || ratio === 0) return '0';
+    const pricePerMillion = ratio * 1000000;
+    return pricePerMillion.toFixed(2);
+  };
+
+  // Convert price per 1M tokens back to ratio
+  const convertToRatio = (pricePerMillion) => {
+    if (!pricePerMillion || pricePerMillion === 0) return 0;
+    return parseFloat(pricePerMillion) / 1000000;
   };
 
   return (
@@ -163,10 +176,10 @@ const PricingModal = ({ open, onClose, channelId, channelName, channelType }) =>
         {/* Model Ratio Section */}
         <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
           <Typography variant="h6" gutterBottom>
-            Model Pricing Ratios
+            Model Pricing (Price per 1M tokens)
           </Typography>
           <Typography variant="body2" color="text.secondary" gutterBottom>
-            Set custom pricing for specific models on this channel
+            Set custom pricing for specific models on this channel (displayed as price per 1M tokens)
           </Typography>
 
           <Grid container spacing={2} sx={{ mb: 2 }}>
@@ -195,11 +208,11 @@ const PricingModal = ({ open, onClose, channelId, channelName, channelType }) =>
             <Grid item xs={5}>
               <TextField
                 fullWidth
-                label="Price Ratio"
+                label="Price per 1M tokens"
                 type="number"
                 value={newModelPrice}
                 onChange={(e) => setNewModelPrice(e.target.value)}
-                placeholder="e.g., 0.03"
+                placeholder="e.g., 30.00"
                 size="small"
               />
             </Grid>
@@ -231,7 +244,7 @@ const PricingModal = ({ open, onClose, channelId, channelName, channelType }) =>
                 <TextField
                   fullWidth
                   type="number"
-                  value={ratio}
+                  value={formatPricePerMillion(ratio)}
                   onChange={(e) => updateModelRatio(modelName, e.target.value)}
                   size="small"
                 />
@@ -252,10 +265,10 @@ const PricingModal = ({ open, onClose, channelId, channelName, channelType }) =>
         {/* Completion Ratio Section */}
         <Paper elevation={1} sx={{ p: 2 }}>
           <Typography variant="h6" gutterBottom>
-            Completion Pricing Ratios
+            Completion Pricing (Price per 1M tokens)
           </Typography>
           <Typography variant="body2" color="text.secondary" gutterBottom>
-            Set custom completion token pricing multipliers for specific models
+            Set custom completion token pricing for specific models (displayed as price per 1M tokens)
           </Typography>
 
           <Grid container spacing={2} sx={{ mb: 2 }}>
@@ -284,11 +297,11 @@ const PricingModal = ({ open, onClose, channelId, channelName, channelType }) =>
             <Grid item xs={5}>
               <TextField
                 fullWidth
-                label="Completion Ratio"
+                label="Price per 1M tokens"
                 type="number"
                 value={newCompletionPrice}
                 onChange={(e) => setNewCompletionPrice(e.target.value)}
-                placeholder="e.g., 2.0"
+                placeholder="e.g., 3.00"
                 size="small"
               />
             </Grid>
@@ -320,7 +333,7 @@ const PricingModal = ({ open, onClose, channelId, channelName, channelType }) =>
                 <TextField
                   fullWidth
                   type="number"
-                  value={ratio}
+                  value={formatPricePerMillion(ratio)}
                   onChange={(e) => updateCompletionRatio(modelName, e.target.value)}
                   size="small"
                 />

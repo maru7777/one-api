@@ -306,6 +306,7 @@ export default function ChannelPage() {
         onClose={handleClosePricingModal}
         channelId={pricingChannelId}
         channelName={pricingChannelName}
+        channelType={pricingChannelType}
       />
     </>
   );

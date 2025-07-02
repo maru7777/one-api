@@ -18,6 +18,7 @@ import {
   Typography
 } from '@douyinfe/semi-ui';
 import EditChannel from '../pages/Channel/EditChannel';
+import PricingModal from './PricingModal';
 import { IconTreeTriangleDown } from '@douyinfe/semi-icons';
 
 function renderTimestamp(timestamp) {
@@ -225,6 +226,9 @@ const ChannelsTable = () => {
               setShowEdit(true);
             }
           }>编辑</Button>
+          <Button theme="light" type="warning" style={{ marginRight: 1 }} onClick={
+            () => openPricingModal(record)
+          }>定价</Button>
         </div>
       )
     }
@@ -249,6 +253,8 @@ const ChannelsTable = () => {
     id: undefined
   });
   const [selectedChannels, setSelectedChannels] = useState([]);
+  const [pricingModalVisible, setPricingModalVisible] = useState(false);
+  const [selectedChannel, setSelectedChannel] = useState(null);
 
   const removeRecord = id => {
     let newDataSource = [...channels];
@@ -556,6 +562,16 @@ const ChannelsTable = () => {
     }
   };
 
+  const openPricingModal = (channel) => {
+    setSelectedChannel(channel);
+    setPricingModalVisible(true);
+  };
+
+  const closePricingModal = () => {
+    setPricingModalVisible(false);
+    setSelectedChannel(null);
+  };
+
   const closeEdit = () => {
     setShowEdit(false);
   };
@@ -731,6 +747,13 @@ const ChannelsTable = () => {
             }
           } : null
       } />
+      <PricingModal
+        visible={pricingModalVisible}
+        onClose={closePricingModal}
+        channelId={selectedChannel?.id}
+        channelName={selectedChannel?.name}
+        channelType={selectedChannel?.type}
+      />
     </>
   );
 };

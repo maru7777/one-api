@@ -87,15 +87,15 @@ const EditChannel = () => {
       const res = await API.get(`/api/channel/default-pricing?type=${channelType}`);
       if (res.data.success) {
         setDefaultPricing({
-          model_ratio: res.data.data.model_ratio,
-          completion_ratio: res.data.data.completion_ratio,
+          model_ratio: res.data.data.model_ratio || '',
+          completion_ratio: res.data.data.completion_ratio || '',
         });
         // If current pricing is empty, populate with defaults
         if (!inputs.model_ratio && !inputs.completion_ratio) {
           setInputs((inputs) => ({
             ...inputs,
-            model_ratio: res.data.data.model_ratio,
-            completion_ratio: res.data.data.completion_ratio,
+            model_ratio: res.data.data.model_ratio || '',
+            completion_ratio: res.data.data.completion_ratio || '',
           }));
         }
       }

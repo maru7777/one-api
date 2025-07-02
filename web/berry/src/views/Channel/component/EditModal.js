@@ -22,7 +22,8 @@ import {
   Autocomplete,
   FormHelperText,
   Switch,
-  Checkbox
+  Checkbox,
+  Box
 } from '@mui/material';
 
 import { Formik } from 'formik';
@@ -65,6 +66,34 @@ const validationSchema = Yup.object().shape({
       return false;
     }
     return false;
+  }),
+  model_ratio: Yup.string().nullable().test('is-json', '必须是有效的JSON字符串', function (value) {
+    try {
+      if (value === '' || value === null || value === undefined) {
+        return true;
+      }
+      const parsedValue = JSON.parse(value);
+      if (typeof parsedValue === 'object') {
+        return true;
+      }
+    } catch (e) {
+      return false;
+    }
+    return false;
+  }),
+  completion_ratio: Yup.string().nullable().test('is-json', '必须是有效的JSON字符串', function (value) {
+    try {
+      if (value === '' || value === null || value === undefined) {
+        return true;
+      }
+      const parsedValue = JSON.parse(value);
+      if (typeof parsedValue === 'object') {
+        return true;
+      }
+    } catch (e) {
+      return false;
+    }
+    return false;
   })
 });
 
@@ -78,6 +107,10 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
   const [modelOptions, setModelOptions] = useState([]);
   const [batchAdd, setBatchAdd] = useState(false);
   const [basicModels, setBasicModels] = useState([]);
+  const [defaultPricing, setDefaultPricing] = useState({
+    model_ratio: '',
+    completion_ratio: '',
+  });
 
   const initChannel = (typeValue) => {
     if (typeConfig[typeValue]?.inputLabel) {
@@ -109,6 +142,8 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
     }
 
     setFieldValue('config', {});
+    // Load default pricing for the new channel type
+    loadDefaultPricing(typeValue);
   };
 
   const fetchGroups = async () => {
@@ -151,6 +186,20 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
     }
   };
 
+  const loadDefaultPricing = async (channelType) => {
+    try {
+      const res = await API.get(`/api/channel/default-pricing?type=${channelType}`);
+      if (res.data.success) {
+        setDefaultPricing({
+          model_ratio: res.data.data.model_ratio || '',
+          completion_ratio: res.data.data.completion_ratio || '',
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load default pricing:', error);
+    }
+  };
+
   const submit = async (values, { setErrors, setStatus, setSubmitting }) => {
     setSubmitting(true);
     if (values.base_url && values.base_url.endsWith('/')) {
@@ -174,6 +223,14 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
     const modelsStr = values.models.map((model) => model.id).join(',');
     const configStr = JSON.stringify(values.config);
     values.group = values.groups.join(',');
+
+    // Handle pricing fields - convert empty strings to null for the API
+    if (values.model_ratio === '') {
+      values.model_ratio = null;
+    }
+    if (values.completion_ratio === '') {
+      values.completion_ratio = null;
+    }
     if (channelId) {
       res = await API.put(`/api/channel/`, {
         ...values,
@@ -240,11 +297,28 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
       if (data.config !== '') {
         data.config = JSON.parse(data.config);
       }
+      // Format pricing fields for display
+      if (data.model_ratio && data.model_ratio !== '') {
+        try {
+          data.model_ratio = JSON.stringify(JSON.parse(data.model_ratio), null, 2);
+        } catch (e) {
+          console.error('Failed to parse model_ratio:', e);
+        }
+      }
+      if (data.completion_ratio && data.completion_ratio !== '') {
+        try {
+          data.completion_ratio = JSON.stringify(JSON.parse(data.completion_ratio), null, 2);
+        } catch (e) {
+          console.error('Failed to parse completion_ratio:', e);
+        }
+      }
 
       data.base_url = data.base_url ?? '';
       data.is_edit = true;
       initChannel(data.type);
       setInitialInput(data);
+      // Load default pricing for this channel type
+      loadDefaultPricing(data.type);
     } else {
       showError(message);
     }
@@ -262,6 +336,8 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
     } else {
       initChannel(1);
       setInitialInput({ ...defaultConfig.input, is_edit: false });
+      // Load default pricing for new channels
+      loadDefaultPricing(1);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId]);
@@ -617,6 +693,122 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
                   <FormHelperText id="helper-tex-channel-system_prompt-label"> {inputPrompt.system_prompt} </FormHelperText>
                 )}
               </FormControl>
+
+              {/* Channel-specific pricing fields */}
+              <FormControl fullWidth error={Boolean(touched.model_ratio && errors.model_ratio)} sx={{ ...theme.typography.otherInput }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                  <InputLabel
+                    htmlFor="channel-model_ratio-label"
+                    sx={{
+                      position: 'relative',
+                      transform: 'none',
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                      color: theme.palette.text.primary
+                    }}
+                  >
+                    {inputLabel.model_ratio}
+                  </InputLabel>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => {
+                      // Format the JSON string for better display
+                      let formattedValue = defaultPricing.model_ratio;
+                      if (formattedValue && formattedValue !== '') {
+                        try {
+                          const parsed = JSON.parse(formattedValue);
+                          formattedValue = JSON.stringify(parsed, null, 2);
+                        } catch (e) {
+                          console.error('Failed to format model_ratio JSON:', e);
+                        }
+                      }
+
+                      setFieldValue('model_ratio', formattedValue);
+                    }}
+                  >
+                    加载默认值
+                  </Button>
+                </Box>
+                <TextField
+                  multiline
+                  id="channel-model_ratio-label"
+                  value={values.model_ratio}
+                  name="model_ratio"
+                  onBlur={handleBlur}
+                  onChange={handleChange}
+                  aria-describedby="helper-text-channel-model_ratio-label"
+                  minRows={5}
+                  placeholder={inputPrompt.model_ratio}
+                />
+                {touched.model_ratio && errors.model_ratio ? (
+                  <FormHelperText error id="helper-tex-channel-model_ratio-label">
+                    {errors.model_ratio}
+                  </FormHelperText>
+                ) : (
+                  <FormHelperText id="helper-tex-channel-model_ratio-label">
+                    JSON 格式：{`{"模型名称": 价格倍率}`}。价格倍率乘以 token 数量计算费用。
+                  </FormHelperText>
+                )}
+              </FormControl>
+
+              <FormControl fullWidth error={Boolean(touched.completion_ratio && errors.completion_ratio)} sx={{ ...theme.typography.otherInput }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                  <InputLabel
+                    htmlFor="channel-completion_ratio-label"
+                    sx={{
+                      position: 'relative',
+                      transform: 'none',
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                      color: theme.palette.text.primary
+                    }}
+                  >
+                    {inputLabel.completion_ratio}
+                  </InputLabel>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => {
+                      // Format the JSON string for better display
+                      let formattedValue = defaultPricing.completion_ratio;
+                      if (formattedValue && formattedValue !== '') {
+                        try {
+                          const parsed = JSON.parse(formattedValue);
+                          formattedValue = JSON.stringify(parsed, null, 2);
+                        } catch (e) {
+                          console.error('Failed to format completion_ratio JSON:', e);
+                        }
+                      }
+
+                      setFieldValue('completion_ratio', formattedValue);
+                    }}
+                  >
+                    加载默认值
+                  </Button>
+                </Box>
+                <TextField
+                  multiline
+                  id="channel-completion_ratio-label"
+                  value={values.completion_ratio}
+                  name="completion_ratio"
+                  onBlur={handleBlur}
+                  onChange={handleChange}
+                  aria-describedby="helper-text-channel-completion_ratio-label"
+                  minRows={5}
+                  placeholder={inputPrompt.completion_ratio}
+                />
+                {touched.completion_ratio && errors.completion_ratio ? (
+                  <FormHelperText error id="helper-tex-channel-completion_ratio-label">
+                    {errors.completion_ratio}
+                  </FormHelperText>
+                ) : (
+                  <FormHelperText id="helper-tex-channel-completion_ratio-label">
+                    JSON 格式：{`{"模型名称": 输出倍率}`}。输出倍率乘以输出 token 数量。
+                  </FormHelperText>
+                )}
+              </FormControl>
+
               <DialogActions>
                 <Button onClick={onCancel}>取消</Button>
                 <Button disableElevation disabled={isSubmitting} type="submit" variant="contained" color="primary">

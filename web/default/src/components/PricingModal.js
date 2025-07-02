@@ -74,7 +74,7 @@ const PricingModal = ({ open, onClose, channelId, channelName, channelType }) =>
     if (newModelName && newModelPrice) {
       setModelRatio(prev => ({
         ...prev,
-        [newModelName]: parseFloat(newModelPrice)
+        [newModelName]: convertToRatio(newModelPrice)
       }));
       setNewModelName('');
       setNewModelPrice('');
@@ -85,7 +85,7 @@ const PricingModal = ({ open, onClose, channelId, channelName, channelType }) =>
     if (newCompletionName && newCompletionPrice) {
       setCompletionRatio(prev => ({
         ...prev,
-        [newCompletionName]: parseFloat(newCompletionPrice)
+        [newCompletionName]: convertToRatio(newCompletionPrice)
       }));
       setNewCompletionName('');
       setNewCompletionPrice('');
@@ -111,15 +111,28 @@ const PricingModal = ({ open, onClose, channelId, channelName, channelType }) =>
   const updateModelRatio = (modelName, value) => {
     setModelRatio(prev => ({
       ...prev,
-      [modelName]: parseFloat(value) || 0
+      [modelName]: convertToRatio(value)
     }));
   };
 
   const updateCompletionRatio = (modelName, value) => {
     setCompletionRatio(prev => ({
       ...prev,
-      [modelName]: parseFloat(value) || 0
+      [modelName]: convertToRatio(value)
     }));
+  };
+
+  // Convert ratio to price per 1M tokens for display
+  const formatPricePerMillion = (ratio) => {
+    if (!ratio || ratio === 0) return '0';
+    const pricePerMillion = ratio * 1000000;
+    return pricePerMillion.toFixed(2);
+  };
+
+  // Convert price per 1M tokens back to ratio
+  const convertToRatio = (pricePerMillion) => {
+    if (!pricePerMillion || pricePerMillion === 0) return 0;
+    return parseFloat(pricePerMillion) / 1000000;
   };
 
   return (
@@ -139,9 +152,9 @@ const PricingModal = ({ open, onClose, channelId, channelName, channelType }) =>
 
         {/* Model Ratio Section */}
         <Form.Field>
-          <label><Icon name="settings" /> Model Pricing Ratios</label>
+          <label><Icon name="settings" /> Model Pricing (Price per 1M tokens)</label>
           <Message size="small">
-            Set custom pricing for specific models on this channel
+            Set custom pricing for specific models on this channel (displayed as price per 1M tokens)
           </Message>
         </Form.Field>
 
@@ -164,11 +177,11 @@ const PricingModal = ({ open, onClose, channelId, channelName, channelType }) =>
               />
             </Form.Field>
             <Form.Field>
-              <label>Price Ratio</label>
+              <label>Price per 1M tokens</label>
               <Input
                 type="number"
-                step="0.000001"
-                placeholder="e.g., 0.03"
+                step="0.01"
+                placeholder="e.g., 30.00"
                 value={newModelPrice}
                 onChange={(e) => setNewModelPrice(e.target.value)}
               />
@@ -191,7 +204,7 @@ const PricingModal = ({ open, onClose, channelId, channelName, channelType }) =>
             <Table.Header>
               <Table.Row>
                 <Table.HeaderCell>Model Name</Table.HeaderCell>
-                <Table.HeaderCell>Price Ratio</Table.HeaderCell>
+                <Table.HeaderCell>Price per 1M tokens</Table.HeaderCell>
                 <Table.HeaderCell>Actions</Table.HeaderCell>
               </Table.Row>
             </Table.Header>
@@ -202,8 +215,8 @@ const PricingModal = ({ open, onClose, channelId, channelName, channelType }) =>
                   <Table.Cell>
                     <Input
                       type="number"
-                      step="0.000001"
-                      value={ratio}
+                      step="0.01"
+                      value={formatPricePerMillion(ratio)}
                       onChange={(e) => updateModelRatio(modelName, e.target.value)}
                     />
                   </Table.Cell>
@@ -224,9 +237,9 @@ const PricingModal = ({ open, onClose, channelId, channelName, channelType }) =>
 
         {/* Completion Ratio Section */}
         <Form.Field style={{ marginTop: '2em' }}>
-          <label><Icon name="settings" /> Completion Pricing Ratios</label>
+          <label><Icon name="settings" /> Completion Pricing (Price per 1M tokens)</label>
           <Message size="small">
-            Set custom completion token pricing multipliers for specific models
+            Set custom completion token pricing for specific models (displayed as price per 1M tokens)
           </Message>
         </Form.Field>
 
@@ -249,11 +262,11 @@ const PricingModal = ({ open, onClose, channelId, channelName, channelType }) =>
               />
             </Form.Field>
             <Form.Field>
-              <label>Completion Ratio</label>
+              <label>Price per 1M tokens</label>
               <Input
                 type="number"
-                step="0.1"
-                placeholder="e.g., 2.0"
+                step="0.01"
+                placeholder="e.g., 3.00"
                 value={newCompletionPrice}
                 onChange={(e) => setNewCompletionPrice(e.target.value)}
               />
@@ -276,7 +289,7 @@ const PricingModal = ({ open, onClose, channelId, channelName, channelType }) =>
             <Table.Header>
               <Table.Row>
                 <Table.HeaderCell>Model Name</Table.HeaderCell>
-                <Table.HeaderCell>Completion Ratio</Table.HeaderCell>
+                <Table.HeaderCell>Price per 1M tokens</Table.HeaderCell>
                 <Table.HeaderCell>Actions</Table.HeaderCell>
               </Table.Row>
             </Table.Header>
@@ -287,8 +300,8 @@ const PricingModal = ({ open, onClose, channelId, channelName, channelType }) =>
                   <Table.Cell>
                     <Input
                       type="number"
-                      step="0.1"
-                      value={ratio}
+                      step="0.01"
+                      value={formatPricePerMillion(ratio)}
                       onChange={(e) => updateCompletionRatio(modelName, e.target.value)}
                     />
                   </Table.Cell>
