@@ -8,6 +8,42 @@ import (
 	"github.com/songquanpeng/one-api/relay/model"
 )
 
+// ResponseAPIInput represents the input field that can be either a string or an array
+type ResponseAPIInput []any
+
+// UnmarshalJSON implements custom unmarshaling for ResponseAPIInput
+// to handle both string and array inputs as per OpenAI Response API specification
+func (r *ResponseAPIInput) UnmarshalJSON(data []byte) error {
+	// Try to unmarshal as string first
+	var str string
+	if err := json.Unmarshal(data, &str); err == nil {
+		*r = ResponseAPIInput{str}
+		return nil
+	}
+
+	// If string unmarshaling fails, try as array
+	var arr []any
+	if err := json.Unmarshal(data, &arr); err != nil {
+		return err
+	}
+	*r = ResponseAPIInput(arr)
+	return nil
+}
+
+// MarshalJSON implements custom marshaling for ResponseAPIInput
+// If the input contains only one string element, marshal as string
+// Otherwise, marshal as array
+func (r ResponseAPIInput) MarshalJSON() ([]byte, error) {
+	// If there's exactly one element and it's a string, marshal as string
+	if len(r) == 1 {
+		if str, ok := r[0].(string); ok {
+			return json.Marshal(str)
+		}
+	}
+	// Otherwise, marshal as array
+	return json.Marshal([]any(r))
+}
+
 // IsModelsOnlySupportedByChatCompletionAPI determines if a model only supports ChatCompletion API
 // and should not be converted to Response API format.
 // Currently returns false for all models (allowing conversion), but can be implemented later
@@ -25,7 +61,7 @@ func IsModelsOnlySupportedByChatCompletionAPI(actualModel string) bool {
 // ResponseAPIRequest represents the OpenAI Response API request structure
 // https://platform.openai.com/docs/api-reference/responses
 type ResponseAPIRequest struct {
-	Input              []any                          `json:"input"`                          // Required: Text, image, or file inputs to the model
+	Input              ResponseAPIInput               `json:"input,omitempty"`                // Optional: Text, image, or file inputs to the model (string or array) - mutually exclusive with prompt
 	Model              string                         `json:"model"`                          // Required: Model ID used to generate the response
 	Background         *bool                          `json:"background,omitempty"`           // Optional: Whether to run the model response in the background
 	Include            []string                       `json:"include,omitempty"`              // Optional: Additional output data to include
@@ -34,6 +70,7 @@ type ResponseAPIRequest struct {
 	Metadata           any                            `json:"metadata,omitempty"`             // Optional: Set of 16 key-value pairs
 	ParallelToolCalls  *bool                          `json:"parallel_tool_calls,omitempty"`  // Optional: Whether to allow the model to run tool calls in parallel
 	PreviousResponseId *string                        `json:"previous_response_id,omitempty"` // Optional: The unique ID of the previous response
+	Prompt             *ResponseAPIPrompt             `json:"prompt,omitempty"`               // Optional: Prompt template configuration - mutually exclusive with input
 	Reasoning          *model.OpenAIResponseReasoning `json:"reasoning,omitempty"`            // Optional: Configuration options for reasoning models
 	ServiceTier        *string                        `json:"service_tier,omitempty"`         // Optional: Latency tier to use for processing
 	Store              *bool                          `json:"store,omitempty"`                // Optional: Whether to store the generated model response
@@ -45,6 +82,13 @@ type ResponseAPIRequest struct {
 	TopP               *float64                       `json:"top_p,omitempty"`                // Optional: Alternative to sampling with temperature
 	Truncation         *string                        `json:"truncation,omitempty"`           // Optional: Truncation strategy
 	User               *string                        `json:"user,omitempty"`                 // Optional: Stable identifier for end-users
+}
+
+// ResponseAPIPrompt represents the prompt template configuration for Response API requests
+type ResponseAPIPrompt struct {
+	Id        string                 `json:"id"`                  // Required: Unique identifier of the prompt template
+	Version   *string                `json:"version,omitempty"`   // Optional: Specific version of the prompt (defaults to "current")
+	Variables map[string]interface{} `json:"variables,omitempty"` // Optional: Map of values to substitute in for variables in the prompt
 }
 
 // ResponseAPITool represents the tool format for Response API requests
@@ -119,7 +163,7 @@ func findToolCallName(toolCalls []model.Tool, toolCallId string) string {
 func ConvertChatCompletionToResponseAPI(request *model.GeneralOpenAIRequest) *ResponseAPIRequest {
 	responseReq := &ResponseAPIRequest{
 		Model: request.Model,
-		Input: make([]any, 0, len(request.Messages)),
+		Input: make(ResponseAPIInput, 0, len(request.Messages)),
 	}
 
 	// Convert messages to input - Response API expects messages directly in the input array

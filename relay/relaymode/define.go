@@ -15,4 +15,6 @@ const (
 	Proxy
 	Rerank
 	ImagesEdits
+	// ResponseAPI is for OpenAI Response API direct requests
+	ResponseAPI
 )

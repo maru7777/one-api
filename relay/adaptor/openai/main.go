@@ -575,3 +575,172 @@ func ResponseAPIStreamHandler(c *gin.Context, resp *http.Response, relayMode int
 
 	return nil, responseText, usage
 }
+
+// ResponseAPIDirectHandler processes non-streaming responses from Response API format and passes them through directly
+// This function is used for direct Response API requests that don't need conversion back to ChatCompletion format
+// Returns error (if any) and token usage information
+func ResponseAPIDirectHandler(c *gin.Context, resp *http.Response, promptTokens int, modelName string) (*model.ErrorWithStatusCode, *model.Usage) {
+	// Read the entire response body
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return ErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError), nil
+	}
+
+	// Log the response body for debugging
+	logger.Debugf(c.Request.Context(),
+		"got response from upstream: %s", string(responseBody))
+
+	// Close the original response body
+	if err = resp.Body.Close(); err != nil {
+		return ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), nil
+	}
+
+	// Parse the Response API response JSON
+	var responseAPIResp ResponseAPIResponse
+	if err = json.Unmarshal(responseBody, &responseAPIResp); err != nil {
+		return ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError), nil
+	}
+
+	// Check for API errors
+	if responseAPIResp.Error != nil {
+		return &model.ErrorWithStatusCode{
+			Error:      *responseAPIResp.Error,
+			StatusCode: resp.StatusCode,
+		}, nil
+	}
+
+	// Extract usage information for billing
+	var finalUsage *model.Usage
+	if responseAPIResp.Usage != nil {
+		if convertedUsage := responseAPIResp.Usage.ToModelUsage(); convertedUsage != nil {
+			// Check if the converted usage has meaningful token counts
+			if convertedUsage.PromptTokens > 0 || convertedUsage.CompletionTokens > 0 {
+				finalUsage = convertedUsage
+			}
+		}
+	}
+
+	// If we don't have valid usage data, calculate it from the response content
+	if finalUsage == nil {
+		var responseText string
+		for _, output := range responseAPIResp.Output {
+			if output.Type == "message" {
+				for _, content := range output.Content {
+					if content.Type == "output_text" {
+						responseText += content.Text
+					}
+				}
+			}
+		}
+		finalUsage = ResponseText2Usage(responseText, modelName, promptTokens)
+	}
+
+	// Forward all response headers
+	for k, values := range resp.Header {
+		for _, v := range values {
+			c.Writer.Header().Add(k, v)
+		}
+	}
+
+	// Set response status and send the response directly to client
+	c.Writer.Header().Set("Content-Type", "application/json")
+	c.Writer.WriteHeader(resp.StatusCode)
+	if _, err = c.Writer.Write(responseBody); err != nil {
+		return ErrorWrapper(err, "write_response_body_failed", http.StatusInternalServerError), nil
+	}
+
+	return nil, finalUsage
+}
+
+// ResponseAPIDirectStreamHandler processes streaming responses from Response API format and passes them through directly
+// This function is used for direct Response API streaming requests that don't need conversion back to ChatCompletion format
+// Returns error (if any), accumulated response text, and token usage information
+func ResponseAPIDirectStreamHandler(c *gin.Context, resp *http.Response, relayMode int) (*model.ErrorWithStatusCode, string, *model.Usage) {
+	// Initialize accumulators for the response
+	responseText := ""
+	var usage *model.Usage
+
+	// Set up scanner for reading the stream line by line
+	scanner := bufio.NewScanner(resp.Body)
+	buffer := make([]byte, 1024*1024) // 1MB buffer for large messages
+	scanner.Buffer(buffer, len(buffer))
+	scanner.Split(bufio.ScanLines)
+
+	// Set response headers for SSE
+	common.SetEventStreamHeaders(c)
+
+	doneRendered := false
+
+	// Process each line from the stream
+	for scanner.Scan() {
+		data := NormalizeDataLine(scanner.Text())
+
+		logger.Debugf(c.Request.Context(), "receive stream event: %s", data)
+
+		if !strings.HasPrefix(data, dataPrefix) {
+			continue
+		}
+		data = data[dataPrefixLength:]
+
+		if data == done {
+			if !doneRendered {
+				c.Render(-1, common.CustomEvent{Data: "data: " + done})
+				doneRendered = true
+			}
+			break
+		}
+
+		// Parse the Response API streaming chunk
+		fullResponse, streamEvent, err := ParseResponseAPIStreamEvent([]byte(data))
+		if err != nil {
+			// Log the error with more context but continue processing
+			logger.Debugf(c.Request.Context(), "skipping unparseable stream chunk: %s, error: %s", data, err.Error())
+			continue
+		}
+
+		// Handle full response events (like response.completed)
+		var responseAPIChunk ResponseAPIResponse
+		if fullResponse != nil {
+			responseAPIChunk = *fullResponse
+		} else if streamEvent != nil {
+			// Convert streaming event to ResponseAPIResponse for processing
+			responseAPIChunk = ConvertStreamEventToResponse(streamEvent)
+		} else {
+			// Skip this chunk if we can't parse it
+			continue
+		}
+
+		// Accumulate response text for token counting - only from delta events to avoid duplicates
+		if streamEvent != nil && strings.Contains(streamEvent.Type, "delta") {
+			// Only accumulate content from delta events to prevent duplication
+			if streamEvent.Delta != "" {
+				responseText += streamEvent.Delta
+			}
+		}
+
+		// Accumulate usage information
+		if responseAPIChunk.Usage != nil {
+			if convertedUsage := responseAPIChunk.Usage.ToModelUsage(); convertedUsage != nil {
+				usage = convertedUsage
+			}
+		}
+
+		// Pass through the original Response API event directly to client
+		c.Render(-1, common.CustomEvent{Data: "data: " + string(data)})
+	}
+
+	if err := scanner.Err(); err != nil {
+		logger.SysError("error reading stream: " + err.Error())
+		return ErrorWrapper(err, "read_stream_failed", http.StatusInternalServerError), responseText, usage
+	}
+
+	if !doneRendered {
+		c.Render(-1, common.CustomEvent{Data: "data: " + done})
+	}
+
+	if err := resp.Body.Close(); err != nil {
+		return ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), responseText, usage
+	}
+
+	return nil, responseText, usage
+}

@@ -12,11 +12,11 @@ import (
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/ctxkey"
-	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/relay"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
+	"github.com/songquanpeng/one-api/relay/billing"
 	"github.com/songquanpeng/one-api/relay/billing/ratio"
 	"github.com/songquanpeng/one-api/relay/channeltype"
 	"github.com/songquanpeng/one-api/relay/constant/role"
@@ -162,37 +162,11 @@ func postConsumeQuota(ctx context.Context,
 		// we cannot just return, because we may have to return the pre-consumed quota
 		quota = 0
 	}
+	// Use centralized detailed billing function to follow DRY principle
 	quotaDelta := quota - preConsumedQuota
-	err := model.PostConsumeTokenQuota(meta.TokenId, quotaDelta)
-	if err != nil {
-		logger.Error(ctx, "error consuming token remain quota: "+err.Error())
-	}
-	err = model.CacheUpdateUserQuota(ctx, meta.UserId)
-	if err != nil {
-		logger.Error(ctx, "error update user quota cache: "+err.Error())
-	}
-
-	var logContent string
-	if usage.ToolsCost == 0 {
-		logContent = fmt.Sprintf("model rate %.2f, group rate %.2f, completion rate %.2f", modelRatio, groupRatio, completionRatio)
-	} else {
-		logContent = fmt.Sprintf("model rate %.2f, group rate %.2f, completion rate %.2f, tools cost %d", modelRatio, groupRatio, completionRatio, usage.ToolsCost)
-	}
-	model.RecordConsumeLog(ctx, &model.Log{
-		UserId:            meta.UserId,
-		ChannelId:         meta.ChannelId,
-		PromptTokens:      promptTokens,
-		CompletionTokens:  completionTokens,
-		ModelName:         textRequest.Model,
-		TokenName:         meta.TokenName,
-		Quota:             int(quota),
-		Content:           logContent,
-		IsStream:          meta.IsStream,
-		ElapsedTime:       helper.CalcElapsedTime(meta.StartTime),
-		SystemPromptReset: systemPromptReset,
-	})
-	model.UpdateUserUsedQuotaAndRequestCount(meta.UserId, quota)
-	model.UpdateChannelUsedQuota(meta.ChannelId, quota)
+	billing.PostConsumeQuotaDetailed(ctx, meta.TokenId, quotaDelta, quota, meta.UserId, meta.ChannelId,
+		promptTokens, completionTokens, modelRatio, groupRatio, textRequest.Model, meta.TokenName,
+		meta.IsStream, meta.StartTime, systemPromptReset, completionRatio, usage.ToolsCost)
 
 	return quota
 }

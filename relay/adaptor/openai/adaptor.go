@@ -112,6 +112,13 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 
 	meta := meta.GetByContext(c)
 
+	// Handle direct Response API requests
+	if relayMode == relaymode.ResponseAPI {
+		// For direct Response API requests, the request should already be in the correct format
+		// We don't need to convert it, just pass it through
+		return request, nil
+	}
+
 	// Convert ChatCompletion requests to Response API format only for OpenAI
 	// Skip conversion for models that only support ChatCompletion API
 	if relayMode == relaymode.ChatCompletions &&
@@ -231,18 +238,25 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 	err *model.ErrorWithStatusCode) {
 	if meta.IsStream {
 		var responseText string
-		// Check if we need to handle Response API streaming response
-		if vi, ok := c.Get(ctxkey.ConvertedRequest); ok {
-			if _, ok := vi.(*ResponseAPIRequest); ok {
-				// This is a Response API streaming response that needs conversion
-				err, responseText, usage = ResponseAPIStreamHandler(c, resp, meta.Mode)
+		// Handle different streaming modes
+		switch meta.Mode {
+		case relaymode.ResponseAPI:
+			// Direct Response API streaming - pass through without conversion
+			err, responseText, usage = ResponseAPIDirectStreamHandler(c, resp, meta.Mode)
+		default:
+			// Check if we need to handle Response API streaming response for ChatCompletion
+			if vi, ok := c.Get(ctxkey.ConvertedRequest); ok {
+				if _, ok := vi.(*ResponseAPIRequest); ok {
+					// This is a Response API streaming response that needs conversion
+					err, responseText, usage = ResponseAPIStreamHandler(c, resp, meta.Mode)
+				} else {
+					// Regular streaming response
+					err, responseText, usage = StreamHandler(c, resp, meta.Mode)
+				}
 			} else {
 				// Regular streaming response
 				err, responseText, usage = StreamHandler(c, resp, meta.Mode)
 			}
-		} else {
-			// Regular streaming response
-			err, responseText, usage = StreamHandler(c, resp, meta.Mode)
 		}
 
 		if usage == nil || usage.TotalTokens == 0 {
@@ -259,6 +273,10 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 			err, usage = ImageHandler(c, resp)
 		// case relaymode.ImagesEdits:
 		// err, usage = ImagesEditsHandler(c, resp)
+		case relaymode.ResponseAPI:
+			// For direct Response API requests, pass through the response directly
+			// without conversion back to ChatCompletion format
+			err, usage = ResponseAPIDirectHandler(c, resp, meta.PromptTokens, meta.ActualModelName)
 		case relaymode.ChatCompletions:
 			// Check if we need to convert Response API response back to ChatCompletion format
 			if vi, ok := c.Get(ctxkey.ConvertedRequest); ok {
