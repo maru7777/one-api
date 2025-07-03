@@ -48,7 +48,8 @@ const EditChannel = (props) => {
         auto_ban: 1,
         groups: ['default'],
         model_ratio: '',
-        completion_ratio: ''
+        completion_ratio: '',
+        inference_profile_arn_map: ''
     };
     const [batch, setBatch] = useState(false);
     const [autoBan, setAutoBan] = useState(true);
@@ -168,6 +169,13 @@ const EditChannel = (props) => {
                     console.error('Failed to parse completion_ratio:', e);
                 }
             }
+            if (data.inference_profile_arn_map && data.inference_profile_arn_map !== '') {
+                try {
+                    data.inference_profile_arn_map = JSON.stringify(JSON.parse(data.inference_profile_arn_map), null, 2);
+                } catch (e) {
+                    console.error('Failed to parse inference_profile_arn_map:', e);
+                }
+            }
             setInputs(data);
             // Load default pricing for this channel type
             loadDefaultPricing(data.type);
@@ -284,6 +292,10 @@ const EditChannel = (props) => {
         }
         if (inputs.completion_ratio !== '' && !verifyJSON(inputs.completion_ratio)) {
             showInfo('输出定价必须是合法的 JSON 格式！');
+            return;
+        }
+        if (inputs.inference_profile_arn_map !== '' && !verifyJSON(inputs.inference_profile_arn_map)) {
+            showInfo('推理配置文件ARN映射必须是合法的 JSON 格式！');
             return;
         }
         let localInputs = {...inputs};
@@ -755,6 +767,31 @@ const EditChannel = (props) => {
                     <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
                         JSON 格式：{`{"模型名称": 输出倍率}`}。输出倍率乘以输出 token 数量。
                     </div>
+
+                    {/* AWS-specific inference profile ARN mapping */}
+                    {inputs.type === 33 && (
+                        <>
+                            <div style={{ marginTop: 20 }}>
+                                <Typography.Text strong>推理配置文件ARN映射：</Typography.Text>
+                            </div>
+                            <TextArea
+                                placeholder={`可选，AWS Bedrock 推理配置文件 ARN 映射，JSON 格式。\n示例：\n${JSON.stringify({
+                                    "claude-3-5-sonnet-20241022": "arn:aws:bedrock:us-east-1:123456789012:inference-profile/us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+                                    "claude-3-haiku-20240307": "arn:aws:bedrock:us-east-1:123456789012:inference-profile/us.anthropic.claude-3-haiku-20240307-v1:0"
+                                }, null, 2)}`}
+                                style={{
+                                    minHeight: 150,
+                                    fontFamily: 'JetBrains Mono, Consolas',
+                                }}
+                                onChange={(value) => handleInputChange('inference_profile_arn_map', value)}
+                                value={inputs.inference_profile_arn_map}
+                                autoComplete="new-password"
+                            />
+                            <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+                                JSON 格式：{`{"模型名称": "arn:aws:bedrock:region:account:inference-profile/profile-id"}`}。将模型名称映射到 AWS Bedrock 推理配置文件 ARN。留空则使用默认模型 ID。
+                            </div>
+                        </>
+                    )}
 
                 </Spin>
             </SideSheet>

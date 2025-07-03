@@ -2,8 +2,6 @@ package utils
 
 import (
 	"context"
-	jsoniter "github.com/json-iterator/go"
-	"os"
 	"slices"
 	"strings"
 	"sync"
@@ -266,62 +264,8 @@ func testModelAvailability(ctx context.Context, client *bedrockruntime.Client, m
 	return true
 }
 
-var arnMap = map[string]string{}
-
-// Config 定义配置结构
-
-var lock = &sync.RWMutex{}
-
-type Config struct {
-	AK     string `json:"ak"`
-	Model  string `json:"model"`
-	Region string `json:"region"`
-	ARN    string `json:"arn"`
-}
-
-func LoadSpArn(ctx context.Context) error {
-	// 读取JSON文件
-	data, err := os.ReadFile("./conf/arn.json")
-	if err != nil {
-		logger.Warnf(ctx, "读取文件失败: %v", err)
-		return err
-	}
-	var configs []Config
-	err = jsoniter.Unmarshal(data, &configs)
-	if err != nil {
-		logger.Warnf(ctx, "解析JSON失败: %v", err)
-		return err
-	}
-	lock.Lock()
-	defer lock.Unlock()
-	arnMap = map[string]string{}
-	// 输出解析结果
-	for _, config := range configs {
-		logger.Infof(ctx, "load special keymap AK[%s], model[%s], region[%s], arn[%s]", config.AK, config.Model, config.Region, config.ARN)
-		key := KeyCombine(config.AK, config.Model, config.Region)
-		arnMap[key] = config.ARN
-		// 输出解析结果
-	}
-	// 解析JSON数据
-	return nil
-}
-
-func KeyCombine(ak, model, region string) string {
-	combineName := strings.Join([]string{ak, model, region}, "::")
-	return combineName
-}
-
-func FastAwsArn(ak, model, region string) (arn string) {
-	lock.RLock()
-	defer lock.RUnlock()
-	key := KeyCombine(ak, model, region)
-	logger.Debugf(context.Background(), "combineKey[%s]", key)
-	arn, ok := arnMap[key]
-	if !ok {
-		return ""
-	}
-	return arn
-}
+// Deprecated: File-based ARN configuration has been replaced with channel-specific configuration
+// These functions are kept for backward compatibility but should not be used in new code
 
 // ConvertModelID2CrossRegionProfile converts the model ID to a cross-region profile ID.
 // Enhanced version that uses aws-sdk-go-v2 patterns and includes availability testing.

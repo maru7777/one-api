@@ -19,6 +19,7 @@ import (
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/relay/adaptor/anthropic"
 	"github.com/songquanpeng/one-api/relay/adaptor/aws/utils"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
@@ -54,24 +55,26 @@ func AwsModelID(requestModel string) (string, error) {
 
 func AwsClaudeModelTransArn(c *gin.Context, awsCli *bedrockruntime.Client) string {
 	reqModelID := c.GetString(ctxkey.RequestModel)
-	arn := ""
-	ak := ""
-	cred, err := awsCli.Options().Credentials.Retrieve(c)
-	if err != nil {
-		logger.Warnf(c, "%v", err)
-	} else {
-		ak = cred.AccessKeyID
+
+	// First, try to get ARN from channel's inference profile ARN mapping
+	if channelModel, ok := c.Get(ctxkey.ChannelModel); ok {
+		if channel, ok := channelModel.(*model.Channel); ok {
+			arnMap := channel.GetInferenceProfileArnMap()
+			if arnMap != nil {
+				if arn, exists := arnMap[reqModelID]; exists && arn != "" {
+					logger.Debugf(c, "Using channel inference profile ARN for model %s: %s", reqModelID, arn)
+					return arn
+				}
+			}
+		}
 	}
-	arn = FastClaudeModelTransArn(ak, reqModelID, awsCli.Options().Region)
-	return arn
+
+	// No ARN mapping found in channel configuration
+	return ""
 }
 
-func FastClaudeModelTransArn(ak, model, region string) (arn string) {
-	if model == "claude-3-7-sonnet-latest-tag" || model == "claude-4-sonnet-latest-tag" {
-		arn = utils.FastAwsArn(ak, model, region)
-	}
-	return arn
-}
+// Deprecated: FastClaudeModelTransArn is no longer used
+// ARN mapping is now handled through channel configuration
 
 func Handler(c *gin.Context, awsCli *bedrockruntime.Client, modelName string) (*relaymodel.ErrorWithStatusCode, *relaymodel.Usage) {
 	awsModelID, err := AwsModelID(c.GetString(ctxkey.RequestModel))

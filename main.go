@@ -1,11 +1,9 @@
 package main
 
 import (
-	"context"
 	"embed"
 	"encoding/base64"
 	"fmt"
-	"github.com/songquanpeng/one-api/relay/adaptor/aws/utils"
 	"net/http"
 	"os"
 	"runtime"
@@ -188,12 +186,7 @@ func main() {
 		server.GET("/metrics", middleware.AdminAuth(), gin.WrapH(promhttp.Handler()))
 		logger.SysLog("Prometheus metrics endpoint available at /metrics")
 	}
-	// special load
-	ctx := context.Background()
-	e := utils.LoadSpArn(ctx)
-	if e != nil {
-		logger.Warnf(ctx, "warn load special arn failed!")
-	}
+
 	router.SetRouter(server, buildFS)
 	var port = os.Getenv("PORT")
 	if port == "" {

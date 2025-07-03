@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	claude "github.com/songquanpeng/one-api/relay/adaptor/aws/claude"
 	"io"
 	"math"
 	"net/http"
@@ -132,14 +131,17 @@ func testChannel(ctx context.Context, channel *model.Channel, request *relaymode
 	if modelMap != nil && modelMap[modelName] != "" {
 		modelName = modelMap[modelName]
 	}
-	// aws bedrock sp Model meta.Config.AK,
-	arn := claude.FastClaudeModelTransArn(meta.Config.AK, modelName, meta.Config.Region)
-	meta.OriginModelName, meta.ActualModelName = request.Model, modelName
-	request.Model = modelName
-	// for aws tag arn
-	if arn != "" {
-		meta.ActualModelName = arn
+	// Check for AWS inference profile ARN mapping
+	if channel.Type == channeltype.AwsClaude {
+		arnMap := channel.GetInferenceProfileArnMap()
+		if arnMap != nil {
+			if arn, exists := arnMap[modelName]; exists && arn != "" {
+				meta.ActualModelName = arn
+			}
+		}
 	}
+	meta.OriginModelName = request.Model
+	request.Model = modelName
 	convertedRequest, err := adaptor.ConvertRequest(c, relaymode.ChatCompletions, request)
 	if err != nil {
 		return "", err, nil

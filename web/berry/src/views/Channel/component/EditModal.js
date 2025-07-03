@@ -94,6 +94,20 @@ const validationSchema = Yup.object().shape({
       return false;
     }
     return false;
+  }),
+  inference_profile_arn_map: Yup.string().nullable().test('is-json', '必须是有效的JSON字符串', function (value) {
+    try {
+      if (value === '' || value === null || value === undefined) {
+        return true;
+      }
+      const parsedValue = JSON.parse(value);
+      if (typeof parsedValue === 'object') {
+        return true;
+      }
+    } catch (e) {
+      return false;
+    }
+    return false;
   })
 });
 
@@ -808,6 +822,44 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
                   </FormHelperText>
                 )}
               </FormControl>
+
+              {/* AWS-specific inference profile ARN mapping */}
+              {values.type === 33 && (
+                <FormControl fullWidth error={Boolean(touched.inference_profile_arn_map && errors.inference_profile_arn_map)} sx={{ ...theme.typography.otherInput }}>
+                  <InputLabel
+                    htmlFor="channel-inference_profile_arn_map-label"
+                    sx={{
+                      position: 'relative',
+                      transform: 'none',
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                      color: theme.palette.text.primary
+                    }}
+                  >
+                    {inputLabel.inference_profile_arn_map}
+                  </InputLabel>
+                  <TextField
+                    multiline
+                    id="channel-inference_profile_arn_map-label"
+                    value={values.inference_profile_arn_map}
+                    name="inference_profile_arn_map"
+                    onBlur={handleBlur}
+                    onChange={handleChange}
+                    aria-describedby="helper-text-channel-inference_profile_arn_map-label"
+                    minRows={5}
+                    placeholder={inputPrompt.inference_profile_arn_map}
+                  />
+                  {touched.inference_profile_arn_map && errors.inference_profile_arn_map ? (
+                    <FormHelperText error id="helper-tex-channel-inference_profile_arn_map-label">
+                      {errors.inference_profile_arn_map}
+                    </FormHelperText>
+                  ) : (
+                    <FormHelperText id="helper-tex-channel-inference_profile_arn_map-label">
+                      JSON 格式：{`{"模型名称": "arn:aws:bedrock:region:account:inference-profile/profile-id"}`}。将模型名称映射到 AWS Bedrock 推理配置文件 ARN。留空则使用默认模型 ID。
+                    </FormHelperText>
+                  )}
+                </FormControl>
+              )}
 
               <DialogActions>
                 <Button onClick={onCancel}>取消</Button>
