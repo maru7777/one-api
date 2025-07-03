@@ -6,6 +6,7 @@ import (
 
 	"github.com/Laisky/errors/v2"
 	"github.com/coze-dev/coze-go"
+
 	"github.com/songquanpeng/one-api/relay/adaptor/coze/constant/event"
 )
 

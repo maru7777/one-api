@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"gorm.io/gorm"
+
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/logger"
-	"gorm.io/gorm"
 )
 
 const (

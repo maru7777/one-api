@@ -14,12 +14,13 @@ import (
 
 	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
+	"golang.org/x/image/webp"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/relay/meta"
 	"github.com/songquanpeng/one-api/relay/model"
-	"golang.org/x/image/webp"
-	"golang.org/x/sync/errgroup"
 )
 
 var errNextLoop = errors.New("next_loop")

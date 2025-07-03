@@ -2,11 +2,12 @@ package aws
 
 import (
 	"context"
+	"regexp"
+
 	"github.com/songquanpeng/one-api/common/logger"
 	claude "github.com/songquanpeng/one-api/relay/adaptor/aws/claude"
 	llama3 "github.com/songquanpeng/one-api/relay/adaptor/aws/llama3"
 	"github.com/songquanpeng/one-api/relay/adaptor/aws/utils"
-	"regexp"
 )
 
 type AwsModelType int

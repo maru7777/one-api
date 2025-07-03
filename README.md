@@ -44,6 +44,8 @@ Also welcome to register and use my deployed one-api gateway, which supports var
     - [Support black-forest-labs/flux-kontext-pro](#support-black-forest-labsflux-kontext-pro)
     - [Support o3-pro \& reasoning content](#support-o3-pro--reasoning-content)
     - [Support GCP Vertex gloabl region and gemini-2.5-pro-preview-06-05](#support-gcp-vertex-gloabl-region-and-gemini-25-pro-preview-06-05)
+    - [Support OpenAI Response API](#support-openai-response-api)
+    - [Support AWS BedRock Inference Profile](#support-aws-bedrock-inference-profile)
   - [Bug fix](#bug-fix)
 
 ## Turtorial
@@ -278,6 +280,16 @@ support `gpt-4o-search-preview` & `gpt-4o-mini-search-preview`
 ### Support GCP Vertex gloabl region and gemini-2.5-pro-preview-06-05
 
 ![](https://s3.laisky.com/uploads/2025/06/gemini-2.5-pro-preview-06-05.png)
+
+### Support OpenAI Response API
+
+**Partially supported, still in development.**
+
+![]<https://s3.laisky.com/uploads/2025/07/response-api.png>)
+
+### Support AWS BedRock Inference Profile
+
+![](https://s3.laisky.com/uploads/2025/07/aws-inference-profile.png)
 
 ## Bug fix
 

@@ -11,6 +11,7 @@ import (
 
 	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
+
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/common/logger"
@@ -21,7 +22,6 @@ import (
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/relay/apitype"
 	"github.com/songquanpeng/one-api/relay/billing"
-
 	"github.com/songquanpeng/one-api/relay/channeltype"
 	metalib "github.com/songquanpeng/one-api/relay/meta"
 	relaymodel "github.com/songquanpeng/one-api/relay/model"

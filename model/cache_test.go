@@ -3,8 +3,9 @@ package model
 import (
 	"testing"
 
-	"github.com/songquanpeng/one-api/common/config"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/songquanpeng/one-api/common/config"
 )
 
 func TestCacheGetRandomSatisfiedChannelExcluding(t *testing.T) {

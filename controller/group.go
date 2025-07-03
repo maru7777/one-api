@@ -1,9 +1,11 @@
 package controller
 
 import (
-	"github.com/gin-gonic/gin"
-	billingratio "github.com/songquanpeng/one-api/relay/billing/ratio"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
+
+	billingratio "github.com/songquanpeng/one-api/relay/billing/ratio"
 )
 
 func GetGroups(c *gin.Context) {

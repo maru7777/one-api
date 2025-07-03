@@ -4,11 +4,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/songquanpeng/one-api/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+
+	"github.com/songquanpeng/one-api/common"
 )
 
 func setupTestDB(t *testing.T) *gorm.DB {
