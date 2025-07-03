@@ -285,7 +285,7 @@ support `gpt-4o-search-preview` & `gpt-4o-mini-search-preview`
 
 **Partially supported, still in development.**
 
-![]<https://s3.laisky.com/uploads/2025/07/response-api.png>)
+![](https://s3.laisky.com/uploads/2025/07/response-api.png)
 
 ### Support AWS BedRock Inference Profile
 
