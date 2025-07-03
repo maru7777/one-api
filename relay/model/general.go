@@ -50,6 +50,7 @@ type GeneralOpenAIRequest struct {
 	// https://platform.openai.com/docs/api-reference/chat/create
 	Messages []Message `json:"messages,omitempty"`
 	Model    string    `json:"model,omitempty"`
+	Arn      string    `json:"arn,omitempty"` // for aws arn
 	Store    *bool     `json:"store,omitempty"`
 	Metadata any       `json:"metadata,omitempty"`
 	// FrequencyPenalty is a number between -2.0 and 2.0 that penalizes

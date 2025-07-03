@@ -264,9 +264,13 @@ func testModelAvailability(ctx context.Context, client *bedrockruntime.Client, m
 	return true
 }
 
+// Deprecated: File-based ARN configuration has been replaced with channel-specific configuration
+// These functions are kept for backward compatibility but should not be used in new code
+
 // ConvertModelID2CrossRegionProfile converts the model ID to a cross-region profile ID.
 // Enhanced version that uses aws-sdk-go-v2 patterns and includes availability testing.
 func ConvertModelID2CrossRegionProfile(model, region string) string {
+
 	regionPrefix := getRegionPrefix(region)
 	if regionPrefix == "" {
 		logger.Debugf(context.TODO(), "unsupported region for cross-region inference: %s", region)

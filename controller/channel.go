@@ -90,6 +90,19 @@ func AddChannel(c *gin.Context) {
 		})
 		return
 	}
+
+	// Validate inference profile ARN map if provided
+	if channel.InferenceProfileArnMap != nil && *channel.InferenceProfileArnMap != "" {
+		err = model.ValidateInferenceProfileArnMapJSON(*channel.InferenceProfileArnMap)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "Invalid inference profile ARN map: " + err.Error(),
+			})
+			return
+		}
+	}
+
 	channel.CreatedTime = helper.GetTimestamp()
 	keys := strings.Split(channel.Key, "\n")
 	channels := make([]model.Channel, 0, len(keys))
@@ -161,6 +174,19 @@ func UpdateChannel(c *gin.Context) {
 		})
 		return
 	}
+
+	// Validate inference profile ARN map if provided
+	if channel.InferenceProfileArnMap != nil && *channel.InferenceProfileArnMap != "" {
+		err = model.ValidateInferenceProfileArnMapJSON(*channel.InferenceProfileArnMap)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "Invalid inference profile ARN map: " + err.Error(),
+			})
+			return
+		}
+	}
+
 	err = channel.Update()
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{

@@ -1,11 +1,10 @@
 package aws
 
 import (
-	"io"
-	"net/http"
-
+	"context"
 	"github.com/Laisky/errors/v2"
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
 	"github.com/gin-gonic/gin"
@@ -13,23 +12,30 @@ import (
 	"github.com/songquanpeng/one-api/relay/adaptor/aws/utils"
 	"github.com/songquanpeng/one-api/relay/meta"
 	"github.com/songquanpeng/one-api/relay/model"
+	"io"
+	"net/http"
 )
 
 var _ adaptor.Adaptor = new(Adaptor)
 
 type Adaptor struct {
 	awsAdapter utils.AwsAdapter
-
-	Meta      *meta.Meta
-	AwsClient *bedrockruntime.Client
+	Config     aws.Config
+	Meta       *meta.Meta
+	AwsClient  *bedrockruntime.Client
 }
 
 func (a *Adaptor) Init(meta *meta.Meta) {
 	a.Meta = meta
-	a.AwsClient = bedrockruntime.New(bedrockruntime.Options{
-		Region:      meta.Config.Region,
-		Credentials: aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(meta.Config.AK, meta.Config.SK, "")),
-	})
+	defaultConfig, err := config.LoadDefaultConfig(context.Background(),
+		config.WithRegion(meta.Config.Region),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
+			meta.Config.AK, meta.Config.SK, "")))
+	if err != nil {
+		return
+	}
+	a.Config = defaultConfig
+	a.AwsClient = bedrockruntime.NewFromConfig(defaultConfig)
 }
 
 func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.GeneralOpenAIRequest) (any, error) {

@@ -131,7 +131,16 @@ func testChannel(ctx context.Context, channel *model.Channel, request *relaymode
 	if modelMap != nil && modelMap[modelName] != "" {
 		modelName = modelMap[modelName]
 	}
-	meta.OriginModelName, meta.ActualModelName = request.Model, modelName
+	// Check for AWS inference profile ARN mapping
+	if channel.Type == channeltype.AwsClaude {
+		arnMap := channel.GetInferenceProfileArnMap()
+		if arnMap != nil {
+			if arn, exists := arnMap[modelName]; exists && arn != "" {
+				meta.ActualModelName = arn
+			}
+		}
+	}
+	meta.OriginModelName = request.Model
 	request.Model = modelName
 	convertedRequest, err := adaptor.ConvertRequest(c, relaymode.ChatCompletions, request)
 	if err != nil {
