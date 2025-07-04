@@ -17,6 +17,7 @@ import (
 	"github.com/gorilla/websocket"
 
 	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/common/random"
@@ -42,6 +43,9 @@ func requestOpenAI2Xunfei(request model.GeneralOpenAIRequest, xunfeiAppId string
 	xunfeiRequest.Parameter.Chat.Domain = domain
 	xunfeiRequest.Parameter.Chat.Temperature = request.Temperature
 	xunfeiRequest.Parameter.Chat.MaxTokens = request.MaxTokens
+	if xunfeiRequest.Parameter.Chat.MaxTokens == 0 {
+		xunfeiRequest.Parameter.Chat.MaxTokens = config.DefaultMaxToken
+	}
 	xunfeiRequest.Payload.Message.Text = messages
 
 	if request.N != nil {

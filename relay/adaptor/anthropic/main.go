@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/image"
 	"github.com/songquanpeng/one-api/common/logger"
@@ -111,7 +112,7 @@ func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Re
 		claudeRequest.ToolChoice = claudeToolChoice
 	}
 	if claudeRequest.MaxTokens == 0 {
-		claudeRequest.MaxTokens = 4096
+		claudeRequest.MaxTokens = config.DefaultMaxToken
 	}
 	// legacy model name mapping
 	if claudeRequest.Model == "claude-instant-1" {

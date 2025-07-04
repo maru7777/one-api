@@ -19,6 +19,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/relay/adaptor/aws/utils"
@@ -63,7 +64,7 @@ func ConvertRequest(textRequest relaymodel.GeneralOpenAIRequest) *Request {
 		TopP:        textRequest.TopP,
 	}
 	if llamaRequest.MaxGenLen == 0 {
-		llamaRequest.MaxGenLen = 2048
+		llamaRequest.MaxGenLen = config.DefaultMaxToken
 	}
 	prompt := RenderPrompt(textRequest.Messages)
 	llamaRequest.Prompt = prompt

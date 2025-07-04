@@ -143,6 +143,9 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *ChatRequest {
 			ResponseModalities: geminiOpenaiCompatible.GetModelModalities(textRequest.Model),
 		},
 	}
+	if geminiRequest.GenerationConfig.MaxOutputTokens == 0 {
+		geminiRequest.GenerationConfig.MaxOutputTokens = config.DefaultMaxToken
+	}
 	if textRequest.ResponseFormat != nil {
 		if mimeType, ok := mimeTypeMap[textRequest.ResponseFormat.Type]; ok {
 			geminiRequest.GenerationConfig.ResponseMimeType = mimeType
