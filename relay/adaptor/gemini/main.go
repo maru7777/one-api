@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
 
 	"github.com/songquanpeng/one-api/common"
@@ -59,6 +60,16 @@ func cleanJsonSchemaForGemini(schema interface{}) interface{} {
 			"null":    "NULL",
 		}
 
+		// Format mapping from OpenAI to Gemini supported formats
+		// Based on error message: only 'enum' and 'date-time' are supported for STRING type
+		formatMapping := map[string]string{
+			"date":      "date-time", // Convert unsupported "date" to "date-time"
+			"time":      "date-time", // Convert unsupported "time" to "date-time"
+			"date-time": "date-time", // Keep supported "date-time"
+			"duration":  "date-time", // Convert to supported format
+			"enum":      "enum",      // Keep supported "enum"
+		}
+
 		for key, value := range v {
 			// Skip unsupported fields like additionalProperties, description, strict
 			if !supportedFields[key] {
@@ -76,6 +87,14 @@ func cleanJsonSchemaForGemini(schema interface{}) interface{} {
 					}
 				} else {
 					cleaned[key] = value
+				}
+			case "format":
+				// Map format values to Gemini-supported formats
+				if formatStr, ok := value.(string); ok {
+					if mappedFormat, exists := formatMapping[formatStr]; exists {
+						cleaned[key] = mappedFormat
+					}
+					// Skip unsupported formats that have no mapping
 				}
 			case "properties":
 				// Handle properties object - recursively clean each property
@@ -121,6 +140,17 @@ func cleanFunctionParametersInternal(params interface{}, isTopLevel bool) interf
 	switch v := params.(type) {
 	case map[string]interface{}:
 		cleaned := make(map[string]interface{})
+
+		// Format mapping from OpenAI to Gemini supported formats
+		// Based on error message: only 'enum' and 'date-time' are supported for STRING type
+		formatMapping := map[string]string{
+			"date":      "date-time", // Convert unsupported "date" to "date-time"
+			"time":      "date-time", // Convert unsupported "time" to "date-time"
+			"date-time": "date-time", // Keep supported "date-time"
+			"duration":  "date-time", // Convert to supported format
+			"enum":      "enum",      // Keep supported "enum"
+		}
+
 		for key, value := range v {
 			// Skip additionalProperties at all levels
 			if key == "additionalProperties" {
@@ -130,6 +160,18 @@ func cleanFunctionParametersInternal(params interface{}, isTopLevel bool) interf
 			if isTopLevel && (key == "description" || key == "strict") {
 				continue
 			}
+
+			// Handle format field - map to supported formats
+			if key == "format" {
+				if formatStr, ok := value.(string); ok {
+					if mappedFormat, exists := formatMapping[formatStr]; exists {
+						cleaned[key] = mappedFormat
+					}
+					// Skip unsupported formats that have no mapping
+				}
+				continue
+			}
+
 			// Recursively clean nested objects (not top level anymore)
 			cleaned[key] = cleanFunctionParametersInternal(value, false)
 		}
@@ -436,7 +478,7 @@ func getToolCalls(candidate *ChatCandidate) []model.Tool {
 	}
 	argsBytes, err := json.Marshal(item.FunctionCall.Arguments)
 	if err != nil {
-		logger.FatalLog("getToolCalls failed: " + err.Error())
+		logger.FatalLog("getToolCalls failed: " + errors.Wrap(err, "marshal function call arguments").Error())
 		return toolCalls
 	}
 	toolCall := model.Tool{
@@ -638,7 +680,7 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 		var geminiResponse ChatResponse
 		err := json.Unmarshal([]byte(data), &geminiResponse)
 		if err != nil {
-			logger.SysError("error unmarshalling stream response: " + err.Error())
+			logger.SysError("error unmarshalling stream response: " + errors.Wrap(err, "unmarshal stream").Error())
 			continue
 		}
 
@@ -651,19 +693,18 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 
 		err = render.ObjectData(c, response)
 		if err != nil {
-			logger.SysError(err.Error())
+			logger.SysError(errors.Wrap(err, "render stream").Error())
 		}
 	}
-
 	if err := scanner.Err(); err != nil {
-		logger.SysError("error reading stream: " + err.Error())
+		logger.SysError("error reading stream: " + errors.Wrap(err, "scanner stream").Error())
 	}
 
 	render.Done(c)
 
 	err := resp.Body.Close()
 	if err != nil {
-		return openai.ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), ""
+		return openai.ErrorWrapper(errors.Wrap(err, "close_response_body_failed"), "close_response_body_failed", http.StatusInternalServerError), ""
 	}
 
 	return nil, responseText
@@ -672,17 +713,16 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 func Handler(c *gin.Context, resp *http.Response, promptTokens int, modelName string) (*model.ErrorWithStatusCode, *model.Usage) {
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return openai.ErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError), nil
+		return openai.ErrorWrapper(errors.Wrap(err, "read_response_body_failed"), "read_response_body_failed", http.StatusInternalServerError), nil
 	}
-
 	err = resp.Body.Close()
 	if err != nil {
-		return openai.ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), nil
+		return openai.ErrorWrapper(errors.Wrap(err, "close_response_body_failed"), "close_response_body_failed", http.StatusInternalServerError), nil
 	}
 	var geminiResponse ChatResponse
 	err = json.Unmarshal(responseBody, &geminiResponse)
 	if err != nil {
-		return openai.ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError), nil
+		return openai.ErrorWrapper(errors.Wrap(err, "unmarshal_response_body_failed"), "unmarshal_response_body_failed", http.StatusInternalServerError), nil
 	}
 	if len(geminiResponse.Candidates) == 0 {
 		return &model.ErrorWithStatusCode{
@@ -706,7 +746,7 @@ func Handler(c *gin.Context, resp *http.Response, promptTokens int, modelName st
 	fullTextResponse.Usage = usage
 	jsonResponse, err := json.Marshal(fullTextResponse)
 	if err != nil {
-		return openai.ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError), nil
+		return openai.ErrorWrapper(errors.Wrap(err, "marshal_response_body_failed"), "marshal_response_body_failed", http.StatusInternalServerError), nil
 	}
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)
@@ -718,15 +758,15 @@ func EmbeddingHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStat
 	var geminiEmbeddingResponse EmbeddingResponse
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return openai.ErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError), nil
+		return openai.ErrorWrapper(errors.Wrap(err, "read_response_body_failed"), "read_response_body_failed", http.StatusInternalServerError), nil
 	}
 	err = resp.Body.Close()
 	if err != nil {
-		return openai.ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), nil
+		return openai.ErrorWrapper(errors.Wrap(err, "close_response_body_failed"), "close_response_body_failed", http.StatusInternalServerError), nil
 	}
 	err = json.Unmarshal(responseBody, &geminiEmbeddingResponse)
 	if err != nil {
-		return openai.ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError), nil
+		return openai.ErrorWrapper(errors.Wrap(err, "unmarshal_response_body_failed"), "unmarshal_response_body_failed", http.StatusInternalServerError), nil
 	}
 	if geminiEmbeddingResponse.Error != nil {
 		return &model.ErrorWithStatusCode{
@@ -742,7 +782,7 @@ func EmbeddingHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStat
 	fullTextResponse := embeddingResponseGemini2OpenAI(&geminiEmbeddingResponse)
 	jsonResponse, err := json.Marshal(fullTextResponse)
 	if err != nil {
-		return openai.ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError), nil
+		return openai.ErrorWrapper(errors.Wrap(err, "marshal_response_body_failed"), "marshal_response_body_failed", http.StatusInternalServerError), nil
 	}
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)
