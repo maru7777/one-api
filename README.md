@@ -89,6 +89,8 @@ oneapi:
     OPENROUTER_PROVIDER_SORT: throughput
     # (optional) CHANNEL_SUSPEND_SECONDS_FOR_429 set the duration for channel suspension when receiving 429 error, default is 60 seconds
     CHANNEL_SUSPEND_SECONDS_FOR_429: 60
+    # (optional) DEFAULT_MAX_TOKEN set the default maximum number of tokens for requests, default is 2048
+    DEFAULT_MAX_TOKEN: 2048
   volumes:
     - /var/lib/oneapi:/data
   ports:

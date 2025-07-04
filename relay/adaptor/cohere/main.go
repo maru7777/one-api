@@ -13,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
@@ -47,6 +48,9 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *Request {
 		FrequencyPenalty: textRequest.FrequencyPenalty,
 		PresencePenalty:  textRequest.PresencePenalty,
 		Seed:             int(textRequest.Seed),
+	}
+	if cohereRequest.MaxTokens == 0 {
+		cohereRequest.MaxTokens = config.DefaultMaxToken
 	}
 	if cohereRequest.Model == "" {
 		cohereRequest.Model = "command-r"

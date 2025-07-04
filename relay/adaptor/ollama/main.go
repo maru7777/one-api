@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/image"
 	"github.com/songquanpeng/one-api/common/logger"
@@ -35,6 +36,9 @@ func ConvertRequest(request model.GeneralOpenAIRequest) *ChatRequest {
 			NumCtx:           request.NumCtx,
 		},
 		Stream: request.Stream,
+	}
+	if ollamaRequest.Options.NumPredict == 0 {
+		ollamaRequest.Options.NumPredict = config.DefaultMaxToken
 	}
 	for _, message := range request.Messages {
 		openaiContent := message.ParseContent()
