@@ -201,3 +201,5 @@ var TestPrompt = env.String("TEST_PROMPT", "2 + 2 = ?")
 
 // OpenrouterProviderSort is used to determine the order of the providers in the openrouter
 var OpenrouterProviderSort = env.String("OPENROUTER_PROVIDER_SORT", "")
+
+var DefaultMaxToken = env.Int("DEFAULT_MAX_TOKEN", 2000)

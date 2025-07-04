@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/songquanpeng/one-api/common/config"
 	"io"
 	"net/http"
 	"time"
@@ -107,7 +108,9 @@ func Handler(c *gin.Context, awsCli *bedrockruntime.Client, modelName string) (*
 	if err = copier.Copy(awsClaudeReq, claudeReq); err != nil {
 		return utils.WrapErr(errors.Wrap(err, "copy request")), nil
 	}
-
+	if awsClaudeReq.MaxTokens == 0 {
+		awsClaudeReq.MaxTokens = config.DefaultMaxToken
+	}
 	awsReq.Body, err = json.Marshal(awsClaudeReq)
 	if err != nil {
 		return utils.WrapErr(errors.Wrap(err, "marshal request")), nil
