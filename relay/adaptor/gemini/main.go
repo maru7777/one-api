@@ -110,6 +110,43 @@ func cleanJsonSchemaForGemini(schema interface{}) interface{} {
 	}
 }
 
+// cleanFunctionParameters recursively removes additionalProperties and other unsupported fields from function parameters
+func cleanFunctionParameters(params interface{}) interface{} {
+	return cleanFunctionParametersInternal(params, true)
+}
+
+// cleanFunctionParametersInternal recursively removes additionalProperties and other unsupported fields from function parameters
+// isTopLevel indicates if we're at the top level where description and strict should be removed
+func cleanFunctionParametersInternal(params interface{}, isTopLevel bool) interface{} {
+	switch v := params.(type) {
+	case map[string]interface{}:
+		cleaned := make(map[string]interface{})
+		for key, value := range v {
+			// Skip additionalProperties at all levels
+			if key == "additionalProperties" {
+				continue
+			}
+			// Skip description and strict only at top level
+			if isTopLevel && (key == "description" || key == "strict") {
+				continue
+			}
+			// Recursively clean nested objects (not top level anymore)
+			cleaned[key] = cleanFunctionParametersInternal(value, false)
+		}
+		return cleaned
+	case []interface{}:
+		// Clean arrays recursively
+		cleaned := make([]interface{}, len(v))
+		for i, item := range v {
+			cleaned[i] = cleanFunctionParametersInternal(item, false)
+		}
+		return cleaned
+	default:
+		// Return primitive values as-is
+		return v
+	}
+}
+
 // Setting safety to the lowest possible values since Gemini is already powerless enough
 func ConvertRequest(textRequest model.GeneralOpenAIRequest) *ChatRequest {
 	geminiRequest := ChatRequest{
@@ -164,11 +201,23 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *ChatRequest {
 	if textRequest.Tools != nil {
 		convertedGeminiFunctions := make([]model.Function, 0, len(textRequest.Tools))
 		for _, tool := range textRequest.Tools {
-			delete(tool.Function.Parameters, "additionalProperties")
+			// Use the helper function to recursively clean function parameters
+			cleanedParams := cleanFunctionParameters(tool.Function.Parameters)
+			// Type assert to map[string]any
+			cleanedParamsMap, ok := cleanedParams.(map[string]interface{})
+			if !ok {
+				// If type assertion fails, fallback to original parameters without additionalProperties
+				cleanedParamsMap = make(map[string]interface{})
+				for k, v := range tool.Function.Parameters {
+					if k != "additionalProperties" && k != "description" && k != "strict" {
+						cleanedParamsMap[k] = v
+					}
+				}
+			}
 			convertedGeminiFunctions = append(convertedGeminiFunctions, model.Function{
 				Name:        tool.Function.Name,
 				Description: tool.Function.Description,
-				Parameters:  tool.Function.Parameters,
+				Parameters:  cleanedParamsMap,
 				Required:    tool.Function.Required,
 			})
 		}
@@ -179,13 +228,25 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *ChatRequest {
 		}
 	} else if textRequest.Functions != nil {
 		for _, function := range textRequest.Functions {
-			delete(function.Parameters, "additionalProperties")
+			// Use the helper function to recursively clean function parameters
+			cleanedParams := cleanFunctionParameters(function.Parameters)
+			// Type assert to map[string]any
+			cleanedParamsMap, ok := cleanedParams.(map[string]interface{})
+			if !ok {
+				// If type assertion fails, fallback to original parameters without additionalProperties
+				cleanedParamsMap = make(map[string]interface{})
+				for k, v := range function.Parameters {
+					if k != "additionalProperties" && k != "description" && k != "strict" {
+						cleanedParamsMap[k] = v
+					}
+				}
+			}
 			geminiRequest.Tools = append(geminiRequest.Tools, ChatTools{
 				FunctionDeclarations: []model.Function{
 					{
 						Name:        function.Name,
 						Description: function.Description,
-						Parameters:  function.Parameters,
+						Parameters:  cleanedParamsMap,
 						Required:    function.Required,
 					},
 				},
