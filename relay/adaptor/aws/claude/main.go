@@ -179,6 +179,9 @@ func StreamHandler(c *gin.Context, awsCli *bedrockruntime.Client) (*relaymodel.E
 	if err = copier.Copy(awsClaudeReq, claudeReq); err != nil {
 		return utils.WrapErr(errors.Wrap(err, "copy request")), nil
 	}
+	if awsClaudeReq.MaxTokens == 0 {
+		awsClaudeReq.MaxTokens = config.DefaultMaxToken
+	}
 	awsReq.Body, err = json.Marshal(awsClaudeReq)
 	if err != nil {
 		return utils.WrapErr(errors.Wrap(err, "marshal request")), nil
