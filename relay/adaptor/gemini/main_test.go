@@ -115,12 +115,12 @@ func TestCleanFunctionParameters(t *testing.T) {
 						"type": "object",
 						"properties": map[string]interface{}{
 							"start": map[string]interface{}{
-								"type": "string",
-								// format: "date" removed
+								"type":   "string",
+								"format": "date-time", // Converted from "date"
 							},
 							"end": map[string]interface{}{
-								"type": "string",
-								// format: "date" removed
+								"type":   "string",
+								"format": "date-time", // Converted from "date"
 							},
 						},
 					},
@@ -133,8 +133,8 @@ func TestCleanFunctionParameters(t *testing.T) {
 						"format": "enum", // Preserved
 					},
 					"unsupported": map[string]interface{}{
-						"type": "string",
-						// format: "time" removed
+						"type":   "string",
+						"format": "date-time", // Converted from "time"
 					},
 				},
 			},
@@ -179,13 +179,13 @@ func TestCleanFunctionParameters(t *testing.T) {
 						"properties": map[string]interface{}{
 							"start": map[string]interface{}{
 								"type":        "string",
+								"format":      "date-time", // Converted from "date"
 								"description": "Start date",
-								// format: "date" removed
 							},
 							"end": map[string]interface{}{
 								"type":        "string",
+								"format":      "date-time", // Converted from "date"
 								"description": "End date",
-								// format: "date" removed
 							},
 						},
 					},
@@ -311,8 +311,8 @@ func TestCleanJsonSchemaForGemini(t *testing.T) {
 				"type": "OBJECT",
 				"properties": map[string]interface{}{
 					"date": map[string]interface{}{
-						"type": "STRING",
-						// format removed
+						"type":   "STRING",
+						"format": "date-time", // Converted from "date"
 					},
 					"timestamp": map[string]interface{}{
 						"type":   "STRING",
@@ -323,8 +323,8 @@ func TestCleanJsonSchemaForGemini(t *testing.T) {
 						"format": "enum", // Kept
 					},
 					"time": map[string]interface{}{
-						"type": "STRING",
-						// format removed
+						"type":   "STRING",
+						"format": "date-time", // Converted from "time"
 					},
 				},
 			},
@@ -431,11 +431,15 @@ func TestConvertRequestWithToolsRegression(t *testing.T) {
 	}
 
 	tool := geminiRequest.Tools[0]
-	if len(tool.FunctionDeclarations) != 1 {
-		t.Fatalf("Expected 1 function declaration, got %d", len(tool.FunctionDeclarations))
+	functions, ok := tool.FunctionDeclarations.([]model.Function)
+	if !ok {
+		t.Fatal("FunctionDeclarations should be []model.Function")
+	}
+	if len(functions) != 1 {
+		t.Fatalf("Expected 1 function declaration, got %d", len(functions))
 	}
 
-	function := tool.FunctionDeclarations[0]
+	function := functions[0]
 	if function.Name != "search_crypto_news" {
 		t.Errorf("Expected function name 'search_crypto_news', got '%s'", function.Name)
 	}
@@ -458,13 +462,17 @@ func TestConvertRequestWithToolsRegression(t *testing.T) {
 		t.Error("strict should have been removed at top level")
 	}
 
-	// Check that unsupported format values were removed - this is the key fix
+	// Check that unsupported format values were converted - this is the key fix
 	if properties, ok := params["properties"].(map[string]interface{}); ok {
 		if dateRange, ok := properties["dateRange"].(map[string]interface{}); ok {
 			if dateRangeProps, ok := dateRange["properties"].(map[string]interface{}); ok {
 				if startField, ok := dateRangeProps["start"].(map[string]interface{}); ok {
 					if format, exists := startField["format"]; exists {
-						t.Errorf("unsupported format 'date' should have been removed, but found: %v", format)
+						if format != "date-time" {
+							t.Errorf("unsupported format 'date' should have been converted to 'date-time', but found: %v", format)
+						}
+					} else {
+						t.Error("format should have been converted to 'date-time', but was missing")
 					}
 					// Description should be preserved in nested objects
 					if _, exists := startField["description"]; !exists {
@@ -473,7 +481,11 @@ func TestConvertRequestWithToolsRegression(t *testing.T) {
 				}
 				if endField, ok := dateRangeProps["end"].(map[string]interface{}); ok {
 					if format, exists := endField["format"]; exists {
-						t.Errorf("unsupported format 'date' should have been removed, but found: %v", format)
+						if format != "date-time" {
+							t.Errorf("unsupported format 'date' should have been converted to 'date-time', but found: %v", format)
+						}
+					} else {
+						t.Error("format should have been converted to 'date-time', but was missing")
 					}
 					// Description should be preserved in nested objects
 					if _, exists := endField["description"]; !exists {
@@ -489,18 +501,19 @@ func TestSupportedFormatsOnly(t *testing.T) {
 	ctx := context.Background()
 	_ = ctx // Context for future use
 
-	// Test that only supported formats are kept
+	// Test that formats are handled correctly (converted or preserved)
 	testCases := []struct {
-		format    string
-		supported bool
+		format         string
+		supported      bool
+		expectedFormat string
 	}{
-		{"date", false},     // This was causing the error
-		{"time", false},     // Also unsupported
-		{"date-time", true}, // Supported
-		{"enum", true},      // Supported
-		{"duration", false}, // Not in our supported list
-		{"email", false},    // Not in our supported list
-		{"uuid", false},     // Not in our supported list
+		{"date", true, "date-time"},      // Converted to supported format
+		{"time", true, "date-time"},      // Converted to supported format
+		{"date-time", true, "date-time"}, // Already supported
+		{"enum", true, "enum"},           // Already supported
+		{"duration", true, "date-time"},  // Converted to supported format
+		{"email", false, ""},             // Unsupported, should be removed
+		{"uuid", false, ""},              // Unsupported, should be removed
 	}
 
 	for _, tc := range testCases {
@@ -516,12 +529,17 @@ func TestSupportedFormatsOnly(t *testing.T) {
 				t.Fatal("expected map result")
 			}
 
-			_, hasFormat := resultMap["format"]
-			if tc.supported && !hasFormat {
-				t.Errorf("supported format %s should be preserved", tc.format)
-			}
-			if !tc.supported && hasFormat {
-				t.Errorf("unsupported format %s should be removed", tc.format)
+			format, hasFormat := resultMap["format"]
+			if tc.supported {
+				if !hasFormat {
+					t.Errorf("format %s should be preserved/converted but was removed", tc.format)
+				} else if format != tc.expectedFormat {
+					t.Errorf("format %s should be converted to %s, got %s", tc.format, tc.expectedFormat, format)
+				}
+			} else {
+				if hasFormat {
+					t.Errorf("unsupported format %s should be removed", tc.format)
+				}
 			}
 		})
 	}
@@ -707,11 +725,15 @@ func TestOriginalErrorScenario(t *testing.T) {
 	}
 
 	tool := geminiRequest.Tools[0]
-	if len(tool.FunctionDeclarations) != 1 {
-		t.Fatalf("Expected 1 function declaration, got %d", len(tool.FunctionDeclarations))
+	functions, ok := tool.FunctionDeclarations.([]model.Function)
+	if !ok {
+		t.Fatal("FunctionDeclarations should be []model.Function")
+	}
+	if len(functions) != 1 {
+		t.Fatalf("Expected 1 function declaration, got %d", len(functions))
 	}
 
-	function := tool.FunctionDeclarations[0]
+	function := functions[0]
 	params := function.Parameters
 
 	// Verify the critical fix: date format should be converted to date-time

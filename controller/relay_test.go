@@ -538,6 +538,7 @@ func TestModelSpecificSuspension(t *testing.T) {
 
 func TestProcessChannelRelayError(t *testing.T) {
 	ctx := context.Background()
+	_ = ctx // Context for future use when mocking is implemented
 
 	tests := []struct {
 		name                     string
@@ -604,6 +605,13 @@ func TestProcessChannelRelayError(t *testing.T) {
 			group := "test-group"
 			originalModel := "test-model"
 
+			// Mark variables as intentionally unused until mocking is implemented
+			_ = userId
+			_ = channelId
+			_ = channelName
+			_ = group
+			_ = originalModel
+
 			// Note: In a real test, you would need to mock the database and monitor
 			// For now, we're testing the logic flow
 
@@ -619,13 +627,13 @@ func TestProcessChannelRelayError(t *testing.T) {
 			// Test that we handle the error appropriately
 			if tt.statusCode == http.StatusBadRequest {
 				// For 400 errors, verify they are treated as client errors
-				t.Logf("✓ 400 error correctly identified as client request issue")
+				t.Logf("✓ 400 error correctly identified as client request issue: %s (status: %d)", testError.Error.Message, testError.StatusCode)
 			} else if tt.statusCode == http.StatusTooManyRequests {
 				// For 429 errors, verify rate limiting logic
-				t.Logf("✓ 429 error correctly triggers rate limit handling")
+				t.Logf("✓ 429 error correctly triggers rate limit handling: %s (status: %d)", testError.Error.Message, testError.StatusCode)
 			} else if tt.statusCode >= 500 {
 				// For 5xx errors, verify server error handling
-				t.Logf("✓ 5xx error correctly triggers server error handling")
+				t.Logf("✓ 5xx error correctly triggers server error handling: %s (status: %d)", testError.Error.Message, testError.StatusCode)
 			}
 		})
 	}
