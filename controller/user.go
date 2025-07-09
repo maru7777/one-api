@@ -1,12 +1,14 @@
 package controller
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
+	gcrypto "github.com/Laisky/go-utils/v5/crypto"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 
@@ -16,12 +18,23 @@ import (
 	"github.com/songquanpeng/one-api/common/i18n"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/common/random"
+	"github.com/songquanpeng/one-api/middleware"
 	"github.com/songquanpeng/one-api/model"
 )
 
 type LoginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+	TotpCode string `json:"totp_code,omitempty"`
+}
+
+type TotpSetupRequest struct {
+	TotpCode string `json:"totp_code"`
+}
+
+type TotpSetupResponse struct {
+	Secret string `json:"secret"`
+	QRCode string `json:"qr_code"`
 }
 
 func Login(c *gin.Context) {
@@ -62,6 +75,42 @@ func Login(c *gin.Context) {
 		})
 		return
 	}
+
+	// Check if TOTP is enabled for this user
+	if user.TotpSecret != "" {
+		// TOTP is enabled, check if code is provided
+		if loginRequest.TotpCode == "" {
+			// Return special response indicating TOTP is required
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "totp_required",
+				"data": gin.H{
+					"totp_required": true,
+					"user_id":       user.Id,
+				},
+			})
+			return
+		}
+
+		// Check rate limit for TOTP verification during login
+		if !middleware.CheckTotpRateLimit(c, user.Id) {
+			c.JSON(http.StatusTooManyRequests, gin.H{
+				"success": false,
+				"message": "Too many TOTP verification attempts. Please wait before trying again.",
+			})
+			return
+		}
+
+		// Verify TOTP code
+		if !verifyTotpCode(user.Id, user.TotpSecret, loginRequest.TotpCode) {
+			c.JSON(http.StatusOK, gin.H{
+				"message": "Invalid TOTP code",
+				"success": false,
+			})
+			return
+		}
+	}
+
 	SetupLogin(&user, c)
 }
 
@@ -846,4 +895,329 @@ func AdminTopUp(c *gin.Context) {
 		"message": "",
 	})
 	return
+}
+
+// SetupTotp generates a new TOTP secret and QR code for the user
+func SetupTotp(c *gin.Context) {
+	userId := c.GetInt(ctxkey.Id)
+	user, err := model.GetUserById(userId, true)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	// Generate a new secret
+	secret := gcrypto.Base32Secret([]byte(random.GetRandomString(20)))
+
+	// Create TOTP instance
+	totp, err := gcrypto.NewTOTP(gcrypto.OTPArgs{
+		Base32Secret: secret,
+		AccountName:  user.Username,
+		IssuerName:   config.SystemName,
+	})
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Failed to generate TOTP: " + err.Error(),
+		})
+		return
+	}
+
+	// Store temporary secret in session
+	session := sessions.Default(c)
+	session.Set("temp_totp_secret", secret)
+	session.Save()
+
+	// Generate QR code URI
+	qrCodeURI := totp.URI()
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data": TotpSetupResponse{
+			Secret: secret,
+			QRCode: qrCodeURI,
+		},
+	})
+}
+
+// ConfirmTotp verifies the TOTP code and enables TOTP for the user
+func ConfirmTotp(c *gin.Context) {
+	userId := c.GetInt(ctxkey.Id)
+
+	// Check rate limit for TOTP verification
+	if !middleware.CheckTotpRateLimit(c, userId) {
+		c.JSON(http.StatusTooManyRequests, gin.H{
+			"success": false,
+			"message": "Too many TOTP verification attempts. Please wait before trying again.",
+		})
+		return
+	}
+
+	var req TotpSetupRequest
+	err := json.NewDecoder(c.Request.Body).Decode(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": i18n.Translate(c, "invalid_parameter"),
+		})
+		return
+	}
+
+	if req.TotpCode == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "TOTP code is required",
+		})
+		return
+	}
+
+	user, err := model.GetUserById(userId, true)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	// Get the temporary secret from session or generate error
+	session := sessions.Default(c)
+	tempSecret := session.Get("temp_totp_secret")
+	if tempSecret == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "No TOTP setup session found. Please start setup again.",
+		})
+		return
+	}
+
+	secret := tempSecret.(string)
+
+	// Verify the TOTP code
+	if !verifyTotpCode(user.Id, secret, req.TotpCode) {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Invalid TOTP code",
+		})
+		return
+	}
+
+	// Save the secret to user
+	user.TotpSecret = secret
+	err = user.Update(false)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	// Clear the temporary secret from session
+	session.Delete("temp_totp_secret")
+	session.Save()
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "TOTP has been successfully enabled",
+	})
+}
+
+// DisableTotp disables TOTP for the user
+func DisableTotp(c *gin.Context) {
+	userId := c.GetInt(ctxkey.Id)
+
+	// Check rate limit for TOTP verification
+	if !middleware.CheckTotpRateLimit(c, userId) {
+		c.JSON(http.StatusTooManyRequests, gin.H{
+			"success": false,
+			"message": "Too many TOTP verification attempts. Please wait before trying again.",
+		})
+		return
+	}
+
+	var req TotpSetupRequest
+	err := json.NewDecoder(c.Request.Body).Decode(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": i18n.Translate(c, "invalid_parameter"),
+		})
+		return
+	}
+
+	user, err := model.GetUserById(userId, true)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	if user.TotpSecret == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "TOTP is not enabled for this user",
+		})
+		return
+	}
+
+	// Verify the TOTP code before disabling
+	if !verifyTotpCode(user.Id, user.TotpSecret, req.TotpCode) {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Invalid TOTP code",
+		})
+		return
+	}
+
+	// Clear the TOTP secret
+	user.TotpSecret = ""
+	err = user.Update(false)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "TOTP has been successfully disabled",
+	})
+}
+
+// verifyTotpCode verifies a TOTP code against a secret with rate limiting and replay protection
+func verifyTotpCode(uid int, secret, code string) bool {
+	if code == "" || secret == "" {
+		return false
+	}
+
+	// Check if this TOTP code has been used recently (replay protection)
+	if common.IsTotpCodeUsed(uid, code) {
+		logger.Warnf(context.Background(), "TOTP code replay attempt detected for user %d", uid)
+		return false
+	}
+
+	totp, err := gcrypto.NewTOTP(gcrypto.OTPArgs{
+		Base32Secret: secret,
+	})
+	if err != nil {
+		return false
+	}
+
+	// Verify the code
+	verified := totp.Key() == code
+	if !verified {
+		return false
+	}
+
+	// Mark the code as used to prevent replay attacks
+	err = common.MarkTotpCodeAsUsed(uid, code)
+	if err != nil {
+		logger.SysError("Failed to mark TOTP code as used: " + err.Error())
+		// Don't fail the verification if we can't mark it as used
+		// This ensures the system remains functional even if Redis/cache fails
+	}
+
+	return true
+}
+
+// GetTotpStatus returns whether TOTP is enabled for the current user
+func GetTotpStatus(c *gin.Context) {
+	userId := c.GetInt(ctxkey.Id)
+	user, err := model.GetUserById(userId, true)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data": gin.H{
+			"totp_enabled": user.TotpSecret != "",
+		},
+	})
+}
+
+// AdminDisableUserTotp allows admins to disable TOTP for any user
+func AdminDisableUserTotp(c *gin.Context) {
+	ctx := c.Request.Context()
+	targetUserId := c.Param("id")
+	if targetUserId == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": i18n.Translate(c, "invalid_parameter"),
+		})
+		return
+	}
+
+	// Convert string ID to int
+	userId, err := strconv.Atoi(targetUserId)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Invalid user ID",
+		})
+		return
+	}
+
+	// Get the target user
+	user, err := model.GetUserById(userId, true)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	// Check if admin has permission to modify this user
+	myRole := c.GetInt(ctxkey.Role)
+	if myRole <= user.Role && myRole != model.RoleRootUser {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "No permission to modify user with the same or higher permission level",
+		})
+		return
+	}
+
+	// Check if TOTP is already disabled
+	if user.TotpSecret == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "TOTP is not enabled for this user",
+		})
+		return
+	}
+
+	// Clear the TOTP secret
+	user.TotpSecret = ""
+	err = user.Update(false)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	// Log the admin action
+	adminUserId := c.GetInt(ctxkey.Id)
+	model.RecordLog(ctx, user.Id, model.LogTypeManage, fmt.Sprintf("Admin (ID: %d) disabled TOTP for user %s", adminUserId, user.Username))
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "TOTP has been successfully disabled for the user",
+	})
 }

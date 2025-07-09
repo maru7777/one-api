@@ -12,7 +12,8 @@ import (
 
 // ModelPrice represents pricing information for a model
 type ModelPrice struct {
-	Ratio           float64 `json:"ratio"`
+	Ratio float64 `json:"ratio"`
+	// CompletionRatio represents the output rate / input rate
 	CompletionRatio float64 `json:"completion_ratio,omitempty"`
 }
 

@@ -49,6 +49,10 @@ func SetApiRouter(router *gin.Engine) {
 				selfRoute.GET("/aff", controller.GetAffCode)
 				selfRoute.POST("/topup", controller.TopUp)
 				selfRoute.GET("/available_models", controller.GetUserAvailableModels)
+				selfRoute.GET("/totp/status", controller.GetTotpStatus)
+				selfRoute.GET("/totp/setup", controller.SetupTotp)
+				selfRoute.POST("/totp/confirm", controller.ConfirmTotp)
+				selfRoute.POST("/totp/disable", controller.DisableTotp)
 			}
 
 			adminRoute := userRoute.Group("/")
@@ -61,6 +65,7 @@ func SetApiRouter(router *gin.Engine) {
 				adminRoute.POST("/manage", controller.ManageUser)
 				adminRoute.PUT("/", controller.UpdateUser)
 				adminRoute.DELETE("/:id", controller.DeleteUser)
+				adminRoute.POST("/totp/disable/:id", controller.AdminDisableUserTotp)
 			}
 		}
 		optionRoute := apiRouter.Group("/option")

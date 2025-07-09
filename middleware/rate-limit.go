@@ -14,6 +14,7 @@ import (
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/ctxkey"
+	"github.com/songquanpeng/one-api/common/logger"
 )
 
 var timeFormat = "2006-01-02T15:04:05.000Z"
@@ -152,4 +153,67 @@ func ChannelRateLimit() func(c *gin.Context) {
 		maxRequestNum = 1
 	}
 	return rateLimitFactory(maxRequestNum, config.ChannelRateLimitDuration, "CR")
+}
+
+// TotpRateLimit limits TOTP verification attempts to 1 per second per user
+func TotpRateLimit() func(c *gin.Context) {
+	return rateLimitFactory(1, 1, "TOTP")
+}
+
+// CheckTotpRateLimit checks if user can make TOTP verification request
+func CheckTotpRateLimit(c *gin.Context, userId int) bool {
+	if config.DebugEnabled {
+		return true
+	}
+
+	key := fmt.Sprintf("rateLimit:TOTP:%d", userId)
+
+	if common.RedisEnabled {
+		return checkRedisRateLimit(c, key, 1, 1)
+	} else {
+		inMemoryRateLimiter.Init(config.RateLimitKeyExpirationDuration)
+		return inMemoryRateLimiter.Request(key, 1, 1)
+	}
+}
+
+// checkRedisRateLimit checks rate limit using Redis
+func checkRedisRateLimit(c *gin.Context, key string, maxRequestNum int, duration int64) bool {
+	ctx := c.Request.Context()
+	rdb := common.RDB
+
+	listLength, err := rdb.LLen(ctx, key).Result()
+	if err != nil {
+		// If Redis fails, allow the request but log the error
+		logger.SysError("Redis rate limit check failed: " + err.Error())
+		return true
+	}
+
+	if listLength < int64(maxRequestNum) {
+		rdb.LPush(ctx, key, time.Now().Format(timeFormat))
+		rdb.Expire(ctx, key, config.RateLimitKeyExpirationDuration)
+		return true
+	} else {
+		oldTimeStr, err := rdb.LIndex(ctx, key, -1).Result()
+		if err != nil {
+			logger.SysError("Redis rate limit get old time failed: " + err.Error())
+			return true
+		}
+
+		oldTime, err := time.Parse(timeFormat, oldTimeStr)
+		if err != nil {
+			logger.SysError("Redis rate limit parse old time failed: " + err.Error())
+			return true
+		}
+
+		nowTime := time.Now()
+		if int64(nowTime.Sub(oldTime).Seconds()) < duration {
+			rdb.Expire(ctx, key, config.RateLimitKeyExpirationDuration)
+			return false
+		} else {
+			rdb.LPush(ctx, key, nowTime.Format(timeFormat))
+			rdb.LTrim(ctx, key, 0, int64(maxRequestNum-1))
+			rdb.Expire(ctx, key, config.RateLimitKeyExpirationDuration)
+			return true
+		}
+	}
 }
