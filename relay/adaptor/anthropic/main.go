@@ -43,7 +43,13 @@ func stopReasonClaude2OpenAI(reason *string) string {
 
 // isModelSupportThinking is used to check if the model supports extended thinking
 func isModelSupportThinking(model string) bool {
+	// Claude 3.7 Sonnet
 	if strings.Contains(model, "claude-3-7-sonnet") {
+		return true
+	}
+
+	// Claude 4 models (Opus 4 and Sonnet 4)
+	if strings.Contains(model, "claude-opus-4") || strings.Contains(model, "claude-sonnet-4") {
 		return true
 	}
 
@@ -139,6 +145,28 @@ func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Re
 				content.ToolUseId = message.ToolCallId
 				claudeMessage.Content = append(claudeMessage.Content, content)
 			} else if stringContent != "" {
+				// For assistant messages with thinking enabled, check if we need to add thinking block
+				if message.Role == "assistant" && claudeRequest.Thinking != nil {
+					// Check if this message has reasoning content that should be converted to thinking block
+					var reasoningContent string
+					if message.Reasoning != nil {
+						reasoningContent = *message.Reasoning
+					} else if message.ReasoningContent != nil {
+						reasoningContent = *message.ReasoningContent
+					} else if message.Thinking != nil {
+						reasoningContent = *message.Thinking
+					}
+
+					// If we have reasoning content, add it as a thinking block first
+					if reasoningContent != "" {
+						thinkingContent := Content{
+							Type:     "thinking",
+							Thinking: &reasoningContent,
+						}
+						claudeMessage.Content = append(claudeMessage.Content, thinkingContent)
+					}
+				}
+
 				// Only add text content if it's not empty
 				content.Type = "text"
 				content.Text = stringContent
@@ -168,6 +196,29 @@ func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Re
 			continue
 		}
 		var contents []Content
+
+		// For assistant messages with thinking enabled, check if we need to add thinking block first
+		if message.Role == "assistant" && claudeRequest.Thinking != nil {
+			// Check if this message has reasoning content that should be converted to thinking block
+			var reasoningContent string
+			if message.Reasoning != nil {
+				reasoningContent = *message.Reasoning
+			} else if message.ReasoningContent != nil {
+				reasoningContent = *message.ReasoningContent
+			} else if message.Thinking != nil {
+				reasoningContent = *message.Thinking
+			}
+
+			// If we have reasoning content, add it as a thinking block first
+			if reasoningContent != "" {
+				thinkingContent := Content{
+					Type:     "thinking",
+					Thinking: &reasoningContent,
+				}
+				contents = append(contents, thinkingContent)
+			}
+		}
+
 		openaiContent := message.ParseContent()
 		for _, part := range openaiContent {
 			var content Content
