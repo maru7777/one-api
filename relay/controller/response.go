@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
 	"time"
 
+	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
 
 	"github.com/songquanpeng/one-api/common"

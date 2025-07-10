@@ -20,9 +20,9 @@ func IsTotpCodeUsed(userId int, totpCode string) bool {
 	if totpCode == "" {
 		return false
 	}
-	
+
 	key := fmt.Sprintf("%s:%d:%s", TotpCodeCacheKeyPrefix, userId, totpCode)
-	
+
 	if RedisEnabled {
 		return isRedisKeyExists(key)
 	} else {
@@ -36,9 +36,9 @@ func MarkTotpCodeAsUsed(userId int, totpCode string) error {
 	if totpCode == "" {
 		return nil
 	}
-	
+
 	key := fmt.Sprintf("%s:%d:%s", TotpCodeCacheKeyPrefix, userId, totpCode)
-	
+
 	if RedisEnabled {
 		return RedisSet(key, "1", TotpCodeCacheDuration)
 	} else {
@@ -67,20 +67,20 @@ func isMemoryKeyExists(key string) bool {
 	if !exists {
 		return false
 	}
-	
+
 	// Check if expired
 	if time.Now().After(expireTime) {
 		delete(totpMemoryCache, key)
 		return false
 	}
-	
+
 	return true
 }
 
 // setMemoryKey sets a key in memory cache with expiration
 func setMemoryKey(key string, duration time.Duration) error {
 	totpMemoryCache[key] = time.Now().Add(duration)
-	
+
 	// Clean up expired keys periodically (simple cleanup)
 	go func() {
 		time.Sleep(duration + time.Minute) // Clean up after expiration + buffer
@@ -90,7 +90,7 @@ func setMemoryKey(key string, duration time.Duration) error {
 			}
 		}
 	}()
-	
+
 	return nil
 }
 

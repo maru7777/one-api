@@ -89,7 +89,6 @@ func PostConsumeQuotaDetailed(ctx context.Context, tokenId int, quotaDelta int64
 	modelRatio float64, groupRatio float64, modelName string, tokenName string,
 	isStream bool, startTime time.Time, systemPromptReset bool,
 	completionRatio float64, toolsCost int64) {
-
 	// Input validation for safety
 	if ctx == nil {
 		logger.SysError("PostConsumeQuotaDetailed: context is nil")

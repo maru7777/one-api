@@ -1,11 +1,11 @@
 package deepl
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 
+	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
 
 	"github.com/songquanpeng/one-api/relay/adaptor"
