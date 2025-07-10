@@ -542,6 +542,12 @@ func ConvertResponseAPIToChatCompletion(responseAPIResp *ResponseAPIResponse) *T
 // ConvertResponseAPIStreamToChatCompletion converts a Response API streaming response chunk back to ChatCompletion streaming format
 // This function handles individual streaming chunks from the Response API
 func ConvertResponseAPIStreamToChatCompletion(responseAPIChunk *ResponseAPIResponse) *ChatCompletionsStreamResponse {
+	return ConvertResponseAPIStreamToChatCompletionWithIndex(responseAPIChunk, nil)
+}
+
+// ConvertResponseAPIStreamToChatCompletionWithIndex converts a Response API streaming response chunk back to ChatCompletion streaming format
+// with optional output_index from streaming events for proper tool call index assignment
+func ConvertResponseAPIStreamToChatCompletionWithIndex(responseAPIChunk *ResponseAPIResponse, outputIndex *int) *ChatCompletionsStreamResponse {
 	var deltaContent string
 	var reasoningText string
 	var finishReason *string
@@ -573,6 +579,14 @@ func ConvertResponseAPIStreamToChatCompletion(responseAPIChunk *ResponseAPIRespo
 		case "function_call":
 			// Handle function call items
 			if outputItem.CallId != "" && outputItem.Name != "" {
+				// Set index for streaming tool calls
+				// Use the provided outputIndex from streaming events if available, otherwise use position in slice
+				var index int
+				if outputIndex != nil {
+					index = *outputIndex
+				} else {
+					index = len(toolCalls)
+				}
 				tool := model.Tool{
 					Id:   outputItem.CallId,
 					Type: "function",
@@ -580,6 +594,7 @@ func ConvertResponseAPIStreamToChatCompletion(responseAPIChunk *ResponseAPIRespo
 						Name:      outputItem.Name,
 						Arguments: outputItem.Arguments,
 					},
+					Index: &index, // Set index for streaming delta accumulation
 				}
 				toolCalls = append(toolCalls, tool)
 			}
@@ -655,6 +670,9 @@ type ResponseAPIStreamEvent struct {
 	Part         *OutputContent `json:"part,omitempty"`          // Content part for part-level events
 	Delta        string         `json:"delta,omitempty"`         // Delta content for streaming
 	Text         string         `json:"text,omitempty"`          // Full text content (for done events)
+
+	// Function call events (type contains "function_call")
+	Arguments string `json:"arguments,omitempty"` // Complete function arguments (for done events)
 
 	// General fields that might be in any event
 	Id     string       `json:"id,omitempty"`     // Event ID
@@ -774,6 +792,26 @@ func ConvertStreamEventToResponse(event *ResponseAPIStreamEvent) ResponseAPIResp
 		// Handle output item events (added, done)
 		if event.Item != nil {
 			response.Output = []OutputItem{*event.Item}
+		}
+
+	case strings.HasPrefix(event.Type, "response.function_call_arguments.delta"):
+		// Handle function call arguments delta events
+		if event.Delta != "" {
+			outputItem := OutputItem{
+				Type:      "function_call",
+				Arguments: event.Delta, // This is a delta, not complete arguments
+			}
+			response.Output = []OutputItem{outputItem}
+		}
+
+	case strings.HasPrefix(event.Type, "response.function_call_arguments.done"):
+		// Handle function call arguments completion events
+		if event.Arguments != "" {
+			outputItem := OutputItem{
+				Type:      "function_call",
+				Arguments: event.Arguments, // Complete arguments
+			}
+			response.Output = []OutputItem{outputItem}
 		}
 
 	case strings.HasPrefix(event.Type, "response.content_part"):

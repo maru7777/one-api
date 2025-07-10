@@ -234,6 +234,8 @@ func StreamResponseClaude2OpenAI(c *gin.Context, claudeResponse *StreamResponse)
 			}
 
 			if claudeResponse.ContentBlock.Type == "tool_use" {
+				// Set index for streaming tool calls - use the current index in the tools slice
+				index := len(tools)
 				tools = append(tools, model.Tool{
 					Id:   claudeResponse.ContentBlock.Id,
 					Type: "function",
@@ -241,6 +243,7 @@ func StreamResponseClaude2OpenAI(c *gin.Context, claudeResponse *StreamResponse)
 						Name:      claudeResponse.ContentBlock.Name,
 						Arguments: "",
 					},
+					Index: &index, // Set index for streaming delta accumulation
 				})
 			}
 		}
@@ -252,11 +255,29 @@ func StreamResponseClaude2OpenAI(c *gin.Context, claudeResponse *StreamResponse)
 			}
 
 			if claudeResponse.Delta.Type == "input_json_delta" {
-				tools = append(tools, model.Tool{
-					Function: model.Function{
-						Arguments: claudeResponse.Delta.PartialJson,
-					},
-				})
+				// For input_json_delta, we should update the last tool call's arguments, not create a new one
+				// The index should match the last tool call that was started in content_block_start
+				if len(tools) > 0 {
+					// Update the last tool call's arguments (this is a delta for the existing tool call)
+					lastIndex := len(tools) - 1
+					lastTool := tools[lastIndex]
+					if existingArgs, ok := lastTool.Function.Arguments.(string); ok {
+						lastTool.Function.Arguments = existingArgs + claudeResponse.Delta.PartialJson
+					} else {
+						lastTool.Function.Arguments = claudeResponse.Delta.PartialJson
+					}
+					// Keep the same index as the original tool call
+					tools[lastIndex] = lastTool
+				} else {
+					// Fallback: create new tool call if no existing tool call found
+					index := 0
+					tools = append(tools, model.Tool{
+						Function: model.Function{
+							Arguments: claudeResponse.Delta.PartialJson,
+						},
+						Index: &index, // Set index for streaming delta accumulation
+					})
+				}
 			}
 		}
 	case "message_delta":

@@ -1350,6 +1350,189 @@ func TestConvertChatCompletionToResponseAPIWithToolResults(t *testing.T) {
 	}
 }
 
+// TestStreamingToolCallsIndexField tests that the Index field is properly set in streaming tool calls
+func TestStreamingToolCallsIndexField(t *testing.T) {
+	// Create a Response API streaming chunk with function call
+	responseAPIChunk := &ResponseAPIResponse{
+		Id:        "resp_123",
+		Object:    "response",
+		CreatedAt: 1234567890,
+		Status:    "in_progress",
+		Output: []OutputItem{
+			{
+				Type:      "function_call",
+				CallId:    "call_abc123",
+				Name:      "get_weather",
+				Arguments: `{"location": "Paris"}`,
+			},
+		},
+	}
+
+	// Convert to ChatCompletion streaming format
+	chatCompletionChunk := ConvertResponseAPIStreamToChatCompletion(responseAPIChunk)
+
+	// Verify the response structure
+	if len(chatCompletionChunk.Choices) != 1 {
+		t.Fatalf("Expected 1 choice, got %d", len(chatCompletionChunk.Choices))
+	}
+
+	choice := chatCompletionChunk.Choices[0]
+	if len(choice.Delta.ToolCalls) != 1 {
+		t.Fatalf("Expected 1 tool call, got %d", len(choice.Delta.ToolCalls))
+	}
+
+	toolCall := choice.Delta.ToolCalls[0]
+
+	// Verify that the Index field is set
+	if toolCall.Index == nil {
+		t.Error("Index field should be set for streaming tool calls")
+	} else if *toolCall.Index != 0 {
+		t.Errorf("Expected index to be 0, got %d", *toolCall.Index)
+	}
+
+	// Verify other tool call fields
+	if toolCall.Id != "call_abc123" {
+		t.Errorf("Expected tool call id 'call_abc123', got '%s'", toolCall.Id)
+	}
+
+	if toolCall.Type != "function" {
+		t.Errorf("Expected tool call type 'function', got '%s'", toolCall.Type)
+	}
+
+	if toolCall.Function.Name != "get_weather" {
+		t.Errorf("Expected function name 'get_weather', got '%s'", toolCall.Function.Name)
+	}
+
+	expectedArgs := `{"location": "Paris"}`
+	if toolCall.Function.Arguments != expectedArgs {
+		t.Errorf("Expected arguments '%s', got '%s'", expectedArgs, toolCall.Function.Arguments)
+	}
+}
+
+// TestStreamingToolCallsWithOutputIndex tests that the Index field is properly set using output_index from streaming events
+func TestStreamingToolCallsWithOutputIndex(t *testing.T) {
+	// Test with explicit output_index from streaming event
+	responseAPIChunk := &ResponseAPIResponse{
+		Id:        "resp_456",
+		Object:    "response",
+		CreatedAt: 1234567890,
+		Status:    "in_progress",
+		Output: []OutputItem{
+			{
+				Type:      "function_call",
+				CallId:    "call_def456",
+				Name:      "send_email",
+				Arguments: `{"to": "test@example.com"}`,
+			},
+		},
+	}
+
+	// Simulate output_index = 2 from a streaming event (e.g., this is the 3rd tool call)
+	outputIndex := 2
+	chatCompletionChunk := ConvertResponseAPIStreamToChatCompletionWithIndex(responseAPIChunk, &outputIndex)
+
+	// Verify the response structure
+	if len(chatCompletionChunk.Choices) != 1 {
+		t.Fatalf("Expected 1 choice, got %d", len(chatCompletionChunk.Choices))
+	}
+
+	choice := chatCompletionChunk.Choices[0]
+	if len(choice.Delta.ToolCalls) != 1 {
+		t.Fatalf("Expected 1 tool call, got %d", len(choice.Delta.ToolCalls))
+	}
+
+	toolCall := choice.Delta.ToolCalls[0]
+
+	// Verify that the Index field is set to the provided output_index
+	if toolCall.Index == nil {
+		t.Error("Index field should be set for streaming tool calls")
+	} else if *toolCall.Index != 2 {
+		t.Errorf("Expected index to be 2 (from output_index), got %d", *toolCall.Index)
+	}
+
+	// Verify other tool call fields
+	if toolCall.Id != "call_def456" {
+		t.Errorf("Expected tool call id 'call_def456', got '%s'", toolCall.Id)
+	}
+
+	if toolCall.Type != "function" {
+		t.Errorf("Expected tool call type 'function', got '%s'", toolCall.Type)
+	}
+
+	if toolCall.Function.Name != "send_email" {
+		t.Errorf("Expected function name 'send_email', got '%s'", toolCall.Function.Name)
+	}
+}
+
+// TestMultipleStreamingToolCallsIndexConsistency tests that multiple tool calls get consistent indices
+func TestMultipleStreamingToolCallsIndexConsistency(t *testing.T) {
+	// Test multiple tool calls with different output_index values
+	testCases := []struct {
+		name        string
+		outputIndex *int
+		expectedIdx int
+	}{
+		{
+			name:        "First tool call with output_index 0",
+			outputIndex: func() *int { i := 0; return &i }(),
+			expectedIdx: 0,
+		},
+		{
+			name:        "Second tool call with output_index 1",
+			outputIndex: func() *int { i := 1; return &i }(),
+			expectedIdx: 1,
+		},
+		{
+			name:        "Third tool call with output_index 2",
+			outputIndex: func() *int { i := 2; return &i }(),
+			expectedIdx: 2,
+		},
+		{
+			name:        "Tool call without output_index (fallback to position)",
+			outputIndex: nil,
+			expectedIdx: 0, // Should fallback to position in slice (0)
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			responseAPIChunk := &ResponseAPIResponse{
+				Id:        "resp_multi",
+				Object:    "response",
+				CreatedAt: 1234567890,
+				Status:    "in_progress",
+				Output: []OutputItem{
+					{
+						Type:      "function_call",
+						CallId:    "call_multi_123",
+						Name:      "test_function",
+						Arguments: `{"param": "value"}`,
+					},
+				},
+			}
+
+			chatCompletionChunk := ConvertResponseAPIStreamToChatCompletionWithIndex(responseAPIChunk, tc.outputIndex)
+
+			// Verify the index is set correctly
+			if len(chatCompletionChunk.Choices) != 1 {
+				t.Fatalf("Expected 1 choice, got %d", len(chatCompletionChunk.Choices))
+			}
+
+			choice := chatCompletionChunk.Choices[0]
+			if len(choice.Delta.ToolCalls) != 1 {
+				t.Fatalf("Expected 1 tool call, got %d", len(choice.Delta.ToolCalls))
+			}
+
+			toolCall := choice.Delta.ToolCalls[0]
+			if toolCall.Index == nil {
+				t.Error("Index field should be set for streaming tool calls")
+			} else if *toolCall.Index != tc.expectedIdx {
+				t.Errorf("Expected index to be %d, got %d", tc.expectedIdx, *toolCall.Index)
+			}
+		})
+	}
+}
+
 func TestResponseAPIUsageConversion(t *testing.T) {
 	// Test JSON containing OpenAI Response API usage format
 	responseJSON := `{

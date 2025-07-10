@@ -493,6 +493,37 @@ func getToolCalls(candidate *ChatCandidate) []model.Tool {
 	return toolCalls
 }
 
+// getStreamingToolCalls creates tool calls for streaming responses with Index field set
+func getStreamingToolCalls(candidate *ChatCandidate) []model.Tool {
+	var toolCalls []model.Tool
+
+	// Process all parts in case there are multiple function calls
+	for partIndex, part := range candidate.Content.Parts {
+		if part.FunctionCall == nil {
+			continue
+		}
+		argsBytes, err := json.Marshal(part.FunctionCall.Arguments)
+		if err != nil {
+			logger.FatalLog("getStreamingToolCalls failed: " + errors.Wrap(err, "marshal function call arguments").Error())
+			continue
+		}
+		// Set index for streaming tool calls - use the part index to ensure proper ordering
+		// This handles the case where Gemini might support multiple parallel tool calls in the future
+		index := partIndex
+		toolCall := model.Tool{
+			Id:   fmt.Sprintf("call_%s", random.GetUUID()),
+			Type: "function",
+			Function: model.Function{
+				Arguments: string(argsBytes),
+				Name:      part.FunctionCall.FunctionName,
+			},
+			Index: &index, // Set index for streaming delta accumulation
+		}
+		toolCalls = append(toolCalls, toolCall)
+	}
+	return toolCalls
+}
+
 func responseGeminiChat2OpenAI(response *ChatResponse) *openai.TextResponse {
 	fullTextResponse := openai.TextResponse{
 		Id:      fmt.Sprintf("chatcmpl-%s", random.GetUUID()),
@@ -625,7 +656,7 @@ func streamResponseGeminiChat2OpenAI(geminiResponse *ChatResponse) *openai.ChatC
 
 		// Handle function calls (if present)
 		if part.FunctionCall != nil {
-			choice.Delta.ToolCalls = getToolCalls(&candidate)
+			choice.Delta.ToolCalls = getStreamingToolCalls(&candidate)
 		}
 	}
 
