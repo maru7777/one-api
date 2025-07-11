@@ -11,6 +11,7 @@ import (
 
 	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
+
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/common/helper"
@@ -29,28 +30,49 @@ func getImageRequest(c *gin.Context, _ int) (*relaymodel.ImageRequest, error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+
 	// if imageRequest.N == 0 {
 	// 	imageRequest.N = 1
 	// }
+
 	// if imageRequest.Size == "" {
-	// 	imageRequest.Size = "1024x1024"
+	// 	switch imageRequest.Model {
+	// 	case "dall-e-2", "dall-e-3":
+	// 		imageRequest.Size = "1024x1024"
+	// 	case "gpt-image-1":
+	// 		imageRequest.Size = "1024x1536"
+	// 	}
 	// }
+
 	// if imageRequest.Model == "" {
 	// 	imageRequest.Model = "dall-e-2"
 	// }
+
+	// if imageRequest.Quality == "" {
+	// 	switch imageRequest.Model {
+	// 	case "dall-e-2":
+	// 		imageRequest.Quality = "standard"
+	// 	case "dall-e-3":
+	// 		imageRequest.Quality = "auto"
+	// 	case "gpt-image-1":
+	// 		imageRequest.Quality = "high"
+	// 	}
+	// }
+
+	// if imageRequest.Model == "gpt-image-1" {
+	// 	imageRequest.ResponseFormat = nil
+	// }
+
 	return imageRequest, nil
 }
 
-func getFromContext[T any](c *gin.Context, key string, defaultValue T) T {
-	val, exists := c.Get(key)
-	if !exists {
-		return defaultValue
-	}
-	if typedVal, ok := val.(T); ok {
-		return typedVal
-	}
-	return defaultValue
-}
+// func isValidImageSize(model string, size string) bool {
+// 	if model == "cogview-3" || billingratio.ImageSizeRatios[model] == nil {
+// 		return true
+// 	}
+// 	_, ok := billingratio.ImageSizeRatios[model][size]
+// 	return ok
+// }
 
 // func isValidImagePromptLength(model string, promptLength int) bool {
 // 	maxPromptLength, ok := billingratio.ImagePromptLengthLimitations[model]
@@ -62,12 +84,12 @@ func getFromContext[T any](c *gin.Context, key string, defaultValue T) T {
 // 	return !ok || (value >= amounts[0] && value <= amounts[1])
 // }
 
-// func getImageSizeRatio(model string, size string) float64 {
-// 	if ratio, ok := billingratio.ImageSizeRatios[model][size]; ok {
-// 		return ratio
-// 	}
-// 	return 1
-// }
+func getImageSizeRatio(model string, size string) float64 {
+	if ratio, ok := billingratio.ImageSizeRatios[model][size]; ok {
+		return ratio
+	}
+	return 1
+}
 
 // func validateImageRequest(imageRequest *relaymodel.ImageRequest, _ *metalib.Meta) *relaymodel.ErrorWithStatusCode {
 // 	// check prompt length
@@ -91,73 +113,73 @@ func getFromContext[T any](c *gin.Context, key string, defaultValue T) T {
 // 	return nil
 // }
 
-// func getImageCostRatio(imageRequest *relaymodel.ImageRequest) (float64, error) {
-// 	if imageRequest == nil {
-// 		return 0, errors.New("imageRequest is nil")
-// 	}
+func getImageCostRatio(imageRequest *relaymodel.ImageRequest) (float64, error) {
+	if imageRequest == nil {
+		return 0, errors.New("imageRequest is nil")
+	}
 
-// 	imageCostRatio := getImageSizeRatio(imageRequest.Model, imageRequest.Size)
-// 	switch imageRequest.Quality {
-// 	case "hd":
-// 		switch imageRequest.Model {
-// 		case "dall-e-3":
-// 			switch imageRequest.Size {
-// 			case "1024x1024":
-// 				imageCostRatio *= 2
-// 			default:
-// 				imageCostRatio *= 1.5
-// 			}
-// 		}
-// 	case "low":
-// 		switch imageRequest.Model {
-// 		case "gpt-image-1":
-// 			switch imageRequest.Size {
-// 			case "1024x1024":
-// 				imageCostRatio = 1
-// 			case "1024x1536",
-// 				"1536x1024":
-// 				imageCostRatio = 16 / 11
-// 			default:
-// 				return 0, errors.New("invalid size for gpt-image-1, should be 1024x1024/1024x1536/1536x1024")
-// 			}
-// 		}
-// 	case "medium":
-// 		switch imageRequest.Model {
-// 		case "gpt-image-1":
-// 			switch imageRequest.Size {
-// 			case "1024x1024":
-// 				imageCostRatio = 42 / 11
-// 			case "1024x1536",
-// 				"1536x1024":
-// 				imageCostRatio = 63 / 11
-// 			default:
-// 				return 0, errors.New("invalid size for gpt-image-1, should be 1024x1024/1024x1536/1536x1024")
-// 			}
-// 		}
-// 	case "high", "auto", "":
-// 		switch imageRequest.Model {
-// 		case "gpt-image-1":
-// 			switch imageRequest.Size {
-// 			case "1024x1024":
-// 				imageCostRatio = 167 / 11
-// 			case "1024x1536",
-// 				"1536x1024",
-// 				"":
-// 				imageCostRatio = 250 / 11
-// 			default:
-// 				return 0, errors.New("invalid size for gpt-image-1, should be 1024x1024/1024x1536/1536x1024")
-// 			}
-// 		}
-// 	default:
-// 		return 0, errors.New("invalid quality, should be hd/low/medium/high/auto")
-// 	}
+	imageCostRatio := getImageSizeRatio(imageRequest.Model, imageRequest.Size)
+	switch imageRequest.Quality {
+	case "hd":
+		switch imageRequest.Model {
+		case "dall-e-3":
+			switch imageRequest.Size {
+			case "1024x1024":
+				imageCostRatio *= 2
+			default:
+				imageCostRatio *= 1.5
+			}
+		}
+	case "low":
+		switch imageRequest.Model {
+		case "gpt-image-1":
+			switch imageRequest.Size {
+			case "1024x1024":
+				imageCostRatio = 1
+			case "1024x1536",
+				"1536x1024":
+				imageCostRatio = 16 / 11
+			default:
+				return 0, errors.New("invalid size for gpt-image-1, should be 1024x1024/1024x1536/1536x1024")
+			}
+		}
+	case "medium":
+		switch imageRequest.Model {
+		case "gpt-image-1":
+			switch imageRequest.Size {
+			case "1024x1024":
+				imageCostRatio = 42 / 11
+			case "1024x1536",
+				"1536x1024":
+				imageCostRatio = 63 / 11
+			default:
+				return 0, errors.New("invalid size for gpt-image-1, should be 1024x1024/1024x1536/1536x1024")
+			}
+		}
+	case "high", "auto", "":
+		switch imageRequest.Model {
+		case "gpt-image-1":
+			switch imageRequest.Size {
+			case "1024x1024":
+				imageCostRatio = 167 / 11
+			case "1024x1536",
+				"1536x1024",
+				"":
+				imageCostRatio = 250 / 11
+			default:
+				return 0, errors.New("invalid size for gpt-image-1, should be 1024x1024/1024x1536/1536x1024")
+			}
+		}
+	default:
+		return 0, errors.New("invalid quality, should be hd/low/medium/high/auto")
+	}
 
-// 	if imageCostRatio <= 0 {
-// 		imageCostRatio = 1
-// 	}
+	if imageCostRatio <= 0 {
+		imageCostRatio = 1
+	}
 
-// 	return imageCostRatio, nil
-// }
+	return imageCostRatio, nil
+}
 
 func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatusCode {
 	ctx := c.Request.Context()
@@ -241,21 +263,23 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	n := meta.VendorContext["PicNumber"].(int)
 	actualModelName := meta.VendorContext["Model"].(string)
 	size := meta.VendorContext["PicSize"].(string)
-	quality := meta.VendorContext["Quality"].(string)
-	var imageCostRatio float64 = 1.0
+	imageCostRatio, _ := getImageCostRatio(imageRequest)
 	if billingratio.ImageSizeRatios[actualModelName] != nil {
 		if ratio, ok := billingratio.ImageSizeRatios[actualModelName][size]; ok {
 			imageCostRatio = ratio
 		}
 	}
-	if quality == "hd" && actualModelName == "dall-e-3" {
-		if size == "1024x1024" {
-			imageCostRatio *= 2
-		} else {
-			imageCostRatio *= 1.5
+
+	// get channel-specific pricing if available
+	var channelModelRatio map[string]float64
+	if channelModel, ok := c.Get(ctxkey.ChannelModel); ok {
+		if channel, ok := channelModel.(*model.Channel); ok {
+			channelModelRatio = channel.GetModelRatio()
 		}
 	}
-	modelRatio := billingratio.GetModelRatio(meta.ActualModelName, meta.ChannelType)
+
+	modelRatio := billingratio.GetModelRatioWithChannel(actualModelName, meta.ChannelType, channelModelRatio)
+	// groupRatio := billingratio.GetGroupRatio(meta.Group)
 	groupRatio := c.GetFloat64(ctxkey.ChannelRatio)
 	var usedQuota = int64(modelRatio*groupRatio*imageCostRatio) * int64(n) * 1000
 	userQuota, _ := model.CacheGetUserQuota(ctx, meta.UserId)

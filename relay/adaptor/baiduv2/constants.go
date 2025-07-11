@@ -1,30 +1,51 @@
 package baiduv2
 
-// https://console.bce.baidu.com/support/?_=1692863460488&timestamp=1739074632076#/api?product=QIANFAN&project=%E5%8D%83%E5%B8%86ModelBuilder&parent=%E5%AF%B9%E8%AF%9DChat%20V2&api=v2%2Fchat%2Fcompletions&method=post
-// https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Fm2vrveyu#%E6%94%AF%E6%8C%81%E6%A8%A1%E5%9E%8B%E5%88%97%E8%A1%A8
+import (
+	"github.com/songquanpeng/one-api/relay/adaptor"
+	"github.com/songquanpeng/one-api/relay/billing/ratio"
+)
 
-var ModelList = []string{
-	"ernie-4.0-8k-latest",
-	"ernie-4.0-8k-preview",
-	"ernie-4.0-8k",
-	"ernie-4.0-turbo-8k-latest",
-	"ernie-4.0-turbo-8k-preview",
-	"ernie-4.0-turbo-8k",
-	"ernie-4.0-turbo-128k",
-	"ernie-3.5-8k-preview",
-	"ernie-3.5-8k",
-	"ernie-3.5-128k",
-	"ernie-speed-8k",
-	"ernie-speed-128k",
-	"ernie-speed-pro-128k",
-	"ernie-lite-8k",
-	"ernie-lite-pro-128k",
-	"ernie-tiny-8k",
-	"ernie-char-8k",
-	"ernie-char-fiction-8k",
-	"ernie-novel-8k",
-	"deepseek-v3",
-	"deepseek-r1",
-	"deepseek-r1-distill-qwen-32b",
-	"deepseek-r1-distill-qwen-14b",
+// ModelRatios contains all supported models and their pricing ratios
+// Model list is derived from the keys of this map, eliminating redundancy
+// Based on https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Blfmc9do2
+var ModelRatios = map[string]adaptor.ModelPrice{
+	// ERNIE 4.0 Models
+	"ernie-4.0-8k-latest":        {Ratio: 0.12 * ratio.MilliTokensRmb, CompletionRatio: 1}, // ¥0.12 / 1k tokens
+	"ernie-4.0-8k-preview":       {Ratio: 0.12 * ratio.MilliTokensRmb, CompletionRatio: 1}, // ¥0.12 / 1k tokens
+	"ernie-4.0-8k":               {Ratio: 0.12 * ratio.MilliTokensRmb, CompletionRatio: 1}, // ¥0.12 / 1k tokens
+	"ernie-4.0-turbo-8k-latest":  {Ratio: 0.02 * ratio.MilliTokensRmb, CompletionRatio: 1}, // ¥0.02 / 1k tokens
+	"ernie-4.0-turbo-8k-preview": {Ratio: 0.02 * ratio.MilliTokensRmb, CompletionRatio: 1}, // ¥0.02 / 1k tokens
+	"ernie-4.0-turbo-8k":         {Ratio: 0.02 * ratio.MilliTokensRmb, CompletionRatio: 1}, // ¥0.02 / 1k tokens
+	"ernie-4.0-turbo-128k":       {Ratio: 0.02 * ratio.MilliTokensRmb, CompletionRatio: 1}, // ¥0.02 / 1k tokens
+
+	// ERNIE 3.5 Models
+	"ernie-3.5-8k-preview": {Ratio: 0.012 * ratio.MilliTokensRmb, CompletionRatio: 1}, // ¥0.012 / 1k tokens
+	"ernie-3.5-8k":         {Ratio: 0.012 * ratio.MilliTokensRmb, CompletionRatio: 1}, // ¥0.012 / 1k tokens
+	"ernie-3.5-128k":       {Ratio: 0.012 * ratio.MilliTokensRmb, CompletionRatio: 1}, // ¥0.012 / 1k tokens
+
+	// ERNIE Speed Models
+	"ernie-speed-8k":       {Ratio: 0.004 * ratio.MilliTokensRmb, CompletionRatio: 1}, // ¥0.004 / 1k tokens
+	"ernie-speed-128k":     {Ratio: 0.004 * ratio.MilliTokensRmb, CompletionRatio: 1}, // ¥0.004 / 1k tokens
+	"ernie-speed-pro-128k": {Ratio: 0.004 * ratio.MilliTokensRmb, CompletionRatio: 1}, // ¥0.004 / 1k tokens
+
+	// ERNIE Lite Models
+	"ernie-lite-8k":       {Ratio: 0.008 * ratio.MilliTokensRmb, CompletionRatio: 1}, // ¥0.008 / 1k tokens
+	"ernie-lite-pro-128k": {Ratio: 0.008 * ratio.MilliTokensRmb, CompletionRatio: 1}, // ¥0.008 / 1k tokens
+
+	// ERNIE Tiny Models
+	"ernie-tiny-8k": {Ratio: 0.004 * ratio.MilliTokensRmb, CompletionRatio: 1}, // ¥0.004 / 1k tokens
+
+	// ERNIE Character Models
+	"ernie-char-8k":         {Ratio: 0.04 * ratio.MilliTokensRmb, CompletionRatio: 1}, // ¥0.04 / 1k tokens
+	"ernie-char-fiction-8k": {Ratio: 0.04 * ratio.MilliTokensRmb, CompletionRatio: 1}, // ¥0.04 / 1k tokens
+	"ernie-novel-8k":        {Ratio: 0.04 * ratio.MilliTokensRmb, CompletionRatio: 1}, // ¥0.04 / 1k tokens
+
+	// DeepSeek Models (hosted on Baidu)
+	"deepseek-v3":                  {Ratio: 0.01 * ratio.MilliTokensRmb, CompletionRatio: 2},  // ¥0.01 / 1k tokens
+	"deepseek-r1":                  {Ratio: 0.01 * ratio.MilliTokensRmb, CompletionRatio: 8},  // ¥0.01 / 1k tokens
+	"deepseek-r1-distill-qwen-32b": {Ratio: 0.004 * ratio.MilliTokensRmb, CompletionRatio: 1}, // ¥0.004 / 1k tokens
+	"deepseek-r1-distill-qwen-14b": {Ratio: 0.003 * ratio.MilliTokensRmb, CompletionRatio: 1}, // ¥0.003 / 1k tokens
 }
+
+// ModelList derived from ModelRatios for backward compatibility
+var ModelList = adaptor.GetModelListFromPricing(ModelRatios)

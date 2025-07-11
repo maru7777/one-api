@@ -3,9 +3,10 @@ package aws_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	aws "github.com/songquanpeng/one-api/relay/adaptor/aws/llama3"
 	relaymodel "github.com/songquanpeng/one-api/relay/model"
-	"github.com/stretchr/testify/require"
 )
 
 func TestRenderPrompt(t *testing.T) {

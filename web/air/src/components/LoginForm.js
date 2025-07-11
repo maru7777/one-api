@@ -16,11 +16,14 @@ const LoginForm = () => {
   const [inputs, setInputs] = useState({
     username: '',
     password: '',
-    wechat_verification_code: ''
+    wechat_verification_code: '',
+    totp_code: ''
   });
   const [searchParams, setSearchParams] = useSearchParams();
   const [submitted, setSubmitted] = useState(false);
-  const { username, password } = inputs;
+  const [totpRequired, setTotpRequired] = useState(false);
+  const [userId, setUserId] = useState(null);
+  const { username, password, totp_code } = inputs;
   const [userState, userDispatch] = useContext(UserContext);
   const [turnstileEnabled, setTurnstileEnabled] = useState(false);
   const [turnstileSiteKey, setTurnstileSiteKey] = useState('');
@@ -81,11 +84,19 @@ const LoginForm = () => {
     }
     setSubmitted(true);
     if (username && password) {
-      const res = await API.post(`/api/user/login?turnstile=${turnstileToken}`, {
+      const loginData = {
         username,
         password
-      });
+      };
+
+      // Add TOTP code if we're in TOTP verification step
+      if (totpRequired && totp_code) {
+        loginData.totp_code = totp_code;
+      }
+
+      const res = await API.post(`/api/user/login?turnstile=${turnstileToken}`, loginData);
       const { success, message, data } = res.data;
+
       if (success) {
         userDispatch({ type: 'login', payload: data });
         localStorage.setItem('user', JSON.stringify(data));
@@ -95,7 +106,14 @@ const LoginForm = () => {
         }
         navigate('/token');
       } else {
-        showError(message);
+        // Check if TOTP is required
+        if (message === 'totp_required' && data && data.totp_required) {
+          setTotpRequired(true);
+          setUserId(data.user_id);
+          showError('请输入您的TOTP验证码');
+        } else {
+          showError(message);
+        }
       }
     } else {
       showError('请输入用户名和密码！');
@@ -142,6 +160,7 @@ const LoginForm = () => {
                     placeholder="用户名"
                     name="username"
                     onChange={(value) => handleChange('username', value)}
+                    disabled={totpRequired}
                   />
                   <Form.Input
                     field={'password'}
@@ -150,12 +169,33 @@ const LoginForm = () => {
                     name="password"
                     type="password"
                     onChange={(value) => handleChange('password', value)}
+                    disabled={totpRequired}
                   />
+                  {totpRequired && (
+                    <Form.Input
+                      field={'totp_code'}
+                      label={'TOTP验证码'}
+                      placeholder="请输入6位验证码"
+                      name="totp_code"
+                      maxLength={6}
+                      onChange={(value) => handleChange('totp_code', value)}
+                    />
+                  )}
 
                   <Button theme="solid" style={{ width: '100%' }} type={'primary'} size="large"
-                          htmlType={'submit'} onClick={handleSubmit}>
-                    登录
+                          htmlType={'submit'} onClick={handleSubmit}
+                          disabled={totpRequired && (!totp_code || totp_code.length !== 6)}>
+                    {totpRequired ? '验证TOTP' : '登录'}
                   </Button>
+                  {totpRequired && (
+                    <Button theme="solid" style={{ width: '100%', marginTop: '10px' }} type={'tertiary'} size="large"
+                            onClick={() => {
+                              setTotpRequired(false);
+                              handleChange('totp_code', '');
+                            }}>
+                      返回登录
+                    </Button>
+                  )}
                 </Form>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20 }}>
                   <Text>

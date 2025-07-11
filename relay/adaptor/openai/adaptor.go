@@ -14,6 +14,7 @@ import (
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/common/logger"
+	dbmodel "github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/relay/adaptor"
 	"github.com/songquanpeng/one-api/relay/adaptor/alibailian"
 	"github.com/songquanpeng/one-api/relay/adaptor/baiduv2"
@@ -21,7 +22,6 @@ import (
 	"github.com/songquanpeng/one-api/relay/adaptor/geminiOpenaiCompatible"
 	"github.com/songquanpeng/one-api/relay/adaptor/minimax"
 	"github.com/songquanpeng/one-api/relay/adaptor/novita"
-	"github.com/songquanpeng/one-api/relay/adaptor/openrouter"
 	"github.com/songquanpeng/one-api/relay/billing/ratio"
 	"github.com/songquanpeng/one-api/relay/channeltype"
 	"github.com/songquanpeng/one-api/relay/meta"
@@ -112,6 +112,13 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 
 	meta := meta.GetByContext(c)
 
+	// Handle direct Response API requests
+	if relayMode == relaymode.ResponseAPI {
+		// For direct Response API requests, the request should already be in the correct format
+		// We don't need to convert it, just pass it through
+		return request, nil
+	}
+
 	// Convert ChatCompletion requests to Response API format only for OpenAI
 	// Skip conversion for models that only support ChatCompletion API
 	if relayMode == relaymode.ChatCompletions &&
@@ -148,7 +155,7 @@ func (a *Adaptor) applyRequestTransformations(meta *meta.Meta, request *model.Ge
 		if request.Provider == nil || request.Provider.Sort == "" &&
 			config.OpenrouterProviderSort != "" {
 			if request.Provider == nil {
-				request.Provider = &openrouter.RequestProvider{}
+				request.Provider = &model.RequestProvider{}
 			}
 
 			request.Provider.Sort = config.OpenrouterProviderSort
@@ -231,18 +238,25 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 	err *model.ErrorWithStatusCode) {
 	if meta.IsStream {
 		var responseText string
-		// Check if we need to handle Response API streaming response
-		if vi, ok := c.Get(ctxkey.ConvertedRequest); ok {
-			if _, ok := vi.(*ResponseAPIRequest); ok {
-				// This is a Response API streaming response that needs conversion
-				err, responseText, usage = ResponseAPIStreamHandler(c, resp, meta.Mode)
+		// Handle different streaming modes
+		switch meta.Mode {
+		case relaymode.ResponseAPI:
+			// Direct Response API streaming - pass through without conversion
+			err, responseText, usage = ResponseAPIDirectStreamHandler(c, resp, meta.Mode)
+		default:
+			// Check if we need to handle Response API streaming response for ChatCompletion
+			if vi, ok := c.Get(ctxkey.ConvertedRequest); ok {
+				if _, ok := vi.(*ResponseAPIRequest); ok {
+					// This is a Response API streaming response that needs conversion
+					err, responseText, usage = ResponseAPIStreamHandler(c, resp, meta.Mode)
+				} else {
+					// Regular streaming response
+					err, responseText, usage = StreamHandler(c, resp, meta.Mode)
+				}
 			} else {
 				// Regular streaming response
 				err, responseText, usage = StreamHandler(c, resp, meta.Mode)
 			}
-		} else {
-			// Regular streaming response
-			err, responseText, usage = StreamHandler(c, resp, meta.Mode)
 		}
 
 		if usage == nil || usage.TotalTokens == 0 {
@@ -259,6 +273,10 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 			err, usage = ImageHandler(c, resp)
 		// case relaymode.ImagesEdits:
 		// err, usage = ImagesEditsHandler(c, resp)
+		case relaymode.ResponseAPI:
+			// For direct Response API requests, pass through the response directly
+			// without conversion back to ChatCompletion format
+			err, usage = ResponseAPIDirectHandler(c, resp, meta.PromptTokens, meta.ActualModelName)
 		case relaymode.ChatCompletions:
 			// Check if we need to convert Response API response back to ChatCompletion format
 			if vi, ok := c.Get(ctxkey.ConvertedRequest); ok {
@@ -334,7 +352,17 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 					// Apply structured output cost multiplier
 					// For structured output, there's typically an additional cost based on completion tokens
 					// Using a conservative estimate of 25% additional cost for structured output
-					structuredOutputCost := int64(math.Ceil(float64(usage.CompletionTokens) * 0.25 * ratio.GetModelRatio(meta.ActualModelName, meta.ChannelType)))
+
+					// get channel-specific pricing if available
+					var channelModelRatio map[string]float64
+					if channelModel, ok := c.Get(ctxkey.ChannelModel); ok {
+						if channel, ok := channelModel.(*dbmodel.Channel); ok {
+							channelModelRatio = channel.GetModelRatio()
+						}
+					}
+
+					modelRatio := ratio.GetModelRatioWithChannel(meta.ActualModelName, meta.ChannelType, channelModelRatio)
+					structuredOutputCost := int64(math.Ceil(float64(usage.CompletionTokens) * 0.25 * modelRatio))
 					usage.ToolsCost += structuredOutputCost
 
 					// Log structured output cost application for debugging
@@ -352,7 +380,17 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 						req.ResponseFormat.Type == "json_schema" &&
 						req.ResponseFormat.JsonSchema != nil {
 						// Apply structured output cost multiplier
-						structuredOutputCost := int64(math.Ceil(float64(usage.CompletionTokens) * 0.25 * ratio.GetModelRatio(meta.ActualModelName, meta.ChannelType)))
+
+						// get channel-specific pricing if available
+						var channelModelRatio map[string]float64
+						if channelModel, ok := c.Get(ctxkey.ChannelModel); ok {
+							if channel, ok := channelModel.(*dbmodel.Channel); ok {
+								channelModelRatio = channel.GetModelRatio()
+							}
+						}
+
+						modelRatio := ratio.GetModelRatioWithChannel(meta.ActualModelName, meta.ChannelType, channelModelRatio)
+						structuredOutputCost := int64(math.Ceil(float64(usage.CompletionTokens) * 0.25 * modelRatio))
 						usage.ToolsCost += structuredOutputCost
 
 						// Log structured output cost application for debugging
@@ -368,11 +406,33 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 }
 
 func (a *Adaptor) GetModelList() []string {
-	_, modelList := GetCompatibleChannelMeta(a.ChannelType)
-	return modelList
+	return adaptor.GetModelListFromPricing(ModelRatios)
 }
 
 func (a *Adaptor) GetChannelName() string {
 	channelName, _ := GetCompatibleChannelMeta(a.ChannelType)
 	return channelName
+}
+
+// Pricing methods - OpenAI adapter manages its own model pricing
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+	return ModelRatios
+}
+
+func (a *Adaptor) GetModelRatio(modelName string) float64 {
+	pricing := a.GetDefaultModelPricing()
+	if price, exists := pricing[modelName]; exists {
+		return price.Ratio
+	}
+	// Fallback to global pricing for unknown models
+	return ratio.GetModelRatio(modelName, a.ChannelType)
+}
+
+func (a *Adaptor) GetCompletionRatio(modelName string) float64 {
+	pricing := a.GetDefaultModelPricing()
+	if price, exists := pricing[modelName]; exists {
+		return price.CompletionRatio
+	}
+	// Fallback to global pricing for unknown models
+	return ratio.GetCompletionRatio(modelName, a.ChannelType)
 }

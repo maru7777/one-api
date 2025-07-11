@@ -59,7 +59,8 @@ type Request struct {
 	Tools         []Tool    `json:"tools,omitempty"`
 	ToolChoice    any       `json:"tool_choice,omitempty"`
 	//Metadata    `json:"metadata,omitempty"`
-	Thinking *model.Thinking `json:"thinking,omitempty"`
+	Thinking         *model.Thinking `json:"thinking,omitempty"`
+	AnthropicVersion string          `json:"anthropic_version,omitempty"`
 }
 
 type Usage struct {

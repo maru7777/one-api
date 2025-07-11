@@ -2,10 +2,11 @@ package utils
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Laisky/errors/v2"
 )
 
 func TestGetRegionPrefix(t *testing.T) {

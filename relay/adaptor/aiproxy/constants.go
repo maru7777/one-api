@@ -1,9 +1,12 @@
 package aiproxy
 
-import "github.com/songquanpeng/one-api/relay/adaptor/openai"
+import (
+	"github.com/songquanpeng/one-api/relay/adaptor"
+	"github.com/songquanpeng/one-api/relay/adaptor/openai"
+)
 
-var ModelList = []string{""}
+// ModelRatios uses the same pricing as OpenAI since AIProxy is an OpenAI proxy
+var ModelRatios = openai.ModelRatios
 
-func init() {
-	ModelList = openai.ModelList
-}
+// ModelList derived from ModelRatios for backward compatibility
+var ModelList = adaptor.GetModelListFromPricing(ModelRatios)

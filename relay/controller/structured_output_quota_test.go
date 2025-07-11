@@ -4,10 +4,21 @@ import (
 	"testing"
 
 	"github.com/songquanpeng/one-api/common/config"
-	"github.com/songquanpeng/one-api/relay/billing/ratio"
+	"github.com/songquanpeng/one-api/relay"
 	"github.com/songquanpeng/one-api/relay/channeltype"
 	relaymodel "github.com/songquanpeng/one-api/relay/model"
 )
+
+// Helper function to get model ratio using the new two-layer approach
+func getTestModelRatio(modelName string, channelType int) float64 {
+	// Use the same logic as the controllers
+	apiType := channeltype.ToAPIType(channelType)
+	if adaptor := relay.GetAdaptor(apiType); adaptor != nil {
+		return adaptor.GetModelRatio(modelName)
+	}
+	// Fallback for tests
+	return 2.5 * 0.5 // Default quota pricing (2.5 * MilliTokensUsd)
+}
 
 func TestPreConsumedQuotaWithStructuredOutput(t *testing.T) {
 	tests := []struct {
@@ -37,8 +48,8 @@ func TestPreConsumedQuotaWithStructuredOutput(t *testing.T) {
 					},
 				},
 			},
-			promptTokens:              100,
-			ratio:                     ratio.GetModelRatio("gpt-4o", channeltype.OpenAI),
+			promptTokens:              100000, // Use larger token count to get non-zero quota
+			ratio:                     getTestModelRatio("gpt-4o", channeltype.OpenAI),
 			expectStructuredSurcharge: true,
 		},
 		{
@@ -47,8 +58,8 @@ func TestPreConsumedQuotaWithStructuredOutput(t *testing.T) {
 				Model:     "gpt-4o",
 				MaxTokens: 1000,
 			},
-			promptTokens:              100,
-			ratio:                     ratio.GetModelRatio("gpt-4o", channeltype.OpenAI),
+			promptTokens:              100000, // Use larger token count to get non-zero quota
+			ratio:                     getTestModelRatio("gpt-4o", channeltype.OpenAI),
 			expectStructuredSurcharge: false,
 		},
 		{
@@ -60,8 +71,8 @@ func TestPreConsumedQuotaWithStructuredOutput(t *testing.T) {
 					Type: "text",
 				},
 			},
-			promptTokens:              100,
-			ratio:                     ratio.GetModelRatio("gpt-4o", channeltype.OpenAI),
+			promptTokens:              100000, // Use larger token count to get non-zero quota
+			ratio:                     getTestModelRatio("gpt-4o", channeltype.OpenAI),
 			expectStructuredSurcharge: false,
 		},
 		{
@@ -78,8 +89,8 @@ func TestPreConsumedQuotaWithStructuredOutput(t *testing.T) {
 					},
 				},
 			},
-			promptTokens:              100,
-			ratio:                     ratio.GetModelRatio("gpt-4o", channeltype.OpenAI),
+			promptTokens:              100000, // Use larger token count to get non-zero quota
+			ratio:                     getTestModelRatio("gpt-4o", channeltype.OpenAI),
 			expectStructuredSurcharge: true,
 		},
 	}
@@ -141,15 +152,20 @@ func TestStructuredOutputQuotaConsistency(t *testing.T) {
 		},
 	}
 
-	promptTokens := 100
-	completionTokens := 400 // Less than max tokens
-	modelRatio := ratio.GetModelRatio("gpt-4o", channeltype.OpenAI)
+	promptTokens := 100000     // Use larger token count to get non-zero quota
+	completionTokens := 400000 // Less than max tokens
+	modelRatio := getTestModelRatio("gpt-4o", channeltype.OpenAI)
 
 	// Calculate pre-consumed quota
 	preConsumedQuota := getPreConsumedQuota(textRequest, promptTokens, modelRatio)
 
 	// Simulate post-consumption calculation
-	completionRatio := ratio.GetCompletionRatio("gpt-4o", channeltype.OpenAI)
+	// Get completion ratio using the new two-layer approach
+	apiType := channeltype.ToAPIType(channeltype.OpenAI)
+	var completionRatio float64 = 1.0 // default
+	if adaptor := relay.GetAdaptor(apiType); adaptor != nil {
+		completionRatio = adaptor.GetCompletionRatio("gpt-4o")
+	}
 	basePostQuota := int64(float64(promptTokens)+float64(completionTokens)*completionRatio) * int64(modelRatio)
 	structuredOutputCost := int64(float64(completionTokens) * 0.25 * modelRatio)
 	actualPostQuota := basePostQuota + structuredOutputCost

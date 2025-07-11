@@ -62,6 +62,10 @@ const EditModal = ({ open, userId, onCancel, onOk }) => {
   const [groupOptions, setGroupOptions] = useState([]);
   const [showPassword, setShowPassword] = useState(false);
 
+  // TOTP related state
+  const [totpEnabled, setTotpEnabled] = useState(false);
+  const [totpLoading, setTotpLoading] = useState(false);
+
   const submit = async (values, { setErrors, setStatus, setSubmitting }) => {
     setSubmitting(true);
 
@@ -101,6 +105,8 @@ const EditModal = ({ open, userId, onCancel, onOk }) => {
     if (success) {
       data.is_edit = true;
       setInputs(data);
+      // Set TOTP status from user data
+      setTotpEnabled(data.totp_secret && data.totp_secret !== '');
     } else {
       showError(message);
     }
@@ -113,6 +119,22 @@ const EditModal = ({ open, userId, onCancel, onOk }) => {
     } catch (error) {
       showError(error.message);
     }
+  };
+
+  const adminDisableTotp = async () => {
+    setTotpLoading(true);
+    try {
+      const res = await API.post(`/api/user/totp/disable/${userId}`);
+      if (res.data.success) {
+        showSuccess('TOTP has been successfully disabled for the user');
+        setTotpEnabled(false);
+      } else {
+        showError(res.data.message);
+      }
+    } catch (error) {
+      showError('Failed to disable TOTP');
+    }
+    setTotpLoading(false);
   };
 
   useEffect(() => {
@@ -264,6 +286,53 @@ const EditModal = ({ open, userId, onCancel, onOk }) => {
                   </FormControl>
                 </>
               )}
+
+              {/* Admin TOTP Section - Show when admin is editing users */}
+              {userId && (
+                <>
+                  <Divider sx={{ my: 2 }}>双因子认证 (TOTP) - 管理员控制</Divider>
+                  {totpEnabled ? (
+                    <div style={{
+                      marginTop: 16,
+                      padding: 16,
+                      backgroundColor: '#fff3cd',
+                      border: '1px solid #ffeaa7',
+                      borderRadius: 4
+                    }}>
+                      <div style={{ fontWeight: 'bold', color: '#856404', marginBottom: 8 }}>
+                        此用户已启用 TOTP
+                      </div>
+                      <div style={{ color: '#856404', marginBottom: 12 }}>
+                        作为管理员，如果用户被锁定，您可以为其禁用 TOTP。
+                      </div>
+                      <Button
+                        variant="contained"
+                        color="error"
+                        onClick={adminDisableTotp}
+                        disabled={totpLoading}
+                      >
+                        {totpLoading ? '处理中...' : '管理员禁用 TOTP'}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div style={{
+                      marginTop: 16,
+                      padding: 16,
+                      backgroundColor: '#d1ecf1',
+                      border: '1px solid #bee5eb',
+                      borderRadius: 4
+                    }}>
+                      <div style={{ fontWeight: 'bold', color: '#0c5460', marginBottom: 8 }}>
+                        此用户未启用 TOTP
+                      </div>
+                      <div style={{ color: '#0c5460' }}>
+                        此用户尚未启用双因子认证。
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
               <DialogActions>
                 <Button onClick={onCancel}>取消</Button>
                 <Button disableElevation disabled={isSubmitting} type="submit" variant="contained" color="primary">

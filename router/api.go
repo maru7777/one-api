@@ -49,6 +49,10 @@ func SetApiRouter(router *gin.Engine) {
 				selfRoute.GET("/aff", controller.GetAffCode)
 				selfRoute.POST("/topup", controller.TopUp)
 				selfRoute.GET("/available_models", controller.GetUserAvailableModels)
+				selfRoute.GET("/totp/status", controller.GetTotpStatus)
+				selfRoute.GET("/totp/setup", controller.SetupTotp)
+				selfRoute.POST("/totp/confirm", controller.ConfirmTotp)
+				selfRoute.POST("/totp/disable", controller.DisableTotp)
 			}
 
 			adminRoute := userRoute.Group("/")
@@ -61,6 +65,7 @@ func SetApiRouter(router *gin.Engine) {
 				adminRoute.POST("/manage", controller.ManageUser)
 				adminRoute.PUT("/", controller.UpdateUser)
 				adminRoute.DELETE("/:id", controller.DeleteUser)
+				adminRoute.POST("/totp/disable/:id", controller.AdminDisableUserTotp)
 			}
 		}
 		optionRoute := apiRouter.Group("/option")
@@ -80,8 +85,11 @@ func SetApiRouter(router *gin.Engine) {
 			channelRoute.GET("/test/:id", controller.TestChannel)
 			channelRoute.GET("/update_balance", controller.UpdateAllChannelsBalance)
 			channelRoute.GET("/update_balance/:id", controller.UpdateChannelBalance)
+			channelRoute.GET("/pricing/:id", controller.GetChannelPricing)
+			channelRoute.GET("/default-pricing", controller.GetChannelDefaultPricing)
 			channelRoute.POST("/", controller.AddChannel)
 			channelRoute.PUT("/", controller.UpdateChannel)
+			channelRoute.PUT("/pricing/:id", controller.UpdateChannelPricing)
 			channelRoute.DELETE("/disabled", controller.DeleteDisabledChannel)
 			channelRoute.DELETE("/:id", controller.DeleteChannel)
 		}
