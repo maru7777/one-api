@@ -10,8 +10,9 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/songquanpeng/one-api/relay/model"
 	"github.com/stretchr/testify/require"
+
+	"github.com/songquanpeng/one-api/relay/model"
 )
 
 type nopCloser struct {

@@ -46,7 +46,10 @@ const EditChannel = (props) => {
         system_prompt: '',
         models: [],
         auto_ban: 1,
-        groups: ['default']
+        groups: ['default'],
+        model_ratio: '',
+        completion_ratio: '',
+        inference_profile_arn_map: ''
     };
     const [batch, setBatch] = useState(false);
     const [autoBan, setAutoBan] = useState(true);
@@ -58,6 +61,10 @@ const EditChannel = (props) => {
     const [basicModels, setBasicModels] = useState([]);
     const [fullModels, setFullModels] = useState([]);
     const [customModel, setCustomModel] = useState('');
+    const [defaultPricing, setDefaultPricing] = useState({
+        model_ratio: '',
+        completion_ratio: '',
+    });
     const handleInputChange = (name, value) => {
         setInputs((inputs) => ({...inputs, [name]: value}));
         if (name === 'type' && inputs.models.length === 0) {
@@ -121,6 +128,10 @@ const EditChannel = (props) => {
             }
             setInputs((inputs) => ({...inputs, models: localModels}));
         }
+        if (name === 'type') {
+            // Load default pricing for the new channel type
+            loadDefaultPricing(value);
+        }
         //setAutoBan
     };
 
@@ -143,7 +154,31 @@ const EditChannel = (props) => {
             if (data.model_mapping !== '') {
                 data.model_mapping = JSON.stringify(JSON.parse(data.model_mapping), null, 2);
             }
+            // Format pricing fields for display
+            if (data.model_ratio && data.model_ratio !== '') {
+                try {
+                    data.model_ratio = JSON.stringify(JSON.parse(data.model_ratio), null, 2);
+                } catch (e) {
+                    console.error('Failed to parse model_ratio:', e);
+                }
+            }
+            if (data.completion_ratio && data.completion_ratio !== '') {
+                try {
+                    data.completion_ratio = JSON.stringify(JSON.parse(data.completion_ratio), null, 2);
+                } catch (e) {
+                    console.error('Failed to parse completion_ratio:', e);
+                }
+            }
+            if (data.inference_profile_arn_map && data.inference_profile_arn_map !== '') {
+                try {
+                    data.inference_profile_arn_map = JSON.stringify(JSON.parse(data.inference_profile_arn_map), null, 2);
+                } catch (e) {
+                    console.error('Failed to parse inference_profile_arn_map:', e);
+                }
+            }
             setInputs(data);
+            // Load default pricing for this channel type
+            loadDefaultPricing(data.type);
             if (data.auto_ban === 0) {
                 setAutoBan(false);
             } else {
@@ -185,6 +220,28 @@ const EditChannel = (props) => {
         }
     };
 
+    const loadDefaultPricing = async (channelType) => {
+        try {
+            const res = await API.get(`/api/channel/default-pricing?type=${channelType}`);
+            if (res.data.success) {
+                setDefaultPricing({
+                    model_ratio: res.data.data.model_ratio || '',
+                    completion_ratio: res.data.data.completion_ratio || '',
+                });
+                // If current pricing is empty, populate with defaults
+                if (!inputs.model_ratio && !inputs.completion_ratio) {
+                    setInputs((inputs) => ({
+                        ...inputs,
+                        model_ratio: res.data.data.model_ratio || '',
+                        completion_ratio: res.data.data.completion_ratio || '',
+                    }));
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load default pricing:', error);
+        }
+    };
+
     useEffect(() => {
         let localModelOptions = [...originModelOptions];
         inputs.models.forEach((model) => {
@@ -208,7 +265,9 @@ const EditChannel = (props) => {
                 }
             );
         } else {
-            setInputs(originInputs)
+            setInputs(originInputs);
+            // Load default pricing for new channels
+            loadDefaultPricing(originInputs.type);
         }
     }, [props.editingChannel.id]);
 
@@ -224,6 +283,19 @@ const EditChannel = (props) => {
         }
         if (inputs.model_mapping !== '' && !verifyJSON(inputs.model_mapping)) {
             showInfo('模型映射必须是合法的 JSON 格式！');
+            return;
+        }
+        // Validate pricing fields
+        if (inputs.model_ratio !== '' && !verifyJSON(inputs.model_ratio)) {
+            showInfo('模型定价必须是合法的 JSON 格式！');
+            return;
+        }
+        if (inputs.completion_ratio !== '' && !verifyJSON(inputs.completion_ratio)) {
+            showInfo('输出定价必须是合法的 JSON 格式！');
+            return;
+        }
+        if (inputs.inference_profile_arn_map !== '' && !verifyJSON(inputs.inference_profile_arn_map)) {
+            showInfo('推理配置文件ARN映射必须是合法的 JSON 格式！');
             return;
         }
         let localInputs = {...inputs};
@@ -245,6 +317,14 @@ const EditChannel = (props) => {
         localInputs.auto_ban = autoBan ? 1 : 0;
         localInputs.models = localInputs.models.join(',');
         localInputs.group = localInputs.groups.join(',');
+
+        // Handle pricing fields - convert empty strings to null for the API
+        if (localInputs.model_ratio === '') {
+            localInputs.model_ratio = null;
+        }
+        if (localInputs.completion_ratio === '') {
+            localInputs.completion_ratio = null;
+        }
         if (isEdit) {
             res = await API.put(`/api/channel/`, {...localInputs, id: parseInt(channelId)});
         } else {
@@ -632,6 +712,86 @@ const EditChannel = (props) => {
                         </>
                       )
                     }
+
+                    {/* Channel-specific pricing fields */}
+                    <div style={{ marginTop: 20 }}>
+                        <Typography.Text strong>模型定价：</Typography.Text>
+                        <Button
+                            theme="borderless"
+                            size="small"
+                            onClick={() => {
+                                handleInputChange('model_ratio', defaultPricing.model_ratio);
+                            }}
+                            style={{ marginLeft: 10 }}
+                        >
+                            加载默认值
+                        </Button>
+                    </div>
+                    <TextArea
+                        placeholder="可选，渠道专用模型定价，JSON 格式。留空则使用默认定价。"
+                        style={{
+                            minHeight: 150,
+                            fontFamily: 'JetBrains Mono, Consolas',
+                        }}
+                        onChange={(value) => handleInputChange('model_ratio', value)}
+                        value={inputs.model_ratio}
+                        autoComplete="new-password"
+                    />
+                    <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+                        JSON 格式：{`{"模型名称": 价格倍率}`}。价格倍率乘以 token 数量计算费用。
+                    </div>
+
+                    <div style={{ marginTop: 20 }}>
+                        <Typography.Text strong>输出定价：</Typography.Text>
+                        <Button
+                            theme="borderless"
+                            size="small"
+                            onClick={() => {
+                                handleInputChange('completion_ratio', defaultPricing.completion_ratio);
+                            }}
+                            style={{ marginLeft: 10 }}
+                        >
+                            加载默认值
+                        </Button>
+                    </div>
+                    <TextArea
+                        placeholder="可选，渠道专用输出 token 定价倍率，JSON 格式。"
+                        style={{
+                            minHeight: 150,
+                            fontFamily: 'JetBrains Mono, Consolas',
+                        }}
+                        onChange={(value) => handleInputChange('completion_ratio', value)}
+                        value={inputs.completion_ratio}
+                        autoComplete="new-password"
+                    />
+                    <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+                        JSON 格式：{`{"模型名称": 输出倍率}`}。输出倍率乘以输出 token 数量。
+                    </div>
+
+                    {/* AWS-specific inference profile ARN mapping */}
+                    {inputs.type === 33 && (
+                        <>
+                            <div style={{ marginTop: 20 }}>
+                                <Typography.Text strong>推理配置文件ARN映射：</Typography.Text>
+                            </div>
+                            <TextArea
+                                placeholder={`可选，AWS Bedrock 推理配置文件 ARN 映射，JSON 格式。\n示例：\n${JSON.stringify({
+                                    "claude-3-5-sonnet-20241022": "arn:aws:bedrock:us-east-1:123456789012:inference-profile/us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+                                    "claude-3-haiku-20240307": "arn:aws:bedrock:us-east-1:123456789012:inference-profile/us.anthropic.claude-3-haiku-20240307-v1:0"
+                                }, null, 2)}`}
+                                style={{
+                                    minHeight: 150,
+                                    fontFamily: 'JetBrains Mono, Consolas',
+                                }}
+                                onChange={(value) => handleInputChange('inference_profile_arn_map', value)}
+                                value={inputs.inference_profile_arn_map}
+                                autoComplete="new-password"
+                            />
+                            <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+                                JSON 格式：{`{"模型名称": "arn:aws:bedrock:region:account:inference-profile/profile-id"}`}。将模型名称映射到 AWS Bedrock 推理配置文件 ARN。留空则使用默认模型 ID。
+                            </div>
+                        </>
+                    )}
 
                 </Spin>
             </SideSheet>

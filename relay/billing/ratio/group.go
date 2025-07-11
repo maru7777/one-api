@@ -2,8 +2,9 @@ package ratio
 
 import (
 	"encoding/json"
-	"github.com/songquanpeng/one-api/common/logger"
 	"sync"
+
+	"github.com/songquanpeng/one-api/common/logger"
 )
 
 var groupRatioLock sync.RWMutex

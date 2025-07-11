@@ -3,8 +3,9 @@ package model
 import (
 	"time"
 
-	"github.com/songquanpeng/one-api/common/metrics"
 	"gorm.io/gorm"
+
+	"github.com/songquanpeng/one-api/common/metrics"
 )
 
 // PrometheusDBHook implements GORM's plugin interface for monitoring database operations

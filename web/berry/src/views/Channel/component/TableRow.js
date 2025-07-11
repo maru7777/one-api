@@ -28,13 +28,14 @@ import ResponseTimeLabel from "./ResponseTimeLabel";
 import GroupLabel from "./GroupLabel";
 import NameLabel from "./NameLabel";
 
-import { IconDotsVertical, IconEdit, IconTrash } from "@tabler/icons-react";
+import { IconDotsVertical, IconEdit, IconTrash, IconCurrencyDollar } from "@tabler/icons-react";
 
 export default function ChannelTableRow({
   item,
   manageChannel,
   handleOpenModal,
   setModalChannelId,
+  handleOpenPricingModal,
 }) {
   const [open, setOpen] = useState(null);
   const [openDelete, setOpenDelete] = useState(false);
@@ -223,6 +224,15 @@ export default function ChannelTableRow({
           <IconEdit style={{ marginRight: "16px" }} />
           编辑
         </MenuItem>
+        <MenuItem
+          onClick={() => {
+            handleCloseMenu();
+            handleOpenPricingModal(item.id, item.name, item.type);
+          }}
+        >
+          <IconCurrencyDollar style={{ marginRight: "16px" }} />
+          定价
+        </MenuItem>
         <MenuItem onClick={handleDeleteOpen} sx={{ color: "error.main" }}>
           <IconTrash style={{ marginRight: "16px" }} />
           删除
@@ -250,6 +260,7 @@ ChannelTableRow.propTypes = {
   manageChannel: PropTypes.func,
   handleOpenModal: PropTypes.func,
   setModalChannelId: PropTypes.func,
+  handleOpenPricingModal: PropTypes.func,
 };
 
 function renderBalance(type, balance) {

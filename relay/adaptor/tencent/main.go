@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
 
 	"github.com/songquanpeng/one-api/common"

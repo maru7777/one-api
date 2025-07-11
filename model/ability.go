@@ -2,15 +2,17 @@ package model
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/Laisky/errors/v2"
 	gutils "github.com/Laisky/go-utils/v5"
+	"gorm.io/gorm"
+
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/utils"
-	"gorm.io/gorm"
 )
 
 type Ability struct {
@@ -229,6 +231,32 @@ func GetRandomSatisfiedChannelExcluding(group string, model string, ignoreFirstP
 		}
 	} else {
 		// For ignoreFirstPriority=false, select from highest priority channels
+		// First check if there are any available channels after exclusions
+		var availableCount int64
+		countQuery := DB.Model(&Ability{}).Where(groupCol+" = ? AND model = ? AND enabled = "+trueVal+" AND (suspend_until IS NULL OR suspend_until < ?)", group, model, now)
+		if len(excludeChannelIds) > 0 {
+			var excludeIds []int
+			for channelId := range excludeChannelIds {
+				excludeIds = append(excludeIds, channelId)
+			}
+			countQuery = countQuery.Where("channel_id NOT IN (?)", excludeIds)
+		}
+		countQuery.Count(&availableCount)
+
+		if availableCount == 0 {
+			// Simple error message to avoid performance overhead
+			// Detailed diagnostics can be enabled via debug mode if needed
+			var excludeIds []int
+			for channelId := range excludeChannelIds {
+				excludeIds = append(excludeIds, channelId)
+			}
+
+			errorMsg := fmt.Sprintf("no channels available for model %s in group %s after excluding %d channels",
+				model, group, len(excludeIds))
+			return nil, errors.New(errorMsg)
+		}
+
+		// Now find the maximum priority among available channels
 		maxPrioritySubQuery := DB.Model(&Ability{}).Select("MAX(priority)").Where(groupCol+" = ? AND model = ? AND enabled = "+trueVal+" AND (suspend_until IS NULL OR suspend_until < ?)", group, model, now)
 		if len(excludeChannelIds) > 0 {
 			var excludeIds []int

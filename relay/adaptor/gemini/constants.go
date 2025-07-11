@@ -1,12 +1,15 @@
 package gemini
 
 import (
+	"github.com/songquanpeng/one-api/relay/adaptor"
 	"github.com/songquanpeng/one-api/relay/adaptor/geminiOpenaiCompatible"
 )
 
-// https://ai.google.dev/models/gemini
+// ModelRatios uses the shared Gemini pricing from geminiOpenaiCompatible
+var ModelRatios = geminiOpenaiCompatible.ModelRatios
 
-var ModelList = geminiOpenaiCompatible.ModelList
+// ModelList derived from ModelRatios for backward compatibility
+var ModelList = adaptor.GetModelListFromPricing(ModelRatios)
 
 // ModelsSupportSystemInstruction is the list of models that support system instruction.
 //

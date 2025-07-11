@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Form, Card } from 'semantic-ui-react';
+import { Button, Form, Card, Modal, Message, Divider, Image } from 'semantic-ui-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { API, showError, showSuccess } from '../../helpers';
 import { renderQuota, renderQuotaWithPrompt } from '../../helpers/render';
+import QRCode from 'qrcode';
 
 const EditUser = () => {
   const { t } = useTranslation();
@@ -21,6 +22,14 @@ const EditUser = () => {
     group: 'default',
   });
   const [groupOptions, setGroupOptions] = useState([]);
+
+  // TOTP related state
+  const [totpEnabled, setTotpEnabled] = useState(false);
+  const [showTotpSetup, setShowTotpSetup] = useState(false);
+  const [totpSecret, setTotpSecret] = useState('');
+  const [totpQRCode, setTotpQRCode] = useState('');
+  const [totpCode, setTotpCode] = useState('');
+  const [totpLoading, setTotpLoading] = useState(false);
   const {
     username,
     display_name,
@@ -63,17 +72,120 @@ const EditUser = () => {
     if (success) {
       data.password = '';
       setInputs(data);
+      // For admin editing other users, set TOTP status from user data
+      if (userId) {
+        setTotpEnabled(data.totp_secret && data.totp_secret !== '');
+      }
     } else {
       showError(message);
     }
     setLoading(false);
   };
+
+  const loadTotpStatus = async () => {
+    if (userId) {
+      // For admin editing other users, TOTP status is loaded from user data
+      return;
+    }
+    // Only load TOTP status API for self
+    try {
+      const res = await API.get('/api/user/totp/status');
+      if (res.data.success) {
+        setTotpEnabled(res.data.data.totp_enabled);
+      }
+    } catch (error) {
+      console.error('Failed to load TOTP status:', error);
+    }
+  };
+
+  const setupTotp = async () => {
+    setTotpLoading(true);
+    try {
+      const res = await API.get('/api/user/totp/setup');
+      if (res.data.success) {
+        setTotpSecret(res.data.data.secret);
+        // Generate QR code from URI
+        const qrCodeDataURL = await QRCode.toDataURL(res.data.data.qr_code);
+        setTotpQRCode(qrCodeDataURL);
+        setShowTotpSetup(true);
+      } else {
+        showError(res.data.message);
+      }
+    } catch (error) {
+      showError('Failed to setup TOTP');
+    }
+    setTotpLoading(false);
+  };
+
+  const confirmTotp = async () => {
+    if (!totpCode) {
+      showError('Please enter the TOTP code');
+      return;
+    }
+    setTotpLoading(true);
+    try {
+      const res = await API.post('/api/user/totp/confirm', {
+        totp_code: totpCode,
+      });
+      if (res.data.success) {
+        showSuccess('TOTP has been successfully enabled');
+        setTotpEnabled(true);
+        setShowTotpSetup(false);
+        setTotpCode('');
+      } else {
+        showError(res.data.message);
+      }
+    } catch (error) {
+      showError('Failed to confirm TOTP');
+    }
+    setTotpLoading(false);
+  };
+
+  const disableTotp = async () => {
+    if (!totpCode) {
+      showError('Please enter the TOTP code to disable');
+      return;
+    }
+    setTotpLoading(true);
+    try {
+      const res = await API.post('/api/user/totp/disable', {
+        totp_code: totpCode,
+      });
+      if (res.data.success) {
+        showSuccess('TOTP has been successfully disabled');
+        setTotpEnabled(false);
+        setTotpCode('');
+      } else {
+        showError(res.data.message);
+      }
+    } catch (error) {
+      showError('Failed to disable TOTP');
+    }
+    setTotpLoading(false);
+  };
+
+  const adminDisableTotp = async () => {
+    setTotpLoading(true);
+    try {
+      const res = await API.post(`/api/user/totp/disable/${userId}`);
+      if (res.data.success) {
+        showSuccess('TOTP has been successfully disabled for the user');
+        setTotpEnabled(false);
+      } else {
+        showError(res.data.message);
+      }
+    } catch (error) {
+      showError('Failed to disable TOTP');
+    }
+    setTotpLoading(false);
+  };
   useEffect(() => {
     loadUser().then();
+    loadTotpStatus().then();
     if (userId) {
       fetchGroups().then();
     }
-  }, []);
+  }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const submit = async () => {
     let res = undefined;
@@ -195,6 +307,79 @@ const EditUser = () => {
                 readOnly
               />
             </Form.Field>
+
+            {/* TOTP Section */}
+            {!userId && (
+              <>
+                <Divider />
+                <Form.Field>
+                  <label>Two-Factor Authentication (TOTP)</label>
+                  {totpEnabled ? (
+                    <Message positive>
+                      <Message.Header>TOTP is enabled</Message.Header>
+                      <p>Your account is protected with two-factor authentication.</p>
+                      <Form.Input
+                        placeholder="Enter TOTP code to disable"
+                        value={totpCode}
+                        onChange={(e) => setTotpCode(e.target.value)}
+                        style={{ marginTop: '10px' }}
+                      />
+                      <Button
+                        color="red"
+                        onClick={disableTotp}
+                        loading={totpLoading}
+                        style={{ marginTop: '10px' }}
+                      >
+                        Disable TOTP
+                      </Button>
+                    </Message>
+                  ) : (
+                    <Message info>
+                      <Message.Header>TOTP is not enabled</Message.Header>
+                      <p>Enable two-factor authentication to secure your account.</p>
+                      <Button
+                        color="blue"
+                        onClick={setupTotp}
+                        loading={totpLoading}
+                        style={{ marginTop: '10px' }}
+                      >
+                        Enable TOTP
+                      </Button>
+                    </Message>
+                  )}
+                </Form.Field>
+              </>
+            )}
+
+            {/* Admin TOTP Section - Show when admin is editing other users */}
+            {userId && (
+              <>
+                <Divider />
+                <Form.Field>
+                  <label>Two-Factor Authentication (TOTP) - Admin Control</label>
+                  {totpEnabled ? (
+                    <Message warning>
+                      <Message.Header>TOTP is enabled for this user</Message.Header>
+                      <p>As an administrator, you can disable TOTP for this user if they are locked out.</p>
+                      <Button
+                        color="red"
+                        onClick={adminDisableTotp}
+                        loading={totpLoading}
+                        style={{ marginTop: '10px' }}
+                      >
+                        Admin Disable TOTP
+                      </Button>
+                    </Message>
+                  ) : (
+                    <Message info>
+                      <Message.Header>TOTP is not enabled for this user</Message.Header>
+                      <p>This user has not enabled two-factor authentication.</p>
+                    </Message>
+                  )}
+                </Form.Field>
+              </>
+            )}
+
             <Button onClick={handleCancel}>
               {t('user.edit.buttons.cancel')}
             </Button>
@@ -204,6 +389,64 @@ const EditUser = () => {
           </Form>
         </Card.Content>
       </Card>
+
+      {/* TOTP Setup Modal */}
+      <Modal
+        open={showTotpSetup}
+        onClose={() => setShowTotpSetup(false)}
+        size="small"
+      >
+        <Modal.Header>Setup Two-Factor Authentication</Modal.Header>
+        <Modal.Content>
+          <Message info>
+            <Message.Header>Setup Instructions</Message.Header>
+            <ol>
+              <li>Install an authenticator app (Google Authenticator, Authy, etc.)</li>
+              <li>Scan the QR code below or manually enter the secret key</li>
+              <li>Enter the 6-digit code from your authenticator app</li>
+              <li>Click "Confirm" to enable TOTP</li>
+            </ol>
+          </Message>
+
+          {totpQRCode && (
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <Image src={totpQRCode} size="medium" centered />
+            </div>
+          )}
+
+          <Form.Field>
+            <label>Secret Key (manual entry)</label>
+            <Form.Input
+              value={totpSecret}
+              readOnly
+              style={{ fontFamily: 'monospace' }}
+            />
+          </Form.Field>
+
+          <Form.Field>
+            <label>Verification Code</label>
+            <Form.Input
+              placeholder="Enter 6-digit code from your authenticator app"
+              value={totpCode}
+              onChange={(e) => setTotpCode(e.target.value)}
+              maxLength={6}
+            />
+          </Form.Field>
+        </Modal.Content>
+        <Modal.Actions>
+          <Button onClick={() => setShowTotpSetup(false)}>
+            Cancel
+          </Button>
+          <Button
+            positive
+            onClick={confirmTotp}
+            loading={totpLoading}
+            disabled={!totpCode || totpCode.length !== 6}
+          >
+            Confirm
+          </Button>
+        </Modal.Actions>
+      </Modal>
     </div>
   );
 };

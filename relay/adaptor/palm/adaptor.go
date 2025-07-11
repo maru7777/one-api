@@ -2,17 +2,20 @@ package palm
 
 import (
 	"fmt"
+	"io"
+	"net/http"
+
 	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
+
 	"github.com/songquanpeng/one-api/relay/adaptor"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/relay/meta"
 	"github.com/songquanpeng/one-api/relay/model"
-	"io"
-	"net/http"
 )
 
 type Adaptor struct {
+	adaptor.DefaultPricingMethods
 }
 
 func (a *Adaptor) Init(meta *meta.Meta) {

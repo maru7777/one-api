@@ -20,6 +20,7 @@ import { API } from 'utils/api';
 import { ITEMS_PER_PAGE } from 'constants';
 import { IconRefresh, IconHttpDelete, IconPlus, IconBrandSpeedtest, IconCoinYuan } from '@tabler/icons-react';
 import EditeModal from './component/EditModal';
+import PricingModal from './component/PricingModal';
 
 // ----------------------------------------------------------------------
 // CHANNEL_OPTIONS,
@@ -32,6 +33,10 @@ export default function ChannelPage() {
   const matchUpMd = useMediaQuery(theme.breakpoints.up('sm'));
   const [openModal, setOpenModal] = useState(false);
   const [editChannelId, setEditChannelId] = useState(0);
+  const [openPricingModal, setOpenPricingModal] = useState(false);
+  const [pricingChannelId, setPricingChannelId] = useState(0);
+  const [pricingChannelName, setPricingChannelName] = useState('');
+  const [pricingChannelType, setPricingChannelType] = useState(0);
 
   const loadChannels = async (startIdx) => {
     setSearching(true);
@@ -182,6 +187,20 @@ export default function ChannelPage() {
     }
   };
 
+  const handleOpenPricingModal = (channelId, channelName, channelType) => {
+    setPricingChannelId(channelId);
+    setPricingChannelName(channelName);
+    setPricingChannelType(channelType);
+    setOpenPricingModal(true);
+  };
+
+  const handleClosePricingModal = () => {
+    setOpenPricingModal(false);
+    setPricingChannelId(0);
+    setPricingChannelName('');
+    setPricingChannelType(0);
+  };
+
   useEffect(() => {
     loadChannels(0)
       .then()
@@ -265,6 +284,7 @@ export default function ChannelPage() {
                     key={row.id}
                     handleOpenModal={handleOpenModal}
                     setModalChannelId={setEditChannelId}
+                    handleOpenPricingModal={handleOpenPricingModal}
                   />
                 ))}
               </TableBody>
@@ -281,6 +301,13 @@ export default function ChannelPage() {
         />
       </Card>
       <EditeModal open={openModal} onCancel={handleCloseModal} onOk={handleOkModal} channelId={editChannelId} />
+      <PricingModal
+        open={openPricingModal}
+        onClose={handleClosePricingModal}
+        channelId={pricingChannelId}
+        channelName={pricingChannelName}
+        channelType={pricingChannelType}
+      />
     </>
   );
 }

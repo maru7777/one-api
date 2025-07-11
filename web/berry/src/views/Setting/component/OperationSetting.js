@@ -10,7 +10,7 @@ import {
   FormControlLabel,
   TextField,
 } from "@mui/material";
-import { showSuccess, showError, verifyJSON } from "utils/common";
+import { showSuccess, showError } from "utils/common";
 import { API } from "utils/api";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -26,9 +26,6 @@ const OperationSetting = () => {
     QuotaForInvitee: 0,
     QuotaRemindThreshold: 0,
     PreConsumedQuota: 0,
-    ModelRatio: "",
-    CompletionRatio: "",
-    GroupRatio: "",
     TopUpLink: "",
     ChatLink: "",
     QuotaPerUnit: 0,
@@ -53,9 +50,6 @@ const OperationSetting = () => {
     if (success) {
       let newInputs = {};
       data.forEach((item) => {
-        if (item.key === "ModelRatio" || item.key === "GroupRatio" || item.key === "CompletionRatio") {
-          item.value = JSON.stringify(JSON.parse(item.value), null, 2);
-        }
         if (item.value === '{}') {
           item.value = '';
         }
@@ -122,29 +116,7 @@ const OperationSetting = () => {
           );
         }
         break;
-      case "ratio":
-        if (originInputs["ModelRatio"] !== inputs.ModelRatio) {
-          if (!verifyJSON(inputs.ModelRatio)) {
-            showError("模型倍率不是合法的 JSON 字符串");
-            return;
-          }
-          await updateOption("ModelRatio", inputs.ModelRatio);
-        }
-        if (originInputs["GroupRatio"] !== inputs.GroupRatio) {
-          if (!verifyJSON(inputs.GroupRatio)) {
-            showError("分组倍率不是合法的 JSON 字符串");
-            return;
-          }
-          await updateOption("GroupRatio", inputs.GroupRatio);
-        }
-        if (originInputs['CompletionRatio'] !== inputs.CompletionRatio) {
-          if (!verifyJSON(inputs.CompletionRatio)) {
-            showError('补全倍率不是合法的 JSON 字符串');
-            return;
-          }
-          await updateOption('CompletionRatio', inputs.CompletionRatio);
-        }
-        break;
+
       case "quota":
         if (originInputs["QuotaForNewUser"] !== inputs.QuotaForNewUser) {
           await updateOption("QuotaForNewUser", inputs.QuotaForNewUser);
@@ -495,60 +467,7 @@ const OperationSetting = () => {
           </Button>
         </Stack>
       </SubCard>
-      <SubCard title="倍率设置">
-        <Stack justifyContent="flex-start" alignItems="flex-start" spacing={2}>
-          <FormControl fullWidth>
-            <TextField
-              multiline
-              maxRows={15}
-              id="channel-ModelRatio-label"
-              label="模型倍率"
-              value={inputs.ModelRatio}
-              name="ModelRatio"
-              onChange={handleInputChange}
-              aria-describedby="helper-text-channel-ModelRatio-label"
-              minRows={5}
-              placeholder="为一个 JSON 文本，键为模型名称，值为倍率"
-            />
-          </FormControl>
-          <FormControl fullWidth>
-            <TextField
-              multiline
-              maxRows={15}
-              id="channel-CompletionRatio-label"
-              label="补全倍率"
-              value={inputs.CompletionRatio}
-              name="CompletionRatio"
-              onChange={handleInputChange}
-              aria-describedby="helper-text-channel-CompletionRatio-label"
-              minRows={5}
-              placeholder="为一个 JSON 文本，键为模型名称，值为倍率，此处的倍率设置是模型补全倍率相较于提示倍率的比例，使用该设置可强制覆盖 One API 的内部比例"
-            />
-          </FormControl>
-          <FormControl fullWidth>
-            <TextField
-              multiline
-              maxRows={15}
-              id="channel-GroupRatio-label"
-              label="分组倍率"
-              value={inputs.GroupRatio}
-              name="GroupRatio"
-              onChange={handleInputChange}
-              aria-describedby="helper-text-channel-GroupRatio-label"
-              minRows={5}
-              placeholder="为一个 JSON 文本，键为分组名称，值为倍率"
-            />
-          </FormControl>
-          <Button
-            variant="contained"
-            onClick={() => {
-              submitConfig("ratio").then();
-            }}
-          >
-            保存倍率设置
-          </Button>
-        </Stack>
-      </SubCard>
+
     </Stack>
   );
 };

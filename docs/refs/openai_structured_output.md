@@ -1,4 +1,4 @@
-# Stucture Output
+# OpenAI Stucture Output
 
 - <https://platform.openai.com/docs/guides/structured-outputs>
 

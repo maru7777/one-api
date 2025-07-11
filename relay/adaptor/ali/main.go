@@ -8,7 +8,9 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/logger"
@@ -37,7 +39,7 @@ func ConvertRequest(request model.GeneralOpenAIRequest) *ChatRequest {
 		aliModel = strings.TrimSuffix(aliModel, EnableSearchModelSuffix)
 	}
 	request.TopP = helper.Float64PtrMax(request.TopP, 0.9999)
-	return &ChatRequest{
+	chatRequest := &ChatRequest{
 		Model: aliModel,
 		Input: Input{
 			Messages: messages,
@@ -54,6 +56,10 @@ func ConvertRequest(request model.GeneralOpenAIRequest) *ChatRequest {
 			Tools:             request.Tools,
 		},
 	}
+	if chatRequest.Parameters.MaxTokens == 0 {
+		chatRequest.Parameters.MaxTokens = config.DefaultMaxToken
+	}
+	return chatRequest
 }
 
 func ConvertEmbeddingRequest(request model.GeneralOpenAIRequest) *EmbeddingRequest {

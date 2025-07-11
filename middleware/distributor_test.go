@@ -4,8 +4,9 @@ import (
 	"testing"
 
 	"github.com/Laisky/errors/v2"
-	"github.com/songquanpeng/one-api/model"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/songquanpeng/one-api/model"
 )
 
 // TestChannelPriorityLogic tests the channel priority selection logic

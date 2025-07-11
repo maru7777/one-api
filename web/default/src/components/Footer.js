@@ -41,10 +41,6 @@ const Footer = () => {
             <a href='https://github.com/Laisky/one-api' target='_blank'>
               {systemName} {process.env.REACT_APP_VERSION}{' '}
             </a>
-            {t('footer.built_by')}{' '}
-            <a href='https://github.com/Laisky/one-api' target='_blank'>
-              {t('footer.built_by_name')}
-            </a>{' '}
             {t('footer.license')}{' '}
             <a href='https://opensource.org/licenses/mit-license.php'>
               {t('footer.mit')}

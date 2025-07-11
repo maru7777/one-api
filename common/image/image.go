@@ -13,8 +13,9 @@ import (
 	"sync"
 
 	"github.com/Laisky/errors/v2"
-	"github.com/songquanpeng/one-api/common/client"
 	_ "golang.org/x/image/webp"
+
+	"github.com/songquanpeng/one-api/common/client"
 )
 
 // Regex to match data URL pattern

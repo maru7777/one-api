@@ -8,7 +8,10 @@ const defaultConfig = {
     model_mapping: '',
     models: [],
     groups: ['default'],
-    config: {}
+    config: {},
+    model_ratio: '',
+    completion_ratio: '',
+    inference_profile_arn_map: ''
   },
   inputLabel: {
     name: '渠道名称',
@@ -20,7 +23,10 @@ const defaultConfig = {
     model_mapping: '模型映射关系',
     system_prompt: '系统提示词',
     groups: '用户组',
-    config: null
+    config: null,
+    model_ratio: '模型定价',
+    completion_ratio: '输出定价',
+    inference_profile_arn_map: '推理配置文件ARN映射'
   },
   prompt: {
     type: '请选择渠道类型',
@@ -33,7 +39,10 @@ const defaultConfig = {
       '请输入要修改的模型映射关系，格式为：api请求模型ID:实际转发给渠道的模型ID，使用JSON数组表示，例如：{"gpt-3.5": "gpt-35"}',
     system_prompt:"此项可选，用于强制设置给定的系统提示词，请配合自定义模型 & 模型重定向使用，首先创建一个唯一的自定义模型名称并在上面填入，之后将该自定义模型重定向映射到该渠道一个原生支持的模型此项可选，用于强制设置给定的系统提示词，请配合自定义模型 & 模型重定向使用，首先创建一个唯一的自定义模型名称并在上面填入，之后将该自定义模型重定向映射到该渠道一个原生支持的模型",
     groups: '请选择该渠道所支持的用户组',
-    config: null
+    config: null,
+    model_ratio: '可选，渠道专用模型定价，JSON 格式。留空则使用默认定价。',
+    completion_ratio: '可选，渠道专用输出 token 定价倍率，JSON 格式。',
+    inference_profile_arn_map: '可选，AWS Bedrock 推理配置文件 ARN 映射，JSON 格式。将模型名称映射到推理配置文件 ARN。'
   },
   modelGroup: 'openai'
 };
