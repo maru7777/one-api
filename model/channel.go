@@ -32,6 +32,7 @@ type Channel struct {
 	Balance            float64 `json:"balance"` // in USD
 	BalanceUpdatedTime int64   `json:"balance_updated_time" gorm:"bigint"`
 	Models             string  `json:"models"`
+	ModelConfigs       *string `json:"model_configs" gorm:"type:varchar(1024);default:''"`
 	Group              string  `json:"group" gorm:"type:varchar(32);default:'default'"`
 	UsedQuota          int64   `json:"used_quota" gorm:"bigint;default:0"`
 	ModelMapping       *string `json:"model_mapping" gorm:"type:varchar(1024);default:''"`
@@ -55,6 +56,10 @@ type ChannelConfig struct {
 	VertexAIProjectID string `json:"vertex_ai_project_id,omitempty"`
 	VertexAIADC       string `json:"vertex_ai_adc,omitempty"`
 	AuthType          string `json:"auth_type,omitempty"`
+}
+
+type ModelConfig struct {
+	MaxTokens int32 `json:"max_tokens,omitempty"`
 }
 
 func GetAllChannels(startIdx int, num int, scope string) ([]*Channel, error) {
@@ -128,6 +133,23 @@ func (channel *Channel) GetModelMapping() map[string]string {
 		return nil
 	}
 	return modelMapping
+}
+
+func (channel *Channel) GetModelConfig(modelName string) *ModelConfig {
+	if channel.ModelConfigs == nil || *channel.ModelConfigs == "" || *channel.ModelConfigs == "{}" {
+		logger.SysError(fmt.Sprintf("no ModelConfigs: %v.", channel.ModelConfigs))
+		return nil
+	}
+	modelConfigs := make(map[string]ModelConfig)
+	err := json.Unmarshal([]byte(*channel.ModelConfigs), &modelConfigs)
+	if err != nil {
+		logger.SysError(fmt.Sprintf("failed to unmarshal model mapping for channel %d, error: %s", channel.Id, err.Error()))
+		return nil
+	}
+
+	modelConfig := modelConfigs[modelName]
+
+	return &modelConfig
 }
 
 func (channel *Channel) Insert() error {

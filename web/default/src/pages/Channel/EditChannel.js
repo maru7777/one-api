@@ -12,6 +12,12 @@ const MODEL_MAPPING_EXAMPLE = {
   'gpt-4-32k-0314': 'gpt-4-32k',
 };
 
+const MODEL_CONFIGS_EXAMPLE = {
+  'gpt-3.5-turbo-0301': {
+    'max_tokens': 65536,
+  }
+};
+
 const OAUTH_JWT_CONFIG_EXAMPLE = {
   "client_type": "jwt",
   "client_id": "123456789",
@@ -60,6 +66,7 @@ const EditChannel = () => {
     ratelimit: 0,
     model_ratio: '',
     completion_ratio: '',
+    model_configs: '',
   };
   const [batch, setBatch] = useState(false);
   const [inputs, setInputs] = useState(originInputs);
@@ -138,6 +145,13 @@ const EditChannel = () => {
       if (data.model_mapping !== '') {
         data.model_mapping = JSON.stringify(
           JSON.parse(data.model_mapping),
+          null,
+          2
+        );
+      }
+      if (data.model_configs !== '') {
+        data.model_configs = JSON.stringify(
+          JSON.parse(data.model_configs),
           null,
           2
         );
@@ -249,6 +263,10 @@ const EditChannel = () => {
     }
     if (inputs.model_mapping !== '' && !verifyJSON(inputs.model_mapping)) {
       showInfo(t('channel.edit.messages.model_mapping_invalid'));
+      return;
+    }
+    if (inputs.model_configs !== '' && !verifyJSON(inputs.model_configs)) {
+      showInfo(t('channel.edit.messages.model_configs_invalid'));
       return;
     }
 
@@ -606,6 +624,22 @@ const EditChannel = () => {
                     name='model_mapping'
                     onChange={handleInputChange}
                     value={inputs.model_mapping}
+                    style={{
+                      minHeight: 150,
+                      fontFamily: 'JetBrains Mono, Consolas',
+                    }}
+                    autoComplete='new-password'
+                  />
+                </Form.Field>
+                <Form.Field>
+                  <Form.TextArea
+                    label={t('channel.edit.model_configs')}
+                    placeholder={`${t(
+                      'channel.edit.model_configs_placeholder'
+                    )}\n${JSON.stringify(MODEL_CONFIGS_EXAMPLE, null, 2)}`}
+                    name='model_configs'
+                    onChange={handleInputChange}
+                    value={inputs.model_configs}
                     style={{
                       minHeight: 150,
                       fontFamily: 'JetBrains Mono, Consolas',
