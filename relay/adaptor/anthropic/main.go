@@ -43,17 +43,13 @@ func stopReasonClaude2OpenAI(reason *string) string {
 
 // isModelSupportThinking is used to check if the model supports extended thinking
 func isModelSupportThinking(model string) bool {
-	// Claude 3.7 Sonnet
-	if strings.Contains(model, "claude-3-7-sonnet") {
-		return true
+	if strings.Contains(model, "claude-3-5") ||
+		strings.Contains(model, "claude-2") ||
+		strings.Contains(model, "claude-instant-1") {
+		return false
 	}
 
-	// Claude 4 models (Opus 4 and Sonnet 4)
-	if strings.Contains(model, "claude-opus-4") || strings.Contains(model, "claude-sonnet-4") {
-		return true
-	}
-
-	return false
+	return true
 }
 
 func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Request, error) {
