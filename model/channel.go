@@ -140,7 +140,7 @@ func (channel *Channel) GetModelMapping() map[string]string {
 
 func (channel *Channel) GetModelConfig(modelName string) *ModelConfig {
 	if channel.ModelConfigs == nil || *channel.ModelConfigs == "" || *channel.ModelConfigs == "{}" {
-		logger.SysWarnf(fmt.Sprintf("no ModelConfigs: %v.", channel.ModelConfigs))
+		logger.SysWarn(fmt.Sprintf("no ModelConfigs: %v.", channel.ModelConfigs))
 		return nil
 	}
 	modelConfigs := make(map[string]ModelConfig)
