@@ -37,10 +37,21 @@ func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Request, meta *me
 	req.Header.Set("anthropic-version", anthropicVersion)
 	req.Header.Set("anthropic-beta", "messages-2023-12-15")
 
+	// set beta headers for specific models
+	var betaHeaders []string
+
 	// https://x.com/alexalbert__/status/1812921642143900036
 	// claude-3-5-sonnet can support 8k context
 	if strings.HasPrefix(meta.ActualModelName, "claude-3-7-sonnet") {
-		req.Header.Set("anthropic-beta", "output-128k-2025-02-19")
+		betaHeaders = append(betaHeaders, "output-128k-2024-11-06")
+	}
+
+	if strings.HasPrefix(meta.ActualModelName, "claude-4") {
+		betaHeaders = append(betaHeaders, "interleaved-thinking-2025-05-14")
+	}
+
+	if len(betaHeaders) > 0 {
+		req.Header.Set("anthropic-beta", strings.Join(betaHeaders, ","))
 	}
 
 	return nil
