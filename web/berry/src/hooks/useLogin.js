@@ -7,19 +7,21 @@ import { showSuccess } from 'utils/common';
 const useLogin = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const login = async (username, password) => {
+  const login = async (username, password, totpCode = null) => {
     try {
-      const res = await API.post(`/api/user/login`, {
-        username,
-        password
-      });
+      const loginData = { username, password };
+      if (totpCode) {
+        loginData.totp_code = totpCode;
+      }
+
+      const res = await API.post(`/api/user/login`, loginData);
       const { success, message, data } = res.data;
       if (success) {
         localStorage.setItem('user', JSON.stringify(data));
         dispatch({ type: LOGIN, payload: data });
         navigate('/panel');
       }
-      return { success, message };
+      return { success, message, data };
     } catch (err) {
       // 请求失败，设置错误信息
       return { success: false, message: '' };

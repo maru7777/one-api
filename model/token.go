@@ -4,12 +4,13 @@ import (
 	"fmt"
 
 	"github.com/Laisky/errors/v2"
+	"gorm.io/gorm"
+
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/common/message"
-	"gorm.io/gorm"
 )
 
 const (

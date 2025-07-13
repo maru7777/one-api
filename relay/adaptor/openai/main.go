@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/conv"
 	"github.com/songquanpeng/one-api/common/logger"
@@ -467,11 +468,16 @@ func ResponseAPIStreamHandler(c *gin.Context, resp *http.Response, relayMode int
 
 		// Handle full response events (like response.completed)
 		var responseAPIChunk ResponseAPIResponse
+		var outputIndex *int
 		if fullResponse != nil {
 			responseAPIChunk = *fullResponse
 		} else if streamEvent != nil {
 			// Convert streaming event to ResponseAPIResponse for processing
 			responseAPIChunk = ConvertStreamEventToResponse(streamEvent)
+			// Preserve the output_index from the streaming event for proper tool call indexing
+			if streamEvent.OutputIndex >= 0 {
+				outputIndex = &streamEvent.OutputIndex
+			}
 		} else {
 			// Skip this chunk if we can't parse it
 			continue
@@ -498,8 +504,8 @@ func ResponseAPIStreamHandler(c *gin.Context, resp *http.Response, relayMode int
 			}
 		}
 
-		// Convert Response API chunk to ChatCompletion streaming format
-		chatCompletionChunk := ConvertResponseAPIStreamToChatCompletion(&responseAPIChunk)
+		// Convert Response API chunk to ChatCompletion streaming format with proper index context
+		chatCompletionChunk := ConvertResponseAPIStreamToChatCompletionWithIndex(&responseAPIChunk, outputIndex)
 
 		// Accumulate usage information
 		if chatCompletionChunk.Usage != nil {

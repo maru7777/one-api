@@ -18,6 +18,7 @@ func ShouldDisableChannel(err *model.Error, statusCode int) bool {
 	if statusCode == http.StatusUnauthorized {
 		return true
 	}
+
 	switch err.Type {
 	case "insufficient_quota", "authentication_error", "permission_error", "forbidden":
 		return true

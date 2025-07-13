@@ -1,10 +1,12 @@
 package controller
 
 import (
-	"github.com/songquanpeng/one-api/relay/model"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/songquanpeng/one-api/relay/model"
 )
 
 func TestShouldRetry429Logic(t *testing.T) {

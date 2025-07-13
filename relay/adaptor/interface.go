@@ -1,16 +1,19 @@
 package adaptor
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/songquanpeng/one-api/relay/meta"
-	"github.com/songquanpeng/one-api/relay/model"
 	"io"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/songquanpeng/one-api/relay/meta"
+	"github.com/songquanpeng/one-api/relay/model"
 )
 
 // ModelPrice represents pricing information for a model
 type ModelPrice struct {
-	Ratio           float64 `json:"ratio"`
+	Ratio float64 `json:"ratio"`
+	// CompletionRatio represents the output rate / input rate
 	CompletionRatio float64 `json:"completion_ratio,omitempty"`
 }
 

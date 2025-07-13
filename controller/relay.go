@@ -10,6 +10,7 @@ import (
 
 	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
+
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/ctxkey"
@@ -292,16 +293,28 @@ func logChannelSuspensionStatus(ctx context.Context, group, model string, failed
 func processChannelRelayError(ctx context.Context, userId int, channelId int, channelName string, group string, originalModel string, err model.ErrorWithStatusCode) {
 	logger.Errorf(ctx, "relay error (channel id %d, name %s, user_id %d, group: %s, model: %s): %s", channelId, channelName, userId, group, originalModel, err.Message)
 
+	// Handle 400 errors differently - they are client request issues, not channel problems
+	if err.StatusCode == http.StatusBadRequest {
+		// For 400 errors, log but don't disable channel or suspend abilities
+		// These are typically schema validation errors or malformed requests
+		logger.Infof(ctx, "client request error (400) for channel %d (%s) - not disabling channel as this is not a channel issue", channelId, channelName)
+		// Still emit failure for monitoring purposes, but don't disable the channel
+		monitor.Emit(channelId, false)
+		return
+	}
+
 	if err.StatusCode == http.StatusTooManyRequests {
 		// For 429, we will suspend the specific model for a while
 		logger.Infof(ctx, "suspending model %s in group %s on channel %d (%s) due to rate limit", originalModel, group, channelId, channelName)
 		if suspendErr := dbmodel.SuspendAbility(ctx,
 			group, originalModel, channelId,
 			config.ChannelSuspendSecondsFor429); suspendErr != nil {
-			logger.Errorf(ctx, "failed to suspend ability for channel %d, model %s, group %s: %v", channelId, originalModel, group, suspendErr)
+			logger.Errorf(ctx, "failed to suspend ability for channel %d, model %s, group %s: %v", channelId, originalModel, group, errors.Wrap(suspendErr, "suspend ability failed"))
 		}
 	}
 
+	// Only disable channel for server errors (5xx) or specific client errors that indicate channel issues
+	// 400 errors are client request problems and should not disable channels
 	if monitor.ShouldDisableChannel(&err.Error, err.StatusCode) {
 		monitor.DisableChannel(channelId, channelName, err.Message)
 	} else {

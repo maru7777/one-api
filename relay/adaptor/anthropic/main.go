@@ -12,7 +12,9 @@ import (
 
 	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
+
 	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/image"
 	"github.com/songquanpeng/one-api/common/logger"
@@ -41,7 +43,13 @@ func stopReasonClaude2OpenAI(reason *string) string {
 
 // isModelSupportThinking is used to check if the model supports extended thinking
 func isModelSupportThinking(model string) bool {
+	// Claude 3.7 Sonnet
 	if strings.Contains(model, "claude-3-7-sonnet") {
+		return true
+	}
+
+	// Claude 4 models (Opus 4 and Sonnet 4)
+	if strings.Contains(model, "claude-opus-4") || strings.Contains(model, "claude-sonnet-4") {
 		return true
 	}
 
@@ -110,7 +118,7 @@ func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Re
 		claudeRequest.ToolChoice = claudeToolChoice
 	}
 	if claudeRequest.MaxTokens == 0 {
-		claudeRequest.MaxTokens = 4096
+		claudeRequest.MaxTokens = config.DefaultMaxToken
 	}
 	// legacy model name mapping
 	if claudeRequest.Model == "claude-instant-1" {
@@ -137,6 +145,28 @@ func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Re
 				content.ToolUseId = message.ToolCallId
 				claudeMessage.Content = append(claudeMessage.Content, content)
 			} else if stringContent != "" {
+				// For assistant messages with thinking enabled, check if we need to add thinking block
+				if message.Role == "assistant" && claudeRequest.Thinking != nil {
+					// Check if this message has reasoning content that should be converted to thinking block
+					var reasoningContent string
+					if message.Reasoning != nil {
+						reasoningContent = *message.Reasoning
+					} else if message.ReasoningContent != nil {
+						reasoningContent = *message.ReasoningContent
+					} else if message.Thinking != nil {
+						reasoningContent = *message.Thinking
+					}
+
+					// If we have reasoning content, add it as a thinking block first
+					if reasoningContent != "" {
+						thinkingContent := Content{
+							Type:     "thinking",
+							Thinking: &reasoningContent,
+						}
+						claudeMessage.Content = append(claudeMessage.Content, thinkingContent)
+					}
+				}
+
 				// Only add text content if it's not empty
 				content.Type = "text"
 				content.Text = stringContent
@@ -166,6 +196,29 @@ func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Re
 			continue
 		}
 		var contents []Content
+
+		// For assistant messages with thinking enabled, check if we need to add thinking block first
+		if message.Role == "assistant" && claudeRequest.Thinking != nil {
+			// Check if this message has reasoning content that should be converted to thinking block
+			var reasoningContent string
+			if message.Reasoning != nil {
+				reasoningContent = *message.Reasoning
+			} else if message.ReasoningContent != nil {
+				reasoningContent = *message.ReasoningContent
+			} else if message.Thinking != nil {
+				reasoningContent = *message.Thinking
+			}
+
+			// If we have reasoning content, add it as a thinking block first
+			if reasoningContent != "" {
+				thinkingContent := Content{
+					Type:     "thinking",
+					Thinking: &reasoningContent,
+				}
+				contents = append(contents, thinkingContent)
+			}
+		}
+
 		openaiContent := message.ParseContent()
 		for _, part := range openaiContent {
 			var content Content
@@ -232,6 +285,8 @@ func StreamResponseClaude2OpenAI(c *gin.Context, claudeResponse *StreamResponse)
 			}
 
 			if claudeResponse.ContentBlock.Type == "tool_use" {
+				// Set index for streaming tool calls - use the current index in the tools slice
+				index := len(tools)
 				tools = append(tools, model.Tool{
 					Id:   claudeResponse.ContentBlock.Id,
 					Type: "function",
@@ -239,6 +294,7 @@ func StreamResponseClaude2OpenAI(c *gin.Context, claudeResponse *StreamResponse)
 						Name:      claudeResponse.ContentBlock.Name,
 						Arguments: "",
 					},
+					Index: &index, // Set index for streaming delta accumulation
 				})
 			}
 		}
@@ -250,11 +306,29 @@ func StreamResponseClaude2OpenAI(c *gin.Context, claudeResponse *StreamResponse)
 			}
 
 			if claudeResponse.Delta.Type == "input_json_delta" {
-				tools = append(tools, model.Tool{
-					Function: model.Function{
-						Arguments: claudeResponse.Delta.PartialJson,
-					},
-				})
+				// For input_json_delta, we should update the last tool call's arguments, not create a new one
+				// The index should match the last tool call that was started in content_block_start
+				if len(tools) > 0 {
+					// Update the last tool call's arguments (this is a delta for the existing tool call)
+					lastIndex := len(tools) - 1
+					lastTool := tools[lastIndex]
+					if existingArgs, ok := lastTool.Function.Arguments.(string); ok {
+						lastTool.Function.Arguments = existingArgs + claudeResponse.Delta.PartialJson
+					} else {
+						lastTool.Function.Arguments = claudeResponse.Delta.PartialJson
+					}
+					// Keep the same index as the original tool call
+					tools[lastIndex] = lastTool
+				} else {
+					// Fallback: create new tool call if no existing tool call found
+					index := 0
+					tools = append(tools, model.Tool{
+						Function: model.Function{
+							Arguments: claudeResponse.Delta.PartialJson,
+						},
+						Index: &index, // Set index for streaming delta accumulation
+					})
+				}
 			}
 		}
 	case "message_delta":

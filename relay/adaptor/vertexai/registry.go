@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/songquanpeng/one-api/relay/adaptor/geminiOpenaiCompatible"
 	claude "github.com/songquanpeng/one-api/relay/adaptor/vertexai/claude"
 	gemini "github.com/songquanpeng/one-api/relay/adaptor/vertexai/gemini"

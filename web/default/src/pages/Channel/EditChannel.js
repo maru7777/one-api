@@ -67,6 +67,7 @@ const EditChannel = () => {
     model_ratio: '',
     completion_ratio: '',
     model_configs: '',
+    inference_profile_arn_map: '',
   };
   const [batch, setBatch] = useState(false);
   const [inputs, setInputs] = useState(originInputs);
@@ -169,6 +170,13 @@ const EditChannel = () => {
           data.completion_ratio = JSON.stringify(JSON.parse(data.completion_ratio), null, 2);
         } catch (e) {
           console.error('Failed to parse completion_ratio:', e);
+        }
+      }
+      if (data.inference_profile_arn_map && data.inference_profile_arn_map !== '') {
+        try {
+          data.inference_profile_arn_map = JSON.stringify(JSON.parse(data.inference_profile_arn_map), null, 2);
+        } catch (e) {
+          console.error('Failed to parse inference_profile_arn_map:', e);
         }
       }
       setInputs(data);
@@ -279,6 +287,10 @@ const EditChannel = () => {
       showInfo(t('channel.edit.messages.completion_ratio_invalid'));
       return;
     }
+    if (inputs.inference_profile_arn_map !== '' && !verifyJSON(inputs.inference_profile_arn_map)) {
+      showInfo(t('channel.edit.messages.inference_profile_arn_map_invalid'));
+      return;
+    }
 
     if (inputs.type === 34 && config.auth_type === 'oauth_config') {
       if (!verifyJSON(inputs.key)) {
@@ -334,6 +346,9 @@ const EditChannel = () => {
     }
     if (localInputs.completion_ratio === '') {
       localInputs.completion_ratio = null;
+    }
+    if (localInputs.inference_profile_arn_map === '') {
+      localInputs.inference_profile_arn_map = null;
     }
     if (isEdit) {
       res = await API.put(`/api/channel/`, {
@@ -953,6 +968,32 @@ const EditChannel = () => {
                 {t('channel.edit.completion_ratio_help')}
               </div>
             </Form.Field>
+
+            {/* AWS-specific inference profile ARN mapping */}
+            {inputs.type === 33 && (
+              <Form.Field>
+                <label>
+                  Inference Profile ARN Map
+                </label>
+                <Form.TextArea
+                  name="inference_profile_arn_map"
+                  placeholder={`Optional. JSON mapping of model names to AWS Bedrock Inference Profile ARNs.\nExample:\n${JSON.stringify({
+                    "claude-3-5-sonnet-20241022": "arn:aws:bedrock:us-east-1:123456789012:inference-profile/us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+                    "claude-3-haiku-20240307": "arn:aws:bedrock:us-east-1:123456789012:inference-profile/us.anthropic.claude-3-haiku-20240307-v1:0"
+                  }, null, 2)}`}
+                  style={{
+                    minHeight: 150,
+                    fontFamily: 'JetBrains Mono, Consolas',
+                  }}
+                  onChange={handleInputChange}
+                  value={inputs.inference_profile_arn_map}
+                  autoComplete="new-password"
+                />
+                <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+                  JSON format: {`{"model_name": "arn:aws:bedrock:region:account:inference-profile/profile-id"}`}. Maps model names to AWS Bedrock Inference Profile ARNs. Leave empty to use default model IDs.
+                </div>
+              </Form.Field>
+            )}
 
             <Button onClick={handleCancel}>
               {t('channel.edit.buttons.cancel')}

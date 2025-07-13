@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
+
 	"github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/relay/meta"
 )

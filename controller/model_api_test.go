@@ -7,9 +7,10 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/relay"
-	"github.com/stretchr/testify/assert"
 )
 
 func min(a, b int) int {
