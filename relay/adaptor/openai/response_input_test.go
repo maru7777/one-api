@@ -22,7 +22,7 @@ func TestResponseAPIInputUnmarshaling(t *testing.T) {
 			expected: ResponseAPIInput{"Hello world"},
 		},
 		{
-			name: "Array input with message object",
+			name:     "Array input with message object",
 			jsonData: `{"input": [{"role": "user", "content": "Hello"}]}`,
 			expected: ResponseAPIInput{map[string]interface{}{
 				"role":    "user",
@@ -30,7 +30,7 @@ func TestResponseAPIInputUnmarshaling(t *testing.T) {
 			}},
 		},
 		{
-			name: "Array input with multiple items",
+			name:     "Array input with multiple items",
 			jsonData: `{"input": ["Hello", {"role": "user", "content": "World"}]}`,
 			expected: ResponseAPIInput{
 				"Hello",
@@ -60,7 +60,7 @@ func TestResponseAPIInputUnmarshaling(t *testing.T) {
 
 			for i, expectedItem := range tt.expected {
 				actualItem := request.Input[i]
-				
+
 				// For string comparison
 				if expectedStr, ok := expectedItem.(string); ok {
 					if actualStr, ok := actualItem.(string); ok {
@@ -146,7 +146,7 @@ func TestResponseAPIRequestValidation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var request ResponseAPIRequest
 			err := json.Unmarshal([]byte(tt.jsonData), &request)
-			
+
 			if tt.expectError && err == nil {
 				t.Errorf("Expected error but got none")
 			} else if !tt.expectError && err != nil {

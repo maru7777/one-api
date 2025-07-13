@@ -45,6 +45,8 @@ const LoginForm = ({ ...others }) => {
   const theme = useTheme();
   const { login, wechatLogin } = useLogin();
   const [openWechat, setOpenWechat] = useState(false);
+  const [totpRequired, setTotpRequired] = useState(false);
+  const [userId, setUserId] = useState(null);
   const matchDownSM = useMediaQuery(theme.breakpoints.down('md'));
   const customization = useSelector((state) => state.customization);
   const siteInfo = useSelector((state) => state.siteInfo);
@@ -206,19 +208,26 @@ const LoginForm = ({ ...others }) => {
         initialValues={{
           username: '',
           password: '',
+          totp_code: '',
           submit: null
         }}
         validationSchema={Yup.object().shape({
           username: Yup.string().max(255).required('Username is required'),
-          password: Yup.string().max(255).required('Password is required')
+          password: Yup.string().max(255).required('Password is required'),
+          totp_code: totpRequired ? Yup.string().length(6, 'TOTP code must be 6 digits').required('TOTP code is required') : Yup.string()
         })}
         onSubmit={async (values, { setErrors, setStatus, setSubmitting }) => {
-          const { success, message } = await login(values.username, values.password);
+          const { success, message, data } = await login(values.username, values.password, values.totp_code || null);
           if (success) {
             setStatus({ success: true });
           } else {
             setStatus({ success: false });
-            if (message) {
+            // Check if TOTP is required
+            if (message === 'totp_required' && data && data.totp_required) {
+              setTotpRequired(true);
+              setUserId(data.user_id);
+              setErrors({ submit: '请输入您的TOTP验证码' });
+            } else if (message) {
               setErrors({ submit: message });
             }
           }
@@ -238,6 +247,7 @@ const LoginForm = ({ ...others }) => {
                 onChange={handleChange}
                 label="用户名"
                 inputProps={{ autoComplete: 'username' }}
+                disabled={totpRequired}
               />
               {touched.username && errors.username && (
                 <FormHelperText error id="standard-weight-helper-text-username-login">
@@ -255,6 +265,7 @@ const LoginForm = ({ ...others }) => {
                 name="password"
                 onBlur={handleBlur}
                 onChange={handleChange}
+                disabled={totpRequired}
                 endAdornment={
                   <InputAdornment position="end">
                     <IconButton
@@ -276,6 +287,27 @@ const LoginForm = ({ ...others }) => {
                 </FormHelperText>
               )}
             </FormControl>
+
+            {totpRequired && (
+              <FormControl fullWidth error={Boolean(touched.totp_code && errors.totp_code)} sx={{ ...theme.typography.customInput }}>
+                <InputLabel htmlFor="outlined-adornment-totp-login">TOTP验证码</InputLabel>
+                <OutlinedInput
+                  id="outlined-adornment-totp-login"
+                  type="text"
+                  value={values.totp_code}
+                  name="totp_code"
+                  onBlur={handleBlur}
+                  onChange={handleChange}
+                  label="TOTP验证码"
+                  inputProps={{ maxLength: 6, autoComplete: 'one-time-code' }}
+                />
+                {touched.totp_code && errors.totp_code && (
+                  <FormHelperText error id="standard-weight-helper-text-totp-login">
+                    {errors.totp_code}
+                  </FormHelperText>
+                )}
+              </FormControl>
+            )}
             <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
               {/* <FormControlLabel
                 control={
@@ -302,9 +334,28 @@ const LoginForm = ({ ...others }) => {
             <Box sx={{ mt: 2 }}>
               <AnimateButton>
                 <Button disableElevation disabled={isSubmitting} fullWidth size="large" type="submit" variant="contained" color="primary">
-                  登录
+                  {totpRequired ? '验证TOTP' : '登录'}
                 </Button>
               </AnimateButton>
+              {totpRequired && (
+                <Box sx={{ mt: 1 }}>
+                  <AnimateButton>
+                    <Button
+                      disableElevation
+                      fullWidth
+                      size="large"
+                      variant="outlined"
+                      color="secondary"
+                      onClick={() => {
+                        setTotpRequired(false);
+                        setUserId(null);
+                      }}
+                    >
+                      返回登录
+                    </Button>
+                  </AnimateButton>
+                </Box>
+              )}
             </Box>
           </form>
         )}

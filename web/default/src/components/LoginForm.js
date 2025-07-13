@@ -24,10 +24,13 @@ const LoginForm = () => {
     username: '',
     password: '',
     wechat_verification_code: '',
+    totp_code: '',
   });
   const [searchParams, setSearchParams] = useSearchParams();
   const [submitted, setSubmitted] = useState(false);
-  const { username, password } = inputs;
+  const [totpRequired, setTotpRequired] = useState(false);
+  const [userId, setUserId] = useState(null);
+  const { username, password, totp_code } = inputs;
   const [userState, userDispatch] = useContext(UserContext);
   let navigate = useNavigate();
   const [status, setStatus] = useState({});
@@ -74,11 +77,19 @@ const LoginForm = () => {
   async function handleSubmit(e) {
     setSubmitted(true);
     if (username && password) {
-      const res = await API.post(`/api/user/login`, {
+      const loginData = {
         username,
         password,
-      });
+      };
+
+      // Add TOTP code if we're in TOTP verification step
+      if (totpRequired && totp_code) {
+        loginData.totp_code = totp_code;
+      }
+
+      const res = await API.post(`/api/user/login`, loginData);
       const { success, message, data } = res.data;
+
       if (success) {
         userDispatch({ type: 'login', payload: data });
         localStorage.setItem('user', JSON.stringify(data));
@@ -91,7 +102,14 @@ const LoginForm = () => {
           showSuccess(t('messages.success.login'));
         }
       } else {
-        showError(message);
+        // Check if TOTP is required
+        if (message === 'totp_required' && data && data.totp_required) {
+          setTotpRequired(true);
+          setUserId(data.user_id);
+          showError('Please enter your TOTP code');
+        } else {
+          showError(message);
+        }
       }
     }
   }
@@ -125,6 +143,7 @@ const LoginForm = () => {
                 value={username}
                 onChange={handleChange}
                 style={{ marginBottom: '1em' }}
+                disabled={totpRequired}
               />
               <Form.Input
                 fluid
@@ -135,20 +154,52 @@ const LoginForm = () => {
                 type='password'
                 value={password}
                 onChange={handleChange}
-                style={{ marginBottom: '1.5em' }}
+                style={{ marginBottom: totpRequired ? '1em' : '1.5em' }}
+                disabled={totpRequired}
               />
+              {totpRequired && (
+                <Form.Input
+                  fluid
+                  icon='shield'
+                  iconPosition='left'
+                  placeholder='Enter 6-digit TOTP code'
+                  name='totp_code'
+                  value={totp_code}
+                  onChange={handleChange}
+                  maxLength={6}
+                  style={{ marginBottom: '1.5em' }}
+                />
+              )}
               <Button
                 fluid
                 size='large'
                 style={{
                   background: '#2F73FF', // Use a more modern blue
                   color: 'white',
-                  marginBottom: '1.5em',
+                  marginBottom: totpRequired ? '1em' : '1.5em',
                 }}
                 onClick={handleSubmit}
+                disabled={totpRequired && (!totp_code || totp_code.length !== 6)}
               >
-                {t('auth.login.button')}
+                {totpRequired ? 'Verify TOTP' : t('auth.login.button')}
               </Button>
+              {totpRequired && (
+                <Button
+                  fluid
+                  size='large'
+                  style={{
+                    background: '#666',
+                    color: 'white',
+                    marginBottom: '1.5em',
+                  }}
+                  onClick={() => {
+                    setTotpRequired(false);
+                    setInputs(prev => ({ ...prev, totp_code: '' }));
+                  }}
+                >
+                  Back to Login
+                </Button>
+              )}
             </Form>
 
             <Divider />

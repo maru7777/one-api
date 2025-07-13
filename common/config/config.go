@@ -202,3 +202,6 @@ var TestMaxTokens = env.Int("TEST_MAX_TOKENS", 1024)
 
 // OpenrouterProviderSort is used to determine the order of the providers in the openrouter
 var OpenrouterProviderSort = env.String("OPENROUTER_PROVIDER_SORT", "")
+
+// DefaultMaxToken is the default maximum number of tokens for requests
+var DefaultMaxToken = env.Int("DEFAULT_MAX_TOKEN", 2048)

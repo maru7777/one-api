@@ -26,7 +26,7 @@ func TestAdapterPricingImplementations(t *testing.T) {
 		// Adapters that still use DefaultPricingMethods (expected to have empty pricing)
 		{"Ollama", apitype.Ollama, "llama2", true},
 		{"Cohere", apitype.Cohere, "command", false},
-		{"Coze", apitype.Coze, "test-model", true},
+		{"Coze", apitype.Coze, "coze-chat", false},
 	}
 
 	for _, tc := range testCases {

@@ -14,10 +14,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/songquanpeng/one-api/common/client"
-	img "github.com/songquanpeng/one-api/common/image"
 	"github.com/stretchr/testify/require"
 	_ "golang.org/x/image/webp"
+
+	"github.com/songquanpeng/one-api/common/client"
+	img "github.com/songquanpeng/one-api/common/image"
 )
 
 type CountingReader struct {

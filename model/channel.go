@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"gorm.io/gorm"
+
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/logger"
-	"gorm.io/gorm"
 )
 
 const (
@@ -43,6 +44,8 @@ type Channel struct {
 	// Channel-specific pricing tables
 	ModelRatio      *string `json:"model_ratio" gorm:"type:text"`      // JSON string of model pricing ratios
 	CompletionRatio *string `json:"completion_ratio" gorm:"type:text"` // JSON string of completion pricing ratios
+	// AWS-specific configuration
+	InferenceProfileArnMap *string `json:"inference_profile_arn_map" gorm:"type:text"` // JSON string mapping model names to AWS Bedrock Inference Profile ARNs
 }
 
 type ChannelConfig struct {
@@ -150,6 +153,66 @@ func (channel *Channel) GetModelConfig(modelName string) *ModelConfig {
 	modelConfig := modelConfigs[modelName]
 
 	return &modelConfig
+}
+
+func (channel *Channel) GetInferenceProfileArnMap() map[string]string {
+	if channel.InferenceProfileArnMap == nil || *channel.InferenceProfileArnMap == "" || *channel.InferenceProfileArnMap == "{}" {
+		return nil
+	}
+	arnMap := make(map[string]string)
+	err := json.Unmarshal([]byte(*channel.InferenceProfileArnMap), &arnMap)
+	if err != nil {
+		logger.SysError(fmt.Sprintf("failed to unmarshal inference profile ARN map for channel %d, error: %s", channel.Id, err.Error()))
+		return nil
+	}
+	return arnMap
+}
+
+func (channel *Channel) SetInferenceProfileArnMap(arnMap map[string]string) error {
+	if arnMap == nil || len(arnMap) == 0 {
+		channel.InferenceProfileArnMap = nil
+		return nil
+	}
+
+	// Validate that keys and values are not empty
+	for key, value := range arnMap {
+		if key == "" || value == "" {
+			return fmt.Errorf("inference profile ARN map cannot contain empty keys or values")
+		}
+	}
+
+	jsonBytes, err := json.Marshal(arnMap)
+	if err != nil {
+		return err
+	}
+	jsonStr := string(jsonBytes)
+	channel.InferenceProfileArnMap = &jsonStr
+	return nil
+}
+
+// ValidateInferenceProfileArnMapJSON validates a JSON string for inference profile ARN mapping
+func ValidateInferenceProfileArnMapJSON(jsonStr string) error {
+	if jsonStr == "" {
+		return nil // Empty is allowed
+	}
+
+	var arnMap map[string]string
+	err := json.Unmarshal([]byte(jsonStr), &arnMap)
+	if err != nil {
+		return fmt.Errorf("invalid JSON format: %v", err)
+	}
+
+	// Validate that keys and values are not empty
+	for key, value := range arnMap {
+		if key == "" {
+			return fmt.Errorf("inference profile ARN map cannot contain empty keys")
+		}
+		if value == "" {
+			return fmt.Errorf("inference profile ARN map cannot contain empty values")
+		}
+	}
+
+	return nil
 }
 
 func (channel *Channel) Insert() error {

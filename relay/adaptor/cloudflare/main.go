@@ -11,7 +11,9 @@ import (
 	"github.com/songquanpeng/one-api/common/render"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
@@ -19,12 +21,16 @@ import (
 )
 
 func ConvertCompletionsRequest(textRequest model.GeneralOpenAIRequest) *Request {
-	return &Request{
+	request := &Request{
 		Prompt:      textRequest.Prompt,
 		MaxTokens:   textRequest.MaxTokens,
 		Stream:      textRequest.Stream,
 		Temperature: textRequest.Temperature,
 	}
+	if request.MaxTokens == 0 {
+		request.MaxTokens = config.DefaultMaxToken
+	}
+	return request
 }
 
 func StreamHandler(c *gin.Context, resp *http.Response, promptTokens int, modelName string) (*model.ErrorWithStatusCode, *model.Usage) {

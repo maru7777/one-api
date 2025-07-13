@@ -19,6 +19,11 @@ const EditUser = (props) => {
     group: 'default'
   });
   const [groupOptions, setGroupOptions] = useState([]);
+
+  // TOTP related state
+  const [totpEnabled, setTotpEnabled] = useState(false);
+  const [totpLoading, setTotpLoading] = useState(false);
+
   const { username, display_name, password, github_id, wechat_id, telegram_id, email, quota, group } =
     inputs;
   const handleInputChange = (name, value) => {
@@ -51,10 +56,30 @@ const EditUser = (props) => {
     if (success) {
       data.password = '';
       setInputs(data);
+      // For admin editing other users, set TOTP status from user data
+      if (userId) {
+        setTotpEnabled(data.totp_secret && data.totp_secret !== '');
+      }
     } else {
       showError(message);
     }
     setLoading(false);
+  };
+
+  const adminDisableTotp = async () => {
+    setTotpLoading(true);
+    try {
+      const res = await API.post(`/api/user/totp/disable/${userId}`);
+      if (res.data.success) {
+        showSuccess('TOTP has been successfully disabled for the user');
+        setTotpEnabled(false);
+      } else {
+        showError(res.data.message);
+      }
+    } catch (error) {
+      showError('Failed to disable TOTP');
+    }
+    setTotpLoading(false);
   };
 
   useEffect(() => {
@@ -211,6 +236,38 @@ const EditUser = (props) => {
             placeholder="此项只读，需要用户通过个人设置页面的相关绑定按钮进行绑定，不可直接修改"
             readonly
           />
+
+          {/* Admin TOTP Section - Show when admin is editing other users */}
+          {userId && (
+            <>
+              <Divider style={{ marginTop: 20 }}>双因子认证 (TOTP) - 管理员控制</Divider>
+              {totpEnabled ? (
+                <div style={{ marginTop: 20, padding: 16, backgroundColor: '#fff3cd', border: '1px solid #ffeaa7', borderRadius: 4 }}>
+                  <Typography.Text strong style={{ color: '#856404' }}>此用户已启用 TOTP</Typography.Text>
+                  <div style={{ marginTop: 8 }}>
+                    <Typography.Text style={{ color: '#856404' }}>作为管理员，如果用户被锁定，您可以为其禁用 TOTP。</Typography.Text>
+                  </div>
+                  <div style={{ marginTop: 12 }}>
+                    <Button
+                      theme="solid"
+                      type="danger"
+                      onClick={adminDisableTotp}
+                      loading={totpLoading}
+                    >
+                      管理员禁用 TOTP
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ marginTop: 20, padding: 16, backgroundColor: '#d1ecf1', border: '1px solid #bee5eb', borderRadius: 4 }}>
+                  <Typography.Text strong style={{ color: '#0c5460' }}>此用户未启用 TOTP</Typography.Text>
+                  <div style={{ marginTop: 8 }}>
+                    <Typography.Text style={{ color: '#0c5460' }}>此用户尚未启用双因子认证。</Typography.Text>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </Spin>
       </SideSheet>
     </>

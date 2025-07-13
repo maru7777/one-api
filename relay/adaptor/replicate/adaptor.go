@@ -11,7 +11,9 @@ import (
 
 	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
+
 	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/relay/adaptor"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
@@ -136,7 +138,7 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 	if request.MaxTokens > 0 {
 		replicateRequest.Input.MaxTokens = request.MaxTokens
 	} else if request.MaxTokens == 0 {
-		replicateRequest.Input.MaxTokens = 500
+		replicateRequest.Input.MaxTokens = config.DefaultMaxToken
 	}
 
 	return replicateRequest, nil
