@@ -137,18 +137,20 @@ func (channel *Channel) GetModelMapping() map[string]string {
 
 func (channel *Channel) GetModelConfig(modelName string) *ModelConfig {
 	if channel.ModelConfigs == nil || *channel.ModelConfigs == "" || *channel.ModelConfigs == "{}" {
-		logger.SysError(fmt.Sprintf("no ModelConfigs: %v.", channel.ModelConfigs))
+		logger.SysWarnf(fmt.Sprintf("no ModelConfigs: %v.", channel.ModelConfigs))
 		return nil
 	}
 	modelConfigs := make(map[string]ModelConfig)
 	err := json.Unmarshal([]byte(*channel.ModelConfigs), &modelConfigs)
 	if err != nil {
-		logger.SysError(fmt.Sprintf("failed to unmarshal model mapping for channel %d, error: %s", channel.Id, err.Error()))
+		logger.SysError(fmt.Sprintf("failed to unmarshal model congigs for channel %d, error: %s", channel.Id, err.Error()))
 		return nil
 	}
 
-	modelConfig := modelConfigs[modelName]
-
+	modelConfig, exists := modelConfigs[modelName]
+	if !exists {
+		return nil
+	}
 	return &modelConfig
 }
 

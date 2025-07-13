@@ -354,12 +354,12 @@ func CacheGetRandomSatisfiedChannel(group string, model string, ignoreFirstPrior
 
 	sort.Slice(candidateChannels, func(i, j int) bool {
 		iModelConfig, jModelConfig := candidateChannels[i].GetModelConfig(model), candidateChannels[j].GetModelConfig(model)
-		if iModelConfig.MaxTokens == 0 && jModelConfig.MaxTokens != 0 {
-			return false
+		// Treat 0 as infinity (no limit)
+		if iModelConfig == nil || iModelConfig.MaxTokens == 0 {
+			return false // i has no limit, so it's not less than j
 		}
-
-		if iModelConfig.MaxTokens != 0 && jModelConfig.MaxTokens == 0 {
-			return false
+		if jModelConfig == nil || jModelConfig.MaxTokens == 0 {
+			return true // j has no limit, so i is less than j
 		}
 
 		return iModelConfig.MaxTokens < jModelConfig.MaxTokens
@@ -435,7 +435,9 @@ func CacheGetRandomSatisfiedChannelExcluding(group string, model string, ignoreF
 		var LargerMaxTokensSizeChannels []*Channel
 		for _, channel := range channelsFromCache {
 			modelConfig := channel.GetModelConfig(model)
-			if !smallerMaxTokensSizes[modelConfig.MaxTokens] {
+			if modelConfig != nil && !smallerMaxTokensSizes[modelConfig.MaxTokens] {
+				LargerMaxTokensSizeChannels = append(LargerMaxTokensSizeChannels, channel)
+			} else if modelConfig == nil {
 				LargerMaxTokensSizeChannels = append(LargerMaxTokensSizeChannels, channel)
 			}
 		}
