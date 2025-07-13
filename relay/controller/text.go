@@ -31,6 +31,7 @@ import (
 func RelayTextHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 	ctx := c.Request.Context()
 	meta := metalib.GetByContext(c)
+	meta.BaseURL = c.GetString(ctxkey.BaseURL)
 	// get & validate textRequest
 	textRequest, err := getAndValidateTextRequest(c, meta.Mode)
 	if err != nil {
