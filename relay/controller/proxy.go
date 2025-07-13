@@ -22,6 +22,7 @@ import (
 func RelayProxyHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatusCode {
 	ctx := c.Request.Context()
 	meta := metalib.GetByContext(c)
+	meta.ChannelId = c.GetInt(ctxkey.ChannelId)
 
 	adaptor := relay.GetAdaptor(meta.APIType)
 	if adaptor == nil {

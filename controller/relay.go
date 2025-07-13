@@ -135,8 +135,8 @@ func Relay(c *gin.Context) {
 
 		// Try to find an available channel, preferring lower priority channels for 429 errors
 		if config.DebugEnabled {
-			logger.Infof(ctx, "Debug: Attempting retry %d, excluding channels: %v, shouldTryLowerPriorityFirst: %v",
-				retryTimes-i+1, getChannelIds(failedChannels), shouldTryLowerPriorityFirst)
+			logger.Infof(ctx, "Debug: Attempting retry %d, excluding channels: %v, shouldTryLowerPriorityFirst: %v, shouldTryLargerMaxTokensFirst: %v",
+				retryTimes-i+1, getChannelIds(failedChannels), shouldTryLowerPriorityFirst, shouldTryLargerMaxTokensFirst)
 		}
 
 		if shouldTryLargerMaxTokensFirst {
