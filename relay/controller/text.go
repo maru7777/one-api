@@ -57,8 +57,9 @@ func RelayTextHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 	var channelCompletionRatio map[string]float64
 	if channelModel, ok := c.Get(ctxkey.ChannelModel); ok {
 		if channel, ok := channelModel.(*model.Channel); ok {
-			channelModelRatio = channel.GetModelRatio()
-			channelCompletionRatio = channel.GetCompletionRatio()
+			// Get from unified ModelConfigs only (after migration)
+			channelModelRatio = channel.GetModelRatioFromConfigs()
+			channelCompletionRatio = channel.GetCompletionRatioFromConfigs()
 		}
 	}
 

@@ -5,6 +5,7 @@ import {useNavigate, useParams} from 'react-router-dom';
 import {API, copy, getChannelModels, showError, showInfo, showSuccess, verifyJSON,} from '../../helpers';
 import {CHANNEL_OPTIONS, COZE_AUTH_OPTIONS} from '../../constants';
 import {renderChannelTip} from '../../helpers/render';
+import ChannelDebugPanel from '../../components/ChannelDebugPanel';
 
 const MODEL_MAPPING_EXAMPLE = {
   'gpt-3.5-turbo-0301': 'gpt-3.5-turbo',
@@ -14,7 +15,69 @@ const MODEL_MAPPING_EXAMPLE = {
 
 const MODEL_CONFIGS_EXAMPLE = {
   'gpt-3.5-turbo-0301': {
+    'ratio': 0.0015,
+    'completion_ratio': 2.0,
     'max_tokens': 65536,
+  },
+  'gpt-4': {
+    'ratio': 0.03,
+    'completion_ratio': 2.0,
+    'max_tokens': 128000,
+  }
+};
+
+// Enhanced validation for model configs
+const validateModelConfigs = (configStr) => {
+  if (!configStr || configStr.trim() === '') {
+    return { valid: true };
+  }
+
+  try {
+    const configs = JSON.parse(configStr);
+
+    if (typeof configs !== 'object' || configs === null || Array.isArray(configs)) {
+      return { valid: false, error: 'Model configs must be a JSON object' };
+    }
+
+    for (const [modelName, config] of Object.entries(configs)) {
+      if (!modelName || modelName.trim() === '') {
+        return { valid: false, error: 'Model name cannot be empty' };
+      }
+
+      if (typeof config !== 'object' || config === null || Array.isArray(config)) {
+        return { valid: false, error: `Configuration for model "${modelName}" must be an object` };
+      }
+
+      // Validate ratio
+      if (config.ratio !== undefined) {
+        if (typeof config.ratio !== 'number' || config.ratio < 0) {
+          return { valid: false, error: `Invalid ratio for model "${modelName}": must be a non-negative number` };
+        }
+      }
+
+      // Validate completion_ratio
+      if (config.completion_ratio !== undefined) {
+        if (typeof config.completion_ratio !== 'number' || config.completion_ratio < 0) {
+          return { valid: false, error: `Invalid completion_ratio for model "${modelName}": must be a non-negative number` };
+        }
+      }
+
+      // Validate max_tokens
+      if (config.max_tokens !== undefined) {
+        if (!Number.isInteger(config.max_tokens) || config.max_tokens < 0) {
+          return { valid: false, error: `Invalid max_tokens for model "${modelName}": must be a non-negative integer` };
+        }
+      }
+
+      // Check if at least one meaningful field is provided
+      if (config.ratio === undefined && config.completion_ratio === undefined && config.max_tokens === undefined) {
+        return { valid: false, error: `Model "${modelName}" must have at least one configuration field (ratio, completion_ratio, or max_tokens)` };
+      }
+    }
+
+    return { valid: true };
+  } catch (error) {
+    return { valid: false, error: `Invalid JSON format: ${error.message}` };
   }
 };
 
@@ -87,23 +150,49 @@ const EditChannel = () => {
     auth_type: 'personal_access_token',
   });
   const [defaultPricing, setDefaultPricing] = useState({
-    model_ratio: '',
-    completion_ratio: '',
+    model_configs: '',
   });
+
   const loadDefaultPricing = async (channelType) => {
     try {
       const res = await API.get(`/api/channel/default-pricing?type=${channelType}`);
       if (res.data.success) {
+        // Convert old format to new unified format if needed
+        let defaultModelConfigs = '';
+
+        if (res.data.data.model_configs) {
+          // Already in new format
+          defaultModelConfigs = res.data.data.model_configs;
+        } else if (res.data.data.model_ratio || res.data.data.completion_ratio) {
+          // Convert from old format to new format
+          const modelRatio = res.data.data.model_ratio ? JSON.parse(res.data.data.model_ratio) : {};
+          const completionRatio = res.data.data.completion_ratio ? JSON.parse(res.data.data.completion_ratio) : {};
+
+          const unifiedConfigs = {};
+          const allModels = new Set([...Object.keys(modelRatio), ...Object.keys(completionRatio)]);
+
+          for (const modelName of allModels) {
+            unifiedConfigs[modelName] = {};
+            if (modelRatio[modelName]) {
+              unifiedConfigs[modelName].ratio = modelRatio[modelName];
+            }
+            if (completionRatio[modelName]) {
+              unifiedConfigs[modelName].completion_ratio = completionRatio[modelName];
+            }
+          }
+
+          defaultModelConfigs = JSON.stringify(unifiedConfigs, null, 2);
+        }
+
         setDefaultPricing({
-          model_ratio: res.data.data.model_ratio || '',
-          completion_ratio: res.data.data.completion_ratio || '',
+          model_configs: defaultModelConfigs,
         });
-        // If current pricing is empty, populate with defaults
-        if (!inputs.model_ratio && !inputs.completion_ratio) {
+
+        // If current model_configs is empty, populate with defaults
+        if (!inputs.model_configs) {
           setInputs((inputs) => ({
             ...inputs,
-            model_ratio: res.data.data.model_ratio || '',
-            completion_ratio: res.data.data.completion_ratio || '',
+            model_configs: defaultModelConfigs,
           }));
         }
       }
@@ -112,7 +201,37 @@ const EditChannel = () => {
     }
   };
 
+  const formatJSON = (jsonString) => {
+    if (!jsonString || jsonString.trim() === '') return '';
+    try {
+      const parsed = JSON.parse(jsonString);
+      return JSON.stringify(parsed, null, 2);
+    } catch (e) {
+      return jsonString; // Return original if parsing fails
+    }
+  };
+
+  const isValidJSON = (jsonString) => {
+    if (!jsonString || jsonString.trim() === '') return true; // Empty is valid
+    try {
+      JSON.parse(jsonString);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+
   const handleInputChange = (e, { name, value }) => {
+    // Auto-format JSON for model_configs field on blur/paste
+    if (name === 'model_configs' && value && value.trim() !== '') {
+      try {
+        const parsed = JSON.parse(value);
+        value = JSON.stringify(parsed, null, 2);
+      } catch (e) {
+        // Keep original value if JSON is invalid (user might still be typing)
+      }
+    }
+
     setInputs((inputs) => ({ ...inputs, [name]: value }));
     if (name === 'type') {
       let localModels = getChannelModels(value);
@@ -130,7 +249,9 @@ const EditChannel = () => {
   };
 
   const loadChannel = async () => {
-    let res = await API.get(`/api/channel/${channelId}`);
+    // Add cache busting parameter to ensure fresh data
+    const cacheBuster = Date.now();
+    let res = await API.get(`/api/channel/${channelId}?_cb=${cacheBuster}`);
     const { success, message, data } = res.data;
     if (success) {
       if (data.models === '') {
@@ -151,11 +272,15 @@ const EditChannel = () => {
         );
       }
       if (data.model_configs !== '') {
-        data.model_configs = JSON.stringify(
-          JSON.parse(data.model_configs),
-          null,
-          2
-        );
+        try {
+          const parsedConfigs = JSON.parse(data.model_configs);
+          // Pretty format with proper indentation
+          data.model_configs = JSON.stringify(parsedConfigs, null, 2);
+          console.log('Loaded model_configs for channel:', data.id, 'type:', data.type, 'models:', Object.keys(parsedConfigs));
+        } catch (e) {
+          console.error('Failed to parse model_configs:', e);
+          // If parsing fails, keep original value but log the error
+        }
       }
       // Format pricing fields for display
       if (data.model_ratio && data.model_ratio !== '') {
@@ -273,20 +398,15 @@ const EditChannel = () => {
       showInfo(t('channel.edit.messages.model_mapping_invalid'));
       return;
     }
-    if (inputs.model_configs !== '' && !verifyJSON(inputs.model_configs)) {
-      showInfo(t('channel.edit.messages.model_configs_invalid'));
-      return;
+    if (inputs.model_configs !== '') {
+      const validation = validateModelConfigs(inputs.model_configs);
+      if (!validation.valid) {
+        showInfo(`${t('channel.edit.messages.model_configs_invalid')}: ${validation.error}`);
+        return;
+      }
     }
 
-    // Validate pricing fields
-    if (inputs.model_ratio !== '' && !verifyJSON(inputs.model_ratio)) {
-      showInfo(t('channel.edit.messages.model_ratio_invalid'));
-      return;
-    }
-    if (inputs.completion_ratio !== '' && !verifyJSON(inputs.completion_ratio)) {
-      showInfo(t('channel.edit.messages.completion_ratio_invalid'));
-      return;
-    }
+    // Note: model_ratio and completion_ratio are now handled through model_configs
     if (inputs.inference_profile_arn_map !== '' && !verifyJSON(inputs.inference_profile_arn_map)) {
       showInfo(t('channel.edit.messages.inference_profile_arn_map_invalid'));
       return;
@@ -393,10 +513,19 @@ const EditChannel = () => {
     <div className='dashboard-container'>
       <Card fluid className='chart-card'>
         <Card.Content>
-          <Card.Header className='header'>
-            {isEdit
-              ? t('channel.edit.title_edit')
-              : t('channel.edit.title_create')}
+          <Card.Header className='header' style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>
+              {isEdit
+                ? t('channel.edit.title_edit')
+                : t('channel.edit.title_create')}
+            </span>
+            {isEdit && (
+              <ChannelDebugPanel
+                channelId={channelId}
+                channelType={inputs.type}
+                channelName={inputs.name}
+              />
+            )}
           </Card.Header>
           <Form loading={loading} autoComplete='new-password'>
             <Form.Field>
@@ -647,20 +776,80 @@ const EditChannel = () => {
                   />
                 </Form.Field>
                 <Form.Field>
+                  <label>
+                    {t('channel.edit.model_configs')}
+                    <Button
+                      type="button"
+                      size="mini"
+                      onClick={() => {
+                        const formatted = formatJSON(defaultPricing.model_configs);
+                        setInputs((inputs) => ({
+                          ...inputs,
+                          model_configs: formatted,
+                        }));
+                      }}
+                      style={{ marginLeft: '10px' }}
+                    >
+                      {t('channel.edit.buttons.load_defaults')}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="mini"
+                      onClick={() => {
+                        const formatted = formatJSON(inputs.model_configs);
+                        setInputs((inputs) => ({
+                          ...inputs,
+                          model_configs: formatted,
+                        }));
+                      }}
+                      style={{ marginLeft: '5px' }}
+                      disabled={!inputs.model_configs || inputs.model_configs.trim() === ''}
+                    >
+                      Format JSON
+                    </Button>
+                  </label>
                   <Form.TextArea
-                    label={t('channel.edit.model_configs')}
                     placeholder={`${t(
                       'channel.edit.model_configs_placeholder'
                     )}\n${JSON.stringify(MODEL_CONFIGS_EXAMPLE, null, 2)}`}
                     name='model_configs'
                     onChange={handleInputChange}
+                    onBlur={(e) => {
+                      // Auto-format on blur for better UX
+                      const formatted = formatJSON(e.target.value);
+                      if (formatted !== e.target.value) {
+                        setInputs((inputs) => ({
+                          ...inputs,
+                          model_configs: formatted,
+                        }));
+                      }
+                    }}
                     value={inputs.model_configs}
                     style={{
-                      minHeight: 150,
-                      fontFamily: 'JetBrains Mono, Consolas',
+                      minHeight: 200,
+                      fontFamily: 'JetBrains Mono, Consolas, Monaco, "Courier New", monospace',
+                      fontSize: '13px',
+                      lineHeight: '1.4',
+                      backgroundColor: '#f8f9fa',
+                      border: `1px solid ${isValidJSON(inputs.model_configs) ? '#e1e5e9' : '#ff6b6b'}`,
+                      borderRadius: '4px',
                     }}
                     autoComplete='new-password'
                   />
+                  <div style={{ fontSize: '12px', marginTop: '5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#666' }}>
+                      {t('channel.edit.model_configs_help')} JSON will be automatically formatted when you finish editing.
+                    </span>
+                    {inputs.model_configs && inputs.model_configs.trim() !== '' && (
+                      <span style={{
+                        color: isValidJSON(inputs.model_configs) ? '#28a745' : '#dc3545',
+                        fontWeight: 'bold',
+                        fontSize: '11px'
+                      }}>
+                        {isValidJSON(inputs.model_configs) ? '✓ Valid JSON' : '✗ Invalid JSON'}
+                      </span>
+                    )}
+                  </div>
                 </Form.Field>
                 <Form.Field>
                   <Form.TextArea
@@ -902,72 +1091,7 @@ const EditChannel = () => {
                 </Form.Field>
               )}
 
-            {/* Channel-specific pricing fields */}
-            <Form.Field>
-              <label>
-                {t('channel.edit.model_ratio')}
-                <Button
-                  type="button"
-                  size="mini"
-                  onClick={() => {
-                    setInputs((inputs) => ({
-                      ...inputs,
-                      model_ratio: defaultPricing.model_ratio,
-                    }));
-                  }}
-                  style={{ marginLeft: '10px' }}
-                >
-                  {t('channel.edit.buttons.load_defaults')}
-                </Button>
-              </label>
-              <Form.TextArea
-                name="model_ratio"
-                placeholder={t('channel.edit.model_ratio_placeholder')}
-                style={{
-                  minHeight: 150,
-                  fontFamily: 'JetBrains Mono, Consolas',
-                }}
-                onChange={handleInputChange}
-                value={inputs.model_ratio}
-                autoComplete="new-password"
-              />
-              <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
-                {t('channel.edit.model_ratio_help')}
-              </div>
-            </Form.Field>
-
-            <Form.Field>
-              <label>
-                {t('channel.edit.completion_ratio')}
-                <Button
-                  type="button"
-                  size="mini"
-                  onClick={() => {
-                    setInputs((inputs) => ({
-                      ...inputs,
-                      completion_ratio: defaultPricing.completion_ratio,
-                    }));
-                  }}
-                  style={{ marginLeft: '10px' }}
-                >
-                  {t('channel.edit.buttons.load_defaults')}
-                </Button>
-              </label>
-              <Form.TextArea
-                name="completion_ratio"
-                placeholder={t('channel.edit.completion_ratio_placeholder')}
-                style={{
-                  minHeight: 150,
-                  fontFamily: 'JetBrains Mono, Consolas',
-                }}
-                onChange={handleInputChange}
-                value={inputs.completion_ratio}
-                autoComplete="new-password"
-              />
-              <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
-                {t('channel.edit.completion_ratio_help')}
-              </div>
-            </Form.Field>
+            {/* Channel-specific pricing fields - now handled through model_configs */}
 
             {/* AWS-specific inference profile ARN mapping */}
             {inputs.type === 33 && (

@@ -103,7 +103,7 @@
       "model_mapping": "模型重定向",
       "model_mapping_placeholder": "此项可选，用于修改请求体中的模型名称，为一个 JSON 字符串，键为请求中模型名称，值为要替换的模型名称",
       "model_configs": "模型配置",
-      "model_configs_placeholder": "此项可选，用于设置模型的属性，为一个JSON字符串，键为模型的名称，值为模型的属性，也是一个JSON字符串",
+      "model_configs_placeholder": "此项可选，统一的模型配置包括定价和属性。JSON格式，键为模型名称，值包含ratio、completion_ratio和max_tokens字段",
       "system_prompt": "系统提示词",
       "system_prompt_placeholder": "此项可选，用于强制设置给定的系统提示词，请配合自定义模型 & 模型重定向使用，首先创建一个唯一的自定义模型名称并在上面填入，之后将该自定义模型重定向映射到该渠道一个原生支持的模型",
       "proxy_url": "代理",

@@ -143,6 +143,12 @@ func InitDB() {
 		return
 	}
 	logger.SysLog("database migrated")
+
+	// Migrate existing ModelConfigs data from old format to new format
+	if err = MigrateAllChannelModelConfigs(); err != nil {
+		logger.SysError("failed to migrate channel ModelConfigs: " + err.Error())
+		// Don't fail startup for this migration, just log the error
+	}
 }
 
 func migrateDB() error {

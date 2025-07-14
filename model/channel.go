@@ -42,8 +42,9 @@ type Channel struct {
 	SystemPrompt       *string `json:"system_prompt" gorm:"type:text"`
 	RateLimit          *int    `json:"ratelimit" gorm:"column:ratelimit;default:0"`
 	// Channel-specific pricing tables
-	ModelRatio      *string `json:"model_ratio" gorm:"type:text"`      // JSON string of model pricing ratios
-	CompletionRatio *string `json:"completion_ratio" gorm:"type:text"` // JSON string of completion pricing ratios
+	// DEPRECATED: Use ModelConfigs instead. These fields are kept for backward compatibility and migration.
+	ModelRatio      *string `json:"model_ratio" gorm:"type:text"`      // DEPRECATED: JSON string of model pricing ratios
+	CompletionRatio *string `json:"completion_ratio" gorm:"type:text"` // DEPRECATED: JSON string of completion pricing ratios
 	// AWS-specific configuration
 	InferenceProfileArnMap *string `json:"inference_profile_arn_map" gorm:"type:text"` // JSON string mapping model names to AWS Bedrock Inference Profile ARNs
 }
@@ -63,6 +64,14 @@ type ChannelConfig struct {
 
 type ModelConfig struct {
 	MaxTokens int32 `json:"max_tokens,omitempty"`
+}
+
+// ModelPriceLocal represents the local definition of ModelPrice to avoid import cycles
+// This should match the structure in relay/adaptor/interface.go
+type ModelPriceLocal struct {
+	Ratio           float64 `json:"ratio"`
+	CompletionRatio float64 `json:"completion_ratio,omitempty"`
+	MaxTokens       int32   `json:"max_tokens,omitempty"`
 }
 
 func GetAllChannels(startIdx int, num int, scope string) ([]*Channel, error) {
@@ -138,23 +147,256 @@ func (channel *Channel) GetModelMapping() map[string]string {
 	return modelMapping
 }
 
+// GetModelConfig returns the model configuration for a specific model
+// DEPRECATED: Use GetModelPriceConfig() instead. This method is kept for backward compatibility.
 func (channel *Channel) GetModelConfig(modelName string) *ModelConfig {
-	if channel.ModelConfigs == nil || *channel.ModelConfigs == "" || *channel.ModelConfigs == "{}" {
-		logger.SysWarn(fmt.Sprintf("no ModelConfigs: %v.", channel.ModelConfigs))
-		return nil
+	// Only use unified ModelConfigs after migration
+	priceConfig := channel.GetModelPriceConfig(modelName)
+	if priceConfig != nil {
+		// Convert ModelPriceLocal to ModelConfig for backward compatibility
+		return &ModelConfig{
+			MaxTokens: priceConfig.MaxTokens,
+		}
 	}
-	modelConfigs := make(map[string]ModelConfig)
-	err := json.Unmarshal([]byte(*channel.ModelConfigs), &modelConfigs)
+
+	return nil
+}
+
+// MigrateModelConfigsToModelPrice migrates existing ModelConfigs data from the old format
+// (map[string]ModelConfig) to the new format (map[string]ModelPriceLocal)
+// This handles cases where contributors have already applied the PR changes locally
+func (channel *Channel) MigrateModelConfigsToModelPrice() error {
+	if channel.ModelConfigs == nil || *channel.ModelConfigs == "" || *channel.ModelConfigs == "{}" {
+		return nil // Nothing to migrate
+	}
+
+	// Validate JSON format first
+	var rawData interface{}
+	if err := json.Unmarshal([]byte(*channel.ModelConfigs), &rawData); err != nil {
+		logger.SysError(fmt.Sprintf("Channel %d has invalid JSON in ModelConfigs: %s", channel.Id, err.Error()))
+		return fmt.Errorf("invalid JSON in ModelConfigs: %w", err)
+	}
+
+	// Try to unmarshal as the new format first
+	var newFormatConfigs map[string]ModelPriceLocal
+	err := json.Unmarshal([]byte(*channel.ModelConfigs), &newFormatConfigs)
+	if err == nil {
+		// Validate the new format data
+		if err := channel.validateModelPriceConfigs(newFormatConfigs); err != nil {
+			logger.SysError(fmt.Sprintf("Channel %d has invalid ModelPriceLocal data: %s", channel.Id, err.Error()))
+			return fmt.Errorf("invalid ModelPriceLocal data: %w", err)
+		}
+
+		// Check if it has pricing data (already in new format)
+		hasPricingData := false
+		for _, config := range newFormatConfigs {
+			if config.Ratio != 0 || config.CompletionRatio != 0 {
+				hasPricingData = true
+				break
+			}
+		}
+
+		if hasPricingData {
+			logger.SysLog(fmt.Sprintf("Channel %d ModelConfigs already in new format with pricing data", channel.Id))
+			return nil
+		}
+
+		logger.SysLog(fmt.Sprintf("Channel %d ModelConfigs in new format but needs pricing migration", channel.Id))
+	}
+
+	// Try to unmarshal as the old format (map[string]ModelConfig)
+	var oldFormatConfigs map[string]ModelConfig
+	err = json.Unmarshal([]byte(*channel.ModelConfigs), &oldFormatConfigs)
 	if err != nil {
-		logger.SysError(fmt.Sprintf("failed to unmarshal model congigs for channel %d, error: %s", channel.Id, err.Error()))
+		logger.SysError(fmt.Sprintf("Channel %d ModelConfigs cannot be parsed in either format: %s", channel.Id, err.Error()))
+		return fmt.Errorf("ModelConfigs cannot be parsed in either format: %w", err)
+	}
+
+	// Validate old format data
+	for modelName, config := range oldFormatConfigs {
+		if modelName == "" {
+			logger.SysError(fmt.Sprintf("Channel %d has empty model name in ModelConfigs", channel.Id))
+			return fmt.Errorf("empty model name found in ModelConfigs")
+		}
+		if config.MaxTokens < 0 {
+			logger.SysError(fmt.Sprintf("Channel %d has negative MaxTokens for model %s", channel.Id, modelName))
+			return fmt.Errorf("negative MaxTokens for model %s", modelName)
+		}
+	}
+
+	// Convert old format to new format
+	migratedConfigs := make(map[string]ModelPriceLocal)
+
+	// Get existing ModelRatio and CompletionRatio for this channel
+	modelRatios := channel.GetModelRatio()
+	completionRatios := channel.GetCompletionRatio()
+
+	for modelName, oldConfig := range oldFormatConfigs {
+		newConfig := ModelPriceLocal{
+			MaxTokens: oldConfig.MaxTokens,
+		}
+
+		// Add pricing information if available
+		if modelRatios != nil {
+			if ratio, exists := modelRatios[modelName]; exists && ratio > 0 {
+				newConfig.Ratio = ratio
+			}
+		}
+		if completionRatios != nil {
+			if completionRatio, exists := completionRatios[modelName]; exists && completionRatio > 0 {
+				newConfig.CompletionRatio = completionRatio
+			}
+		}
+
+		migratedConfigs[modelName] = newConfig
+	}
+
+	// Validate migrated data
+	if err := channel.validateModelPriceConfigs(migratedConfigs); err != nil {
+		logger.SysError(fmt.Sprintf("Channel %d migration produced invalid data: %s", channel.Id, err.Error()))
+		return fmt.Errorf("migration produced invalid data: %w", err)
+	}
+
+	// Save the migrated data back to ModelConfigs
+	jsonBytes, err := json.Marshal(migratedConfigs)
+	if err != nil {
+		logger.SysError(fmt.Sprintf("Failed to marshal migrated ModelConfigs for channel %d: %s", channel.Id, err.Error()))
+		return fmt.Errorf("failed to marshal migrated data: %w", err)
+	}
+
+	jsonStr := string(jsonBytes)
+	channel.ModelConfigs = &jsonStr
+
+	logger.SysLog(fmt.Sprintf("Successfully migrated ModelConfigs for channel %d from old format to new format (%d models)", channel.Id, len(migratedConfigs)))
+	return nil
+}
+
+// validateModelPriceConfigs validates the structure and values of ModelPriceLocal configurations
+func (channel *Channel) validateModelPriceConfigs(configs map[string]ModelPriceLocal) error {
+	if configs == nil {
 		return nil
 	}
 
-	modelConfig, exists := modelConfigs[modelName]
-	if !exists {
+	for modelName, config := range configs {
+		// Validate model name
+		if modelName == "" {
+			return fmt.Errorf("empty model name found")
+		}
+
+		// Validate ratio values
+		if config.Ratio < 0 {
+			return fmt.Errorf("negative ratio for model %s: %f", modelName, config.Ratio)
+		}
+		if config.CompletionRatio < 0 {
+			return fmt.Errorf("negative completion ratio for model %s: %f", modelName, config.CompletionRatio)
+		}
+
+		// Validate MaxTokens
+		if config.MaxTokens < 0 {
+			return fmt.Errorf("negative MaxTokens for model %s: %d", modelName, config.MaxTokens)
+		}
+
+		// Validate that at least one field has meaningful data
+		if config.Ratio == 0 && config.CompletionRatio == 0 && config.MaxTokens == 0 {
+			return fmt.Errorf("model %s has no meaningful configuration data", modelName)
+		}
+	}
+
+	return nil
+}
+
+// GetModelPriceConfigs returns the channel-specific model price configurations in the new unified format
+func (channel *Channel) GetModelPriceConfigs() map[string]ModelPriceLocal {
+	if channel.ModelConfigs == nil || *channel.ModelConfigs == "" || *channel.ModelConfigs == "{}" {
 		return nil
 	}
-	return &modelConfig
+
+	modelPriceConfigs := make(map[string]ModelPriceLocal)
+	err := json.Unmarshal([]byte(*channel.ModelConfigs), &modelPriceConfigs)
+	if err != nil {
+		logger.SysError(fmt.Sprintf("failed to unmarshal model price configs for channel %d, error: %s", channel.Id, err.Error()))
+		return nil
+	}
+
+	return modelPriceConfigs
+}
+
+// SetModelPriceConfigs sets the channel-specific model price configurations in the new unified format
+func (channel *Channel) SetModelPriceConfigs(modelPriceConfigs map[string]ModelPriceLocal) error {
+	if modelPriceConfigs == nil || len(modelPriceConfigs) == 0 {
+		channel.ModelConfigs = nil
+		return nil
+	}
+
+	// Validate the configurations before setting
+	if err := channel.validateModelPriceConfigs(modelPriceConfigs); err != nil {
+		return fmt.Errorf("invalid model price configurations: %w", err)
+	}
+
+	jsonBytes, err := json.Marshal(modelPriceConfigs)
+	if err != nil {
+		return fmt.Errorf("failed to marshal model price configurations: %w", err)
+	}
+
+	jsonStr := string(jsonBytes)
+	channel.ModelConfigs = &jsonStr
+	return nil
+}
+
+// GetModelPriceConfig returns the price configuration for a specific model
+func (channel *Channel) GetModelPriceConfig(modelName string) *ModelPriceLocal {
+	configs := channel.GetModelPriceConfigs()
+	if configs == nil {
+		return nil
+	}
+
+	if config, exists := configs[modelName]; exists {
+		return &config
+	}
+
+	return nil
+}
+
+// GetModelRatioFromConfigs extracts model ratios from the unified ModelConfigs
+func (channel *Channel) GetModelRatioFromConfigs() map[string]float64 {
+	configs := channel.GetModelPriceConfigs()
+	if configs == nil {
+		return nil
+	}
+
+	modelRatios := make(map[string]float64)
+	for modelName, config := range configs {
+		if config.Ratio != 0 {
+			modelRatios[modelName] = config.Ratio
+		}
+	}
+
+	if len(modelRatios) == 0 {
+		return nil
+	}
+
+	return modelRatios
+}
+
+// GetCompletionRatioFromConfigs extracts completion ratios from the unified ModelConfigs
+func (channel *Channel) GetCompletionRatioFromConfigs() map[string]float64 {
+	configs := channel.GetModelPriceConfigs()
+	if configs == nil {
+		return nil
+	}
+
+	completionRatios := make(map[string]float64)
+	for modelName, config := range configs {
+		if config.CompletionRatio != 0 {
+			completionRatios[modelName] = config.CompletionRatio
+		}
+	}
+
+	if len(completionRatios) == 0 {
+		return nil
+	}
+
+	return completionRatios
 }
 
 func (channel *Channel) GetInferenceProfileArnMap() map[string]string {
@@ -290,6 +532,7 @@ func (channel *Channel) LoadConfig() (ChannelConfig, error) {
 }
 
 // GetModelRatio returns the channel-specific model ratio map
+// DEPRECATED: Use GetModelPriceConfigs() instead. This method is kept for backward compatibility.
 func (channel *Channel) GetModelRatio() map[string]float64 {
 	if channel.ModelRatio == nil || *channel.ModelRatio == "" || *channel.ModelRatio == "{}" {
 		return nil
@@ -304,6 +547,7 @@ func (channel *Channel) GetModelRatio() map[string]float64 {
 }
 
 // GetCompletionRatio returns the channel-specific completion ratio map
+// DEPRECATED: Use GetModelPriceConfigs() instead. This method is kept for backward compatibility.
 func (channel *Channel) GetCompletionRatio() map[string]float64 {
 	if channel.CompletionRatio == nil || *channel.CompletionRatio == "" || *channel.CompletionRatio == "{}" {
 		return nil
@@ -318,6 +562,7 @@ func (channel *Channel) GetCompletionRatio() map[string]float64 {
 }
 
 // SetModelRatio sets the channel-specific model ratio map
+// DEPRECATED: Use SetModelPriceConfigs() instead. This method is kept for backward compatibility.
 func (channel *Channel) SetModelRatio(modelRatio map[string]float64) error {
 	if modelRatio == nil || len(modelRatio) == 0 {
 		channel.ModelRatio = nil
@@ -333,6 +578,7 @@ func (channel *Channel) SetModelRatio(modelRatio map[string]float64) error {
 }
 
 // SetCompletionRatio sets the channel-specific completion ratio map
+// DEPRECATED: Use SetModelPriceConfigs() instead. This method is kept for backward compatibility.
 func (channel *Channel) SetCompletionRatio(completionRatio map[string]float64) error {
 	if completionRatio == nil || len(completionRatio) == 0 {
 		channel.CompletionRatio = nil
@@ -390,4 +636,297 @@ func DeleteDisabledChannel() (int64, error) {
 		InitChannelCache()
 	}
 	return result.RowsAffected, result.Error
+}
+
+// MigrateHistoricalPricingToModelConfigs migrates historical ModelRatio and CompletionRatio data
+// into the new unified ModelConfigs format for a single channel
+func (channel *Channel) MigrateHistoricalPricingToModelConfigs() error {
+	// Validate channel
+	if channel == nil {
+		return fmt.Errorf("channel is nil")
+	}
+
+	// Get existing ModelRatio and CompletionRatio data with validation
+	var modelRatios map[string]float64
+	var completionRatios map[string]float64
+	var migrationErrors []string
+
+	// Safely get ModelRatio
+	if channel.ModelRatio != nil && *channel.ModelRatio != "" && *channel.ModelRatio != "{}" {
+		if err := json.Unmarshal([]byte(*channel.ModelRatio), &modelRatios); err != nil {
+			migrationErrors = append(migrationErrors, fmt.Sprintf("invalid ModelRatio JSON: %s", err.Error()))
+		} else {
+			// Validate ModelRatio values
+			for modelName, ratio := range modelRatios {
+				if modelName == "" {
+					migrationErrors = append(migrationErrors, "empty model name in ModelRatio")
+				}
+				if ratio < 0 {
+					migrationErrors = append(migrationErrors, fmt.Sprintf("negative ratio for model %s: %f", modelName, ratio))
+				}
+			}
+		}
+	}
+
+	// Safely get CompletionRatio
+	if channel.CompletionRatio != nil && *channel.CompletionRatio != "" && *channel.CompletionRatio != "{}" {
+		if err := json.Unmarshal([]byte(*channel.CompletionRatio), &completionRatios); err != nil {
+			migrationErrors = append(migrationErrors, fmt.Sprintf("invalid CompletionRatio JSON: %s", err.Error()))
+		} else {
+			// Validate CompletionRatio values
+			for modelName, ratio := range completionRatios {
+				if modelName == "" {
+					migrationErrors = append(migrationErrors, "empty model name in CompletionRatio")
+				}
+				if ratio < 0 {
+					migrationErrors = append(migrationErrors, fmt.Sprintf("negative completion ratio for model %s: %f", modelName, ratio))
+				}
+			}
+		}
+	}
+
+	// Report validation errors but continue with valid data
+	if len(migrationErrors) > 0 {
+		logger.SysError(fmt.Sprintf("Channel %d has validation errors in historical data: %v", channel.Id, migrationErrors))
+		// Don't return error - continue with valid data
+	}
+
+	// Skip if no valid historical data to migrate
+	if (modelRatios == nil || len(modelRatios) == 0) && (completionRatios == nil || len(completionRatios) == 0) {
+		return nil
+	}
+
+	// Check if ModelConfigs already has unified data
+	existingConfigs := channel.GetModelPriceConfigs()
+	if existingConfigs != nil && len(existingConfigs) > 0 {
+		// Check if existing configs have pricing data (not just MaxTokens)
+		hasPricingData := false
+		for _, config := range existingConfigs {
+			if config.Ratio != 0 || config.CompletionRatio != 0 {
+				hasPricingData = true
+				break
+			}
+		}
+
+		if hasPricingData {
+			logger.SysLog(fmt.Sprintf("Channel %d already has pricing data in ModelConfigs, skipping historical migration", channel.Id))
+			return nil
+		}
+
+		// Merge historical pricing with existing MaxTokens data
+		logger.SysLog(fmt.Sprintf("Channel %d has MaxTokens data, merging with historical pricing", channel.Id))
+	} else {
+		existingConfigs = make(map[string]ModelPriceLocal)
+	}
+
+	// Collect all model names from both ratios and existing configs
+	allModelNames := make(map[string]bool)
+	if modelRatios != nil {
+		for modelName := range modelRatios {
+			allModelNames[modelName] = true
+		}
+	}
+	if completionRatios != nil {
+		for modelName := range completionRatios {
+			allModelNames[modelName] = true
+		}
+	}
+	for modelName := range existingConfigs {
+		allModelNames[modelName] = true
+	}
+
+	// Create unified ModelConfigs from all data sources
+	modelConfigs := make(map[string]ModelPriceLocal)
+	for modelName := range allModelNames {
+		config := ModelPriceLocal{}
+
+		// Start with existing config if available
+		if existingConfig, exists := existingConfigs[modelName]; exists {
+			config = existingConfig
+		}
+
+		// Add/override pricing data from historical sources
+		if modelRatios != nil {
+			if ratio, exists := modelRatios[modelName]; exists {
+				config.Ratio = ratio
+			}
+		}
+
+		if completionRatios != nil {
+			if completionRatio, exists := completionRatios[modelName]; exists {
+				config.CompletionRatio = completionRatio
+			}
+		}
+
+		// Add if we have any data (pricing or MaxTokens)
+		if config.Ratio != 0 || config.CompletionRatio != 0 || config.MaxTokens != 0 {
+			modelConfigs[modelName] = config
+		}
+	}
+
+	// Save the migrated data to ModelConfigs
+	if len(modelConfigs) > 0 {
+		// Log the models being migrated for debugging
+		var modelNames []string
+		for modelName := range modelConfigs {
+			modelNames = append(modelNames, modelName)
+		}
+		logger.SysLog(fmt.Sprintf("Channel %d (type %d) migrating models: %v", channel.Id, channel.Type, modelNames))
+
+		err := channel.SetModelPriceConfigs(modelConfigs)
+		if err != nil {
+			logger.SysError(fmt.Sprintf("Failed to set migrated ModelConfigs for channel %d: %s", channel.Id, err.Error()))
+			return err
+		}
+
+		logger.SysLog(fmt.Sprintf("Successfully migrated historical pricing data to ModelConfigs for channel %d (%d models)", channel.Id, len(modelConfigs)))
+	}
+
+	return nil
+}
+
+// MigrateAllChannelModelConfigs migrates all channels' ModelConfigs from old format to new format
+// and also migrates historical ModelRatio/CompletionRatio data to the new unified format
+// This should be called during application startup to handle existing data
+func MigrateAllChannelModelConfigs() error {
+	logger.SysLog("Starting migration of all channel ModelConfigs and historical pricing data")
+
+	var channels []*Channel
+	err := DB.Find(&channels).Error
+	if err != nil {
+		logger.SysError(fmt.Sprintf("Failed to fetch channels for ModelConfigs migration: %s", err.Error()))
+		return fmt.Errorf("failed to fetch channels: %w", err)
+	}
+
+	if len(channels) == 0 {
+		logger.SysLog("No channels found for migration")
+		return nil
+	}
+
+	migratedCount := 0
+	historicalMigratedCount := 0
+	errorCount := 0
+	var migrationErrors []string
+
+	// Use transaction for data integrity
+	tx := DB.Begin()
+	if tx.Error != nil {
+		logger.SysError(fmt.Sprintf("Failed to start migration transaction: %s", tx.Error.Error()))
+		return fmt.Errorf("failed to start transaction: %w", tx.Error)
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			logger.SysError(fmt.Sprintf("Migration panicked, rolled back: %v", r))
+		}
+	}()
+
+	for _, channel := range channels {
+		channelUpdated := false
+		originalModelConfigs := ""
+		if channel.ModelConfigs != nil {
+			originalModelConfigs = *channel.ModelConfigs
+		}
+
+		// First, migrate existing ModelConfigs from old format to new format (PR format -> unified format)
+		if channel.ModelConfigs != nil && *channel.ModelConfigs != "" && *channel.ModelConfigs != "{}" {
+			err := channel.MigrateModelConfigsToModelPrice()
+			if err != nil {
+				errorMsg := fmt.Sprintf("Failed to migrate ModelConfigs for channel %d: %s", channel.Id, err.Error())
+				logger.SysError(errorMsg)
+				migrationErrors = append(migrationErrors, errorMsg)
+				errorCount++
+				continue
+			}
+			channelUpdated = true
+			migratedCount++
+		}
+
+		// Second, migrate historical ModelRatio/CompletionRatio data to ModelConfigs
+		err := channel.MigrateHistoricalPricingToModelConfigs()
+		if err != nil {
+			errorMsg := fmt.Sprintf("Failed to migrate historical pricing for channel %d: %s", channel.Id, err.Error())
+			logger.SysError(errorMsg)
+			migrationErrors = append(migrationErrors, errorMsg)
+			errorCount++
+			continue
+		}
+
+		// Check if historical migration actually created ModelConfigs data
+		if channel.ModelConfigs != nil && *channel.ModelConfigs != "" && *channel.ModelConfigs != "{}" {
+			if !channelUpdated { // Only count if it wasn't already counted in the first migration
+				historicalMigratedCount++
+				channelUpdated = true
+			}
+		}
+
+		// Save the migrated channel back to database if any changes were made
+		if channelUpdated {
+			// Validate the final result before saving
+			finalConfigs := channel.GetModelPriceConfigs()
+			if err := channel.validateModelPriceConfigs(finalConfigs); err != nil {
+				errorMsg := fmt.Sprintf("Migration validation failed for channel %d: %s", channel.Id, err.Error())
+				logger.SysError(errorMsg)
+				migrationErrors = append(migrationErrors, errorMsg)
+				errorCount++
+				// Restore original data
+				if originalModelConfigs != "" {
+					channel.ModelConfigs = &originalModelConfigs
+				} else {
+					channel.ModelConfigs = nil
+				}
+				continue
+			}
+
+			err = tx.Model(channel).Update("model_configs", channel.ModelConfigs).Error
+			if err != nil {
+				errorMsg := fmt.Sprintf("Failed to save migrated ModelConfigs for channel %d: %s", channel.Id, err.Error())
+				logger.SysError(errorMsg)
+				migrationErrors = append(migrationErrors, errorMsg)
+				errorCount++
+				continue
+			}
+		}
+	}
+
+	// Commit transaction if no critical errors
+	if errorCount == 0 {
+		if err := tx.Commit().Error; err != nil {
+			logger.SysError(fmt.Sprintf("Failed to commit migration transaction: %s", err.Error()))
+			return fmt.Errorf("failed to commit migration: %w", err)
+		}
+	} else {
+		tx.Rollback()
+		logger.SysError(fmt.Sprintf("Migration had %d errors, rolled back transaction", errorCount))
+
+		// If more than 50% of channels failed, return error to prevent silent data loss
+		failureRate := float64(errorCount) / float64(len(channels))
+		if failureRate > 0.5 {
+			return fmt.Errorf("migration failed for %d/%d channels (%.1f%%), rolled back to prevent data loss",
+				errorCount, len(channels), failureRate*100)
+		}
+
+		// For lower failure rates, log errors but don't fail startup
+		logger.SysError(fmt.Sprintf("Migration completed with %d errors out of %d channels", errorCount, len(channels)))
+	}
+
+	// Log final results
+	if migratedCount > 0 {
+		logger.SysLog(fmt.Sprintf("Successfully migrated ModelConfigs format for %d channels", migratedCount))
+	}
+	if historicalMigratedCount > 0 {
+		logger.SysLog(fmt.Sprintf("Successfully migrated historical pricing data for %d channels", historicalMigratedCount))
+	}
+	if errorCount > 0 {
+		logger.SysError(fmt.Sprintf("Migration completed with %d errors", errorCount))
+		for _, errMsg := range migrationErrors {
+			logger.SysError(fmt.Sprintf("Migration error: %s", errMsg))
+		}
+	}
+	if migratedCount == 0 && historicalMigratedCount == 0 && errorCount == 0 {
+		logger.SysLog("No channels required data migration")
+	}
+
+	return nil
 }

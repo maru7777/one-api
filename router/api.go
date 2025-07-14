@@ -93,6 +93,17 @@ func SetApiRouter(router *gin.Engine) {
 			channelRoute.DELETE("/disabled", controller.DeleteDisabledChannel)
 			channelRoute.DELETE("/:id", controller.DeleteChannel)
 		}
+		debugRoute := apiRouter.Group("/debug")
+		debugRoute.Use(middleware.AdminAuth())
+		{
+			debugRoute.POST("/channel/:id/debug", controller.DebugChannelModelConfigs)
+			debugRoute.GET("/channels", controller.DebugAllChannelModelConfigs)
+			debugRoute.POST("/channel/:id/fix", controller.FixChannelModelConfigs)
+			debugRoute.GET("/channels/validate", controller.ValidateAllChannelModelConfigs)
+			debugRoute.POST("/channels/remigrate", controller.RemigratAllChannels)
+			debugRoute.GET("/channel/:id/migration-status", controller.GetChannelMigrationStatus)
+			debugRoute.POST("/channels/clean", controller.CleanAllMixedModelData)
+		}
 		tokenRoute := apiRouter.Group("/token")
 		tokenRoute.Use(middleware.UserAuth())
 		{

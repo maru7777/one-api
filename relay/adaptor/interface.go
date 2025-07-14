@@ -10,11 +10,16 @@ import (
 	"github.com/songquanpeng/one-api/relay/model"
 )
 
-// ModelPrice represents pricing information for a model
+// ModelPrice represents pricing and configuration information for a model
+// This structure consolidates both pricing (Ratio, CompletionRatio) and
+// configuration (MaxTokens, etc.) to eliminate the need for separate ModelConfig
 type ModelPrice struct {
 	Ratio float64 `json:"ratio"`
 	// CompletionRatio represents the output rate / input rate
 	CompletionRatio float64 `json:"completion_ratio,omitempty"`
+	// MaxTokens represents the maximum token limit for this model on this channel
+	// 0 means no limit (infinity)
+	MaxTokens int32 `json:"max_tokens,omitempty"`
 }
 
 type Adaptor interface {
