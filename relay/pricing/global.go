@@ -33,7 +33,7 @@ var DefaultGlobalPricingAdapters = []int{
 // for custom channels that don't have specific model pricing
 type GlobalPricingManager struct {
 	mu                   sync.RWMutex
-	globalModelPricing   map[string]adaptor.ModelPrice
+	globalModelPricing   map[string]adaptor.ModelConfig
 	contributingAdapters []int // API types of adapters to include in global pricing
 	initialized          bool
 	getAdaptorFunc       func(apiType int) adaptor.Adaptor
@@ -132,7 +132,7 @@ func (gpm *GlobalPricingManager) initializeUnsafe() {
 
 	logger.SysLog("Initializing global model pricing from contributing adapters...")
 
-	gpm.globalModelPricing = make(map[string]adaptor.ModelPrice)
+	gpm.globalModelPricing = make(map[string]adaptor.ModelConfig)
 	successCount := 0
 
 	for _, apiType := range gpm.contributingAdapters {
@@ -212,14 +212,14 @@ func GetGlobalCompletionRatio(modelName string) float64 {
 }
 
 // GetGlobalModelPricing returns a copy of the entire global pricing map
-func GetGlobalModelPricing() map[string]adaptor.ModelPrice {
+func GetGlobalModelPricing() map[string]adaptor.ModelConfig {
 	globalPricingManager.mu.RLock()
 	defer globalPricingManager.mu.RUnlock()
 
 	globalPricingManager.ensureInitialized()
 
 	// Return a copy to prevent external modification
-	result := make(map[string]adaptor.ModelPrice)
+	result := make(map[string]adaptor.ModelConfig)
 	for k, v := range globalPricingManager.globalModelPricing {
 		result[k] = v
 	}

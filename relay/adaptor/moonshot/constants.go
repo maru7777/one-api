@@ -8,7 +8,7 @@ import (
 // ModelRatios contains all supported models and their pricing ratios
 // Model list is derived from the keys of this map, eliminating redundancy
 // Based on Moonshot pricing: https://platform.moonshot.cn/docs/pricing
-var ModelRatios = map[string]adaptor.ModelPrice{
+var ModelRatios = map[string]adaptor.ModelConfig{
 	// Moonshot Models - Based on https://platform.moonshot.cn/docs/pricing
 	"moonshot-v1-8k":   {Ratio: 12 * ratio.MilliTokensRmb, CompletionRatio: 1},
 	"moonshot-v1-32k":  {Ratio: 24 * ratio.MilliTokensRmb, CompletionRatio: 1},

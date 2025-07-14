@@ -26,7 +26,7 @@ func DebugChannelModelConfigs(channelId int) error {
 		logger.SysLog(fmt.Sprintf("ModelConfigs (raw): %s", *channel.ModelConfigs))
 
 		// Try to parse as new format
-		var newFormatConfigs map[string]ModelPriceLocal
+		var newFormatConfigs map[string]ModelConfigLocal
 		if err := json.Unmarshal([]byte(*channel.ModelConfigs), &newFormatConfigs); err == nil {
 			logger.SysLog(fmt.Sprintf("ModelConfigs (new format) - %d models:", len(newFormatConfigs)))
 			for modelName, config := range newFormatConfigs {
@@ -119,7 +119,7 @@ func DebugAllChannelModelConfigs() error {
 
 		if hasModelConfigs {
 			// Count models in unified format
-			var configs map[string]ModelPriceLocal
+			var configs map[string]ModelConfigLocal
 			if err := json.Unmarshal([]byte(*fullChannel.ModelConfigs), &configs); err == nil {
 				var modelNames []string
 				for modelName := range configs {
@@ -359,7 +359,7 @@ func ValidateAllChannelModelConfigs() error {
 
 		if hasModelConfigs {
 			// Validate unified format
-			var configs map[string]ModelPriceLocal
+			var configs map[string]ModelConfigLocal
 			if err := json.Unmarshal([]byte(*channel.ModelConfigs), &configs); err != nil {
 				logger.SysError(fmt.Sprintf("Channel %d: Invalid ModelConfigs JSON: %s", channel.Id, err.Error()))
 				issueCount++

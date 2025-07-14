@@ -9,7 +9,7 @@ import (
 // Model list is derived from the keys of this map, eliminating redundancy
 //
 // https://www.anthropic.com/pricing#api
-var ModelRatios = map[string]adaptor.ModelPrice{
+var ModelRatios = map[string]adaptor.ModelConfig{
 	// Claude Instant Models
 	"claude-instant-1.2": {Ratio: 0.8 * ratio.MilliTokensUsd, CompletionRatio: 3.0},
 

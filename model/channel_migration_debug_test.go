@@ -137,7 +137,7 @@ func TestMigrationDebug_DataIntegrity(t *testing.T) {
 
 	// Verify JSON serialization
 	require.NotNil(t, channel.ModelConfigs)
-	var serializedConfigs map[string]ModelPriceLocal
+	var serializedConfigs map[string]ModelConfigLocal
 	err = json.Unmarshal([]byte(*channel.ModelConfigs), &serializedConfigs)
 	require.NoError(t, err)
 	assert.Equal(t, configs, serializedConfigs)

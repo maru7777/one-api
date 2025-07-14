@@ -25,7 +25,7 @@ func (a *Adaptor) GetModelList() []string {
 
 // GetDefaultModelPricing returns the pricing information for DeepSeek models
 // Based on official DeepSeek pricing: https://platform.deepseek.com/api-docs/pricing/
-func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelConfig {
 	return ModelRatios
 }
 

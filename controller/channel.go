@@ -263,9 +263,9 @@ func UpdateChannelPricing(c *gin.Context) {
 	}
 
 	var request struct {
-		ModelRatio      map[string]float64               `json:"model_ratio"`
-		CompletionRatio map[string]float64               `json:"completion_ratio"`
-		ModelConfigs    map[string]model.ModelPriceLocal `json:"model_configs"`
+		ModelRatio      map[string]float64                `json:"model_ratio"`
+		CompletionRatio map[string]float64                `json:"completion_ratio"`
+		ModelConfigs    map[string]model.ModelConfigLocal `json:"model_configs"`
 	}
 
 	err = c.ShouldBindJSON(&request)
@@ -299,7 +299,7 @@ func UpdateChannelPricing(c *gin.Context) {
 		}
 	} else if (request.ModelRatio != nil && len(request.ModelRatio) > 0) || (request.CompletionRatio != nil && len(request.CompletionRatio) > 0) {
 		// Old format - convert to unified format automatically
-		modelConfigs := make(map[string]model.ModelPriceLocal)
+		modelConfigs := make(map[string]model.ModelConfigLocal)
 
 		// Collect all model names from both ratios
 		allModelNames := make(map[string]bool)
@@ -316,7 +316,7 @@ func UpdateChannelPricing(c *gin.Context) {
 
 		// Create ModelPriceLocal entries for each model
 		for modelName := range allModelNames {
-			config := model.ModelPriceLocal{}
+			config := model.ModelConfigLocal{}
 
 			if request.ModelRatio != nil {
 				if ratio, exists := request.ModelRatio[modelName]; exists {
@@ -373,7 +373,7 @@ func GetChannelDefaultPricing(c *gin.Context) {
 		return
 	}
 
-	var defaultPricing map[string]adaptor.ModelPrice
+	var defaultPricing map[string]adaptor.ModelConfig
 
 	// For Custom channels and OpenAI-compatible channels, use global pricing from all adapters
 	// This gives users access to pricing for all supported models
@@ -406,9 +406,9 @@ func GetChannelDefaultPricing(c *gin.Context) {
 	}
 
 	// Create unified model configs format
-	modelConfigs := make(map[string]model.ModelPriceLocal)
+	modelConfigs := make(map[string]model.ModelConfigLocal)
 	for modelName, price := range defaultPricing {
-		modelConfigs[modelName] = model.ModelPriceLocal{
+		modelConfigs[modelName] = model.ModelConfigLocal{
 			Ratio:           price.Ratio,
 			CompletionRatio: price.CompletionRatio,
 			MaxTokens:       price.MaxTokens,

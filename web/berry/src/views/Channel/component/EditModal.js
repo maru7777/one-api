@@ -249,7 +249,7 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
     }
   };
 
-  const loadDefaultPricing = async (channelType) => {
+  const loadDefaultPricing = async (channelType, existingModelConfigs = null) => {
     try {
       const res = await API.get(`/api/channel/default-pricing?type=${channelType}`);
       if (res.data.success) {
@@ -397,8 +397,8 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
       data.is_edit = true;
       initChannel(data.type);
       setInitialInput(data);
-      // Load default pricing for this channel type
-      loadDefaultPricing(data.type);
+      // Load default pricing for this channel type, but don't override existing model_configs
+      loadDefaultPricing(data.type, data.model_configs);
     } else {
       showError(message);
     }
@@ -830,14 +830,7 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
                   id="channel-model_configs-label"
                   value={values.model_configs}
                   name="model_configs"
-                  onBlur={(e) => {
-                    handleBlur(e);
-                    // Auto-format on blur for better UX
-                    const formatted = formatJSON(e.target.value);
-                    if (formatted !== e.target.value) {
-                      setFieldValue('model_configs', formatted);
-                    }
-                  }}
+                  onBlur={handleBlur}
                   onChange={handleChange}
                   aria-describedby="helper-text-channel-model_configs-label"
                   minRows={8}
@@ -863,7 +856,7 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
                 ) : (
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <FormHelperText id="helper-tex-channel-model_configs-label">
-                      JSON 格式：统一的模型配置包括定价和属性。键为模型名称，值包含ratio、completion_ratio和max_tokens字段。JSON将在编辑完成后自动格式化。
+                      JSON 格式：统一的模型配置包括定价和属性。键为模型名称，值包含ratio、completion_ratio和max_tokens字段。
                     </FormHelperText>
                     {values.model_configs && values.model_configs.trim() !== '' && (
                       <Typography

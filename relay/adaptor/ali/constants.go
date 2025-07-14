@@ -7,7 +7,7 @@ import (
 
 // ModelRatios contains all supported models and their pricing ratios
 // Model list is derived from the keys of this map, eliminating redundancy
-var ModelRatios = map[string]adaptor.ModelPrice{
+var ModelRatios = map[string]adaptor.ModelConfig{
 	// Qwen Turbo Models
 	"qwen-turbo":        {Ratio: 0.3 * ratio.MilliTokensRmb, CompletionRatio: 1},
 	"qwen-turbo-latest": {Ratio: 0.3 * ratio.MilliTokensRmb, CompletionRatio: 1},

@@ -149,7 +149,7 @@ func (a *Adaptor) GetChannelName() string {
 }
 
 // Pricing methods - Baidu adapter manages its own model pricing
-func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelConfig {
 	return ModelRatios
 }
 

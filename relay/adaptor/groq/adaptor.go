@@ -25,7 +25,7 @@ func (a *Adaptor) GetModelList() []string {
 
 // GetDefaultModelPricing returns the pricing information for Groq models
 // Based on Groq pricing: https://groq.com/pricing/
-func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelConfig {
 	return ModelRatios
 }
 

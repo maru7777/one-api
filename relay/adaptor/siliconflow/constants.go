@@ -8,7 +8,7 @@ import (
 // ModelRatios contains all supported models and their pricing ratios
 // Model list is derived from the keys of this map, eliminating redundancy
 // Based on SiliconFlow pricing: https://docs.siliconflow.cn/docs/getting-started
-var ModelRatios = map[string]adaptor.ModelPrice{
+var ModelRatios = map[string]adaptor.ModelConfig{
 	// SiliconFlow Models - Based on https://siliconflow.cn/pricing
 	"deepseek-chat":                           {Ratio: 0.14 * ratio.MilliTokensUsd, CompletionRatio: 1},
 	"deepseek-coder":                          {Ratio: 0.14 * ratio.MilliTokensUsd, CompletionRatio: 1},

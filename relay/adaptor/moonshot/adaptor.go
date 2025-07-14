@@ -25,7 +25,7 @@ func (a *Adaptor) GetModelList() []string {
 
 // GetDefaultModelPricing returns the pricing information for Moonshot models
 // Based on official Moonshot pricing: https://platform.moonshot.cn/pricing
-func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelConfig {
 	return ModelRatios
 }
 

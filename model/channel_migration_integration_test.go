@@ -15,7 +15,7 @@ func TestMigrationIntegration_CompleteWorkflow(t *testing.T) {
 		initialModelConfigs    *string
 		initialModelRatio      *string
 		initialCompletionRatio *string
-		expectedFinalConfigs   map[string]ModelPriceLocal
+		expectedFinalConfigs   map[string]ModelConfigLocal
 		expectError            bool
 	}{
 		{
@@ -23,7 +23,7 @@ func TestMigrationIntegration_CompleteWorkflow(t *testing.T) {
 			initialModelConfigs:    nil,
 			initialModelRatio:      stringPtr(`{"gpt-3.5-turbo": 0.0015, "gpt-4": 0.03}`),
 			initialCompletionRatio: stringPtr(`{"gpt-3.5-turbo": 2.0, "gpt-4": 2.0}`),
-			expectedFinalConfigs: map[string]ModelPriceLocal{
+			expectedFinalConfigs: map[string]ModelConfigLocal{
 				"gpt-3.5-turbo": {
 					Ratio:           0.0015,
 					CompletionRatio: 2.0,
@@ -42,7 +42,7 @@ func TestMigrationIntegration_CompleteWorkflow(t *testing.T) {
 			initialModelConfigs:    stringPtr(`{"gpt-3.5-turbo": {"max_tokens": 65536}, "gpt-4": {"max_tokens": 128000}}`),
 			initialModelRatio:      stringPtr(`{"gpt-3.5-turbo": 0.0015, "gpt-4": 0.03}`),
 			initialCompletionRatio: stringPtr(`{"gpt-3.5-turbo": 2.0, "gpt-4": 2.0}`),
-			expectedFinalConfigs: map[string]ModelPriceLocal{
+			expectedFinalConfigs: map[string]ModelConfigLocal{
 				"gpt-3.5-turbo": {
 					Ratio:           0.0015,
 					CompletionRatio: 2.0,
@@ -61,7 +61,7 @@ func TestMigrationIntegration_CompleteWorkflow(t *testing.T) {
 			initialModelConfigs:    stringPtr(`{"gpt-3.5-turbo": {"ratio": 0.0015, "completion_ratio": 2.0, "max_tokens": 65536}}`),
 			initialModelRatio:      stringPtr(`{"gpt-3.5-turbo": 0.002}`), // Should be ignored
 			initialCompletionRatio: stringPtr(`{"gpt-3.5-turbo": 1.5}`),   // Should be ignored
-			expectedFinalConfigs: map[string]ModelPriceLocal{
+			expectedFinalConfigs: map[string]ModelConfigLocal{
 				"gpt-3.5-turbo": {
 					Ratio:           0.0015,
 					CompletionRatio: 2.0,
@@ -75,7 +75,7 @@ func TestMigrationIntegration_CompleteWorkflow(t *testing.T) {
 			initialModelConfigs:    nil,
 			initialModelRatio:      stringPtr(`{"gpt-3.5-turbo": 0.0015}`),
 			initialCompletionRatio: nil,
-			expectedFinalConfigs: map[string]ModelPriceLocal{
+			expectedFinalConfigs: map[string]ModelConfigLocal{
 				"gpt-3.5-turbo": {
 					Ratio:           0.0015,
 					CompletionRatio: 0,
@@ -89,7 +89,7 @@ func TestMigrationIntegration_CompleteWorkflow(t *testing.T) {
 			initialModelConfigs:    stringPtr(`{"gpt-3.5-turbo": {"max_tokens": 65536}}`),
 			initialModelRatio:      stringPtr(`{"gpt-3.5-turbo": 0.0015, "gpt-4": 0.03}`),
 			initialCompletionRatio: stringPtr(`{"gpt-4": 2.0}`),
-			expectedFinalConfigs: map[string]ModelPriceLocal{
+			expectedFinalConfigs: map[string]ModelConfigLocal{
 				"gpt-3.5-turbo": {
 					Ratio:           0.0015,
 					CompletionRatio: 0,
@@ -131,7 +131,7 @@ func TestMigrationIntegration_CompleteWorkflow(t *testing.T) {
 
 			// Verify that the data is properly serialized
 			if channel.ModelConfigs != nil {
-				var serializedConfigs map[string]ModelPriceLocal
+				var serializedConfigs map[string]ModelConfigLocal
 				err = json.Unmarshal([]byte(*channel.ModelConfigs), &serializedConfigs)
 				require.NoError(t, err)
 				assert.Equal(t, tt.expectedFinalConfigs, serializedConfigs)

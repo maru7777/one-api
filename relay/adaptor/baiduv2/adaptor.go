@@ -51,7 +51,7 @@ func (a *Adaptor) GetChannelName() string {
 
 // GetDefaultModelPricing returns the pricing information for BaiduV2 models
 // Based on Baidu pricing: https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Blfmc9do2
-func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelConfig {
 	return ModelRatios
 }
 

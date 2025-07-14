@@ -14,7 +14,7 @@ func TestChannel_MigrateModelConfigsToModelPrice(t *testing.T) {
 		modelConfigs    *string
 		modelRatio      *string
 		completionRatio *string
-		expectedResult  map[string]ModelPriceLocal
+		expectedResult  map[string]ModelConfigLocal
 		expectError     bool
 	}{
 		{
@@ -46,7 +46,7 @@ func TestChannel_MigrateModelConfigsToModelPrice(t *testing.T) {
 			modelConfigs:    stringPtr(`{"gpt-3.5-turbo": {"max_tokens": 65536}, "gpt-4": {"max_tokens": 128000}}`),
 			modelRatio:      stringPtr(`{"gpt-3.5-turbo": 0.0015, "gpt-4": 0.03}`),
 			completionRatio: stringPtr(`{"gpt-3.5-turbo": 2.0, "gpt-4": 2.0}`),
-			expectedResult: map[string]ModelPriceLocal{
+			expectedResult: map[string]ModelConfigLocal{
 				"gpt-3.5-turbo": {
 					Ratio:           0.0015,
 					CompletionRatio: 2.0,
@@ -64,7 +64,7 @@ func TestChannel_MigrateModelConfigsToModelPrice(t *testing.T) {
 			name:         "old format with partial pricing data",
 			modelConfigs: stringPtr(`{"gpt-3.5-turbo": {"max_tokens": 65536}}`),
 			modelRatio:   stringPtr(`{"gpt-3.5-turbo": 0.0015}`),
-			expectedResult: map[string]ModelPriceLocal{
+			expectedResult: map[string]ModelConfigLocal{
 				"gpt-3.5-turbo": {
 					Ratio:           0.0015,
 					CompletionRatio: 0,
@@ -104,7 +104,7 @@ func TestChannel_MigrateModelConfigsToModelPrice(t *testing.T) {
 
 			// Verify the migrated data
 			require.NotNil(t, channel.ModelConfigs)
-			var result map[string]ModelPriceLocal
+			var result map[string]ModelConfigLocal
 			err = json.Unmarshal([]byte(*channel.ModelConfigs), &result)
 			require.NoError(t, err)
 
@@ -119,7 +119,7 @@ func TestChannel_MigrateHistoricalPricingToModelConfigs(t *testing.T) {
 		modelConfigs    *string
 		modelRatio      *string
 		completionRatio *string
-		expectedResult  map[string]ModelPriceLocal
+		expectedResult  map[string]ModelConfigLocal
 		expectError     bool
 	}{
 		{
@@ -134,7 +134,7 @@ func TestChannel_MigrateHistoricalPricingToModelConfigs(t *testing.T) {
 			modelConfigs:    nil,
 			modelRatio:      stringPtr(`{"gpt-3.5-turbo": 0.0015, "gpt-4": 0.03}`),
 			completionRatio: stringPtr(`{"gpt-3.5-turbo": 2.0, "gpt-4": 2.0}`),
-			expectedResult: map[string]ModelPriceLocal{
+			expectedResult: map[string]ModelConfigLocal{
 				"gpt-3.5-turbo": {
 					Ratio:           0.0015,
 					CompletionRatio: 2.0,
@@ -152,7 +152,7 @@ func TestChannel_MigrateHistoricalPricingToModelConfigs(t *testing.T) {
 			name:         "migrate from ModelRatio only",
 			modelConfigs: stringPtr(""),
 			modelRatio:   stringPtr(`{"gpt-3.5-turbo": 0.0015}`),
-			expectedResult: map[string]ModelPriceLocal{
+			expectedResult: map[string]ModelConfigLocal{
 				"gpt-3.5-turbo": {
 					Ratio:           0.0015,
 					CompletionRatio: 0,
@@ -165,7 +165,7 @@ func TestChannel_MigrateHistoricalPricingToModelConfigs(t *testing.T) {
 			name:            "migrate from CompletionRatio only",
 			modelConfigs:    stringPtr("{}"),
 			completionRatio: stringPtr(`{"gpt-3.5-turbo": 2.0}`),
-			expectedResult: map[string]ModelPriceLocal{
+			expectedResult: map[string]ModelConfigLocal{
 				"gpt-3.5-turbo": {
 					Ratio:           0,
 					CompletionRatio: 2.0,
@@ -208,7 +208,7 @@ func TestChannel_MigrateHistoricalPricingToModelConfigs(t *testing.T) {
 
 			// Verify the migrated data
 			require.NotNil(t, channel.ModelConfigs)
-			var result map[string]ModelPriceLocal
+			var result map[string]ModelConfigLocal
 			err = json.Unmarshal([]byte(*channel.ModelConfigs), &result)
 			require.NoError(t, err)
 
@@ -221,7 +221,7 @@ func TestChannel_GetModelPriceConfigs(t *testing.T) {
 	tests := []struct {
 		name         string
 		modelConfigs *string
-		expected     map[string]ModelPriceLocal
+		expected     map[string]ModelConfigLocal
 	}{
 		{
 			name:         "nil ModelConfigs",
@@ -241,7 +241,7 @@ func TestChannel_GetModelPriceConfigs(t *testing.T) {
 		{
 			name:         "valid ModelConfigs",
 			modelConfigs: stringPtr(`{"gpt-3.5-turbo": {"ratio": 0.0015, "completion_ratio": 2.0, "max_tokens": 65536}}`),
-			expected: map[string]ModelPriceLocal{
+			expected: map[string]ModelConfigLocal{
 				"gpt-3.5-turbo": {
 					Ratio:           0.0015,
 					CompletionRatio: 2.0,
@@ -429,7 +429,7 @@ func TestChannel_SetModelPriceConfigs(t *testing.T) {
 	channel := &Channel{Id: 1}
 
 	// Test setting valid configs
-	configs := map[string]ModelPriceLocal{
+	configs := map[string]ModelConfigLocal{
 		"gpt-3.5-turbo": {
 			Ratio:           0.0015,
 			CompletionRatio: 2.0,
@@ -442,7 +442,7 @@ func TestChannel_SetModelPriceConfigs(t *testing.T) {
 	assert.NotNil(t, channel.ModelConfigs)
 
 	// Verify the data was set correctly
-	var result map[string]ModelPriceLocal
+	var result map[string]ModelConfigLocal
 	err = json.Unmarshal([]byte(*channel.ModelConfigs), &result)
 	assert.NoError(t, err)
 	assert.Equal(t, configs, result)
@@ -453,7 +453,7 @@ func TestChannel_SetModelPriceConfigs(t *testing.T) {
 	assert.Nil(t, channel.ModelConfigs)
 
 	// Test setting empty configs
-	err = channel.SetModelPriceConfigs(map[string]ModelPriceLocal{})
+	err = channel.SetModelPriceConfigs(map[string]ModelConfigLocal{})
 	assert.NoError(t, err)
 	assert.Nil(t, channel.ModelConfigs)
 }
@@ -616,7 +616,7 @@ func TestChannel_MigrateHistoricalPricingToModelConfigs_EdgeCases(t *testing.T) 
 func TestChannel_validateModelPriceConfigs(t *testing.T) {
 	tests := []struct {
 		name          string
-		configs       map[string]ModelPriceLocal
+		configs       map[string]ModelConfigLocal
 		expectError   bool
 		errorContains string
 	}{
@@ -627,12 +627,12 @@ func TestChannel_validateModelPriceConfigs(t *testing.T) {
 		},
 		{
 			name:        "empty configs",
-			configs:     map[string]ModelPriceLocal{},
+			configs:     map[string]ModelConfigLocal{},
 			expectError: false,
 		},
 		{
 			name: "valid configs",
-			configs: map[string]ModelPriceLocal{
+			configs: map[string]ModelConfigLocal{
 				"gpt-3.5-turbo": {
 					Ratio:           0.0015,
 					CompletionRatio: 2.0,
@@ -643,7 +643,7 @@ func TestChannel_validateModelPriceConfigs(t *testing.T) {
 		},
 		{
 			name: "empty model name",
-			configs: map[string]ModelPriceLocal{
+			configs: map[string]ModelConfigLocal{
 				"": {
 					Ratio: 0.0015,
 				},
@@ -653,7 +653,7 @@ func TestChannel_validateModelPriceConfigs(t *testing.T) {
 		},
 		{
 			name: "negative ratio",
-			configs: map[string]ModelPriceLocal{
+			configs: map[string]ModelConfigLocal{
 				"gpt-3.5-turbo": {
 					Ratio: -0.0015,
 				},
@@ -663,7 +663,7 @@ func TestChannel_validateModelPriceConfigs(t *testing.T) {
 		},
 		{
 			name: "negative completion ratio",
-			configs: map[string]ModelPriceLocal{
+			configs: map[string]ModelConfigLocal{
 				"gpt-3.5-turbo": {
 					CompletionRatio: -2.0,
 				},
@@ -673,7 +673,7 @@ func TestChannel_validateModelPriceConfigs(t *testing.T) {
 		},
 		{
 			name: "negative MaxTokens",
-			configs: map[string]ModelPriceLocal{
+			configs: map[string]ModelConfigLocal{
 				"gpt-3.5-turbo": {
 					MaxTokens: -1000,
 				},
@@ -683,7 +683,7 @@ func TestChannel_validateModelPriceConfigs(t *testing.T) {
 		},
 		{
 			name: "no meaningful data",
-			configs: map[string]ModelPriceLocal{
+			configs: map[string]ModelConfigLocal{
 				"gpt-3.5-turbo": {
 					Ratio:           0,
 					CompletionRatio: 0,

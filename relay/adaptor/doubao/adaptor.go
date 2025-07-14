@@ -51,7 +51,7 @@ func (a *Adaptor) GetChannelName() string {
 
 // GetDefaultModelPricing returns the pricing information for Doubao models
 // Based on Doubao pricing: https://www.volcengine.com/docs/82379/1099320
-func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelConfig {
 	return ModelRatios
 }
 

@@ -51,10 +51,10 @@ func (a *Adaptor) GetChannelName() string {
 
 // GetDefaultModelPricing returns the pricing information for StepFun models
 // Based on StepFun pricing: https://platform.stepfun.com/docs/pricing/details
-func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelConfig {
 	const MilliRmb = 3.5 // 0.000007 * 500000 = 3.5 quota per milli-token
 
-	return map[string]adaptor.ModelPrice{
+	return map[string]adaptor.ModelConfig{
 		// StepFun Models - Based on https://platform.stepfun.com/docs/pricing/details
 		"step-1-8k":      {Ratio: 0.005 * MilliRmb, CompletionRatio: 1},
 		"step-1-32k":     {Ratio: 0.015 * MilliRmb, CompletionRatio: 1},

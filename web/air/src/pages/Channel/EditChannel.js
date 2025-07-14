@@ -135,7 +135,7 @@ const EditChannel = (props) => {
         model_configs: '',
     });
 
-    const loadDefaultPricing = async (channelType) => {
+    const loadDefaultPricing = async (channelType, existingModelConfigs = null) => {
         try {
             const res = await API.get(`/api/channel/default-pricing?type=${channelType}`);
             if (res.data.success) {
@@ -171,7 +171,8 @@ const EditChannel = (props) => {
                 });
 
                 // If current model_configs is empty, populate with defaults
-                if (!inputs.model_configs) {
+                // Don't override if we have existing model_configs from loadChannel
+                if (!inputs.model_configs && !existingModelConfigs) {
                     handleInputChange('model_configs', defaultModelConfigs);
                 }
             }
@@ -200,16 +201,6 @@ const EditChannel = (props) => {
     };
 
     const handleInputChange = (name, value) => {
-        // Auto-format JSON for model_configs field
-        if (name === 'model_configs' && value && value.trim() !== '') {
-            try {
-                const parsed = JSON.parse(value);
-                value = JSON.stringify(parsed, null, 2);
-            } catch (e) {
-                // Keep original value if JSON is invalid (user might still be typing)
-            }
-        }
-
         setInputs((inputs) => ({...inputs, [name]: value}));
         if (name === 'type') {
             // Load default pricing for the new channel type
@@ -337,8 +328,8 @@ const EditChannel = (props) => {
                 }
             }
             setInputs(data);
-            // Load default pricing for this channel type
-            loadDefaultPricing(data.type);
+            // Load default pricing for this channel type, but don't override existing model_configs
+            loadDefaultPricing(data.type, data.model_configs);
             if (data.auto_ban === 0) {
                 setAutoBan(false);
             } else {
@@ -779,13 +770,7 @@ const EditChannel = (props) => {
                       onChange={value => {
                           handleInputChange('model_configs', value)
                       }}
-                      onBlur={value => {
-                          // Auto-format on blur for better UX
-                          const formatted = formatJSON(value);
-                          if (formatted !== value) {
-                              handleInputChange('model_configs', formatted);
-                          }
-                      }}
+
                       autosize
                       minRows={8}
                       value={inputs.model_configs}
@@ -803,7 +788,7 @@ const EditChannel = (props) => {
                             color: 'rgba(var(--semi-blue-5), 1)',
                             fontSize: '12px'
                         }}>
-                            此项可选，统一的模型配置包括定价和属性。JSON将在编辑完成后自动格式化。
+                            此项可选，统一的模型配置包括定价和属性。
                         </Typography.Text>
                         {inputs.model_configs && inputs.model_configs.trim() !== '' && (
                             <Typography.Text style={{

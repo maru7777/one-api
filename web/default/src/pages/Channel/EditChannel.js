@@ -153,7 +153,7 @@ const EditChannel = () => {
     model_configs: '',
   });
 
-  const loadDefaultPricing = async (channelType) => {
+  const loadDefaultPricing = async (channelType, existingModelConfigs = null) => {
     try {
       const res = await API.get(`/api/channel/default-pricing?type=${channelType}`);
       if (res.data.success) {
@@ -189,7 +189,8 @@ const EditChannel = () => {
         });
 
         // If current model_configs is empty, populate with defaults
-        if (!inputs.model_configs) {
+        // Don't override if we have existing model_configs from loadChannel
+        if (!inputs.model_configs && !existingModelConfigs) {
           setInputs((inputs) => ({
             ...inputs,
             model_configs: defaultModelConfigs,
@@ -222,16 +223,6 @@ const EditChannel = () => {
   };
 
   const handleInputChange = (e, { name, value }) => {
-    // Auto-format JSON for model_configs field on blur/paste
-    if (name === 'model_configs' && value && value.trim() !== '') {
-      try {
-        const parsed = JSON.parse(value);
-        value = JSON.stringify(parsed, null, 2);
-      } catch (e) {
-        // Keep original value if JSON is invalid (user might still be typing)
-      }
-    }
-
     setInputs((inputs) => ({ ...inputs, [name]: value }));
     if (name === 'type') {
       let localModels = getChannelModels(value);
@@ -271,7 +262,7 @@ const EditChannel = () => {
           2
         );
       }
-      if (data.model_configs !== '') {
+      if (data.model_configs && data.model_configs !== '') {
         try {
           const parsedConfigs = JSON.parse(data.model_configs);
           // Pretty format with proper indentation
@@ -309,8 +300,8 @@ const EditChannel = () => {
         setConfig(JSON.parse(data.config));
       }
       setBasicModels(getChannelModels(data.type));
-      // Load default pricing for this channel type
-      loadDefaultPricing(data.type);
+      // Load default pricing for this channel type, but don't override existing model_configs
+      loadDefaultPricing(data.type, data.model_configs);
     } else {
       showError(message);
     }
@@ -814,16 +805,6 @@ const EditChannel = () => {
                     )}\n${JSON.stringify(MODEL_CONFIGS_EXAMPLE, null, 2)}`}
                     name='model_configs'
                     onChange={handleInputChange}
-                    onBlur={(e) => {
-                      // Auto-format on blur for better UX
-                      const formatted = formatJSON(e.target.value);
-                      if (formatted !== e.target.value) {
-                        setInputs((inputs) => ({
-                          ...inputs,
-                          model_configs: formatted,
-                        }));
-                      }
-                    }}
                     value={inputs.model_configs}
                     style={{
                       minHeight: 200,
@@ -838,7 +819,7 @@ const EditChannel = () => {
                   />
                   <div style={{ fontSize: '12px', marginTop: '5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ color: '#666' }}>
-                      {t('channel.edit.model_configs_help')} JSON will be automatically formatted when you finish editing.
+                      {t('channel.edit.model_configs_help')}
                     </span>
                     {inputs.model_configs && inputs.model_configs.trim() !== '' && (
                       <span style={{

@@ -51,10 +51,10 @@ func (a *Adaptor) GetChannelName() string {
 
 // GetDefaultModelPricing returns the pricing information for TogetherAI models
 // Based on TogetherAI pricing: https://www.together.ai/pricing
-func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelConfig {
 	const MilliTokensUsd = 0.5 // 0.000001 * 500000 = 0.5 quota per milli-token
 
-	return map[string]adaptor.ModelPrice{
+	return map[string]adaptor.ModelConfig{
 		// TogetherAI Models - Based on https://www.together.ai/pricing
 		"meta-llama/Llama-2-7b-chat-hf":                {Ratio: 0.2 * MilliTokensUsd, CompletionRatio: 1},
 		"meta-llama/Llama-2-13b-chat-hf":               {Ratio: 0.225 * MilliTokensUsd, CompletionRatio: 1},

@@ -25,7 +25,7 @@ func (a *Adaptor) GetModelList() []string {
 
 // GetDefaultModelPricing returns the pricing information for Mistral models
 // Based on official Mistral pricing: https://docs.mistral.ai/platform/pricing/
-func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelConfig {
 	return ModelRatios
 }
 

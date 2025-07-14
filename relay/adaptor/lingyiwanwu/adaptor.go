@@ -51,10 +51,10 @@ func (a *Adaptor) GetChannelName() string {
 
 // GetDefaultModelPricing returns the pricing information for LingYiWanWu models
 // Based on LingYiWanWu pricing: https://platform.lingyiwanwu.com/docs#-计费单元
-func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelConfig {
 	const MilliTokensRmb = 3.5 // 0.000007 * 500000 = 3.5 quota per milli-token
 
-	return map[string]adaptor.ModelPrice{
+	return map[string]adaptor.ModelConfig{
 		// LingYiWanWu Models - Based on https://platform.lingyiwanwu.com/docs#-计费单元
 		"yi-34b-chat-0205": {Ratio: 2.5 * MilliTokensRmb, CompletionRatio: 1},
 		"yi-34b-chat-200k": {Ratio: 12.0 * MilliTokensRmb, CompletionRatio: 1},

@@ -8,7 +8,7 @@ import (
 // ModelRatios contains all supported models and their pricing ratios
 // Model list is derived from the keys of this map, eliminating redundancy
 // Based on Groq pricing: https://groq.com/pricing/
-var ModelRatios = map[string]adaptor.ModelPrice{
+var ModelRatios = map[string]adaptor.ModelConfig{
 	// Regular Models
 	"distil-whisper-large-v3-en": {Ratio: 0.111 * ratio.MilliTokensUsd, CompletionRatio: 1},
 	"gemma2-9b-it":               {Ratio: 0.20 * ratio.MilliTokensUsd, CompletionRatio: 1},

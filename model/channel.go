@@ -66,9 +66,9 @@ type ModelConfig struct {
 	MaxTokens int32 `json:"max_tokens,omitempty"`
 }
 
-// ModelPriceLocal represents the local definition of ModelPrice to avoid import cycles
+// ModelConfigLocal represents the local definition of ModelConfig to avoid import cycles
 // This should match the structure in relay/adaptor/interface.go
-type ModelPriceLocal struct {
+type ModelConfigLocal struct {
 	Ratio           float64 `json:"ratio"`
 	CompletionRatio float64 `json:"completion_ratio,omitempty"`
 	MaxTokens       int32   `json:"max_tokens,omitempty"`
@@ -177,8 +177,21 @@ func (channel *Channel) MigrateModelConfigsToModelPrice() error {
 		return fmt.Errorf("invalid JSON in ModelConfigs: %w", err)
 	}
 
+	// Check if the JSON is null, array, or string (invalid types)
+	switch rawData.(type) {
+	case nil:
+		logger.SysError(fmt.Sprintf("Channel %d ModelConfigs cannot be parsed: null value", channel.Id))
+		return fmt.Errorf("ModelConfigs cannot be parsed: null value")
+	case []interface{}:
+		logger.SysError(fmt.Sprintf("Channel %d ModelConfigs cannot be parsed: array value", channel.Id))
+		return fmt.Errorf("ModelConfigs cannot be parsed: array value")
+	case string:
+		logger.SysError(fmt.Sprintf("Channel %d ModelConfigs cannot be parsed: string value", channel.Id))
+		return fmt.Errorf("ModelConfigs cannot be parsed: string value")
+	}
+
 	// Try to unmarshal as the new format first
-	var newFormatConfigs map[string]ModelPriceLocal
+	var newFormatConfigs map[string]ModelConfigLocal
 	err := json.Unmarshal([]byte(*channel.ModelConfigs), &newFormatConfigs)
 	if err == nil {
 		// Validate the new format data
@@ -225,26 +238,36 @@ func (channel *Channel) MigrateModelConfigsToModelPrice() error {
 	}
 
 	// Convert old format to new format
-	migratedConfigs := make(map[string]ModelPriceLocal)
+	migratedConfigs := make(map[string]ModelConfigLocal)
 
 	// Get existing ModelRatio and CompletionRatio for this channel
 	modelRatios := channel.GetModelRatio()
 	completionRatios := channel.GetCompletionRatio()
 
 	for modelName, oldConfig := range oldFormatConfigs {
-		newConfig := ModelPriceLocal{
+		newConfig := ModelConfigLocal{
 			MaxTokens: oldConfig.MaxTokens,
 		}
 
 		// Add pricing information if available
 		if modelRatios != nil {
-			if ratio, exists := modelRatios[modelName]; exists && ratio > 0 {
-				newConfig.Ratio = ratio
+			if ratio, exists := modelRatios[modelName]; exists {
+				if ratio < 0 {
+					return fmt.Errorf("negative ratio for model %s: %f", modelName, ratio)
+				}
+				if ratio > 0 {
+					newConfig.Ratio = ratio
+				}
 			}
 		}
 		if completionRatios != nil {
-			if completionRatio, exists := completionRatios[modelName]; exists && completionRatio > 0 {
-				newConfig.CompletionRatio = completionRatio
+			if completionRatio, exists := completionRatios[modelName]; exists {
+				if completionRatio < 0 {
+					return fmt.Errorf("negative completion ratio for model %s: %f", modelName, completionRatio)
+				}
+				if completionRatio > 0 {
+					newConfig.CompletionRatio = completionRatio
+				}
 			}
 		}
 
@@ -272,7 +295,7 @@ func (channel *Channel) MigrateModelConfigsToModelPrice() error {
 }
 
 // validateModelPriceConfigs validates the structure and values of ModelPriceLocal configurations
-func (channel *Channel) validateModelPriceConfigs(configs map[string]ModelPriceLocal) error {
+func (channel *Channel) validateModelPriceConfigs(configs map[string]ModelConfigLocal) error {
 	if configs == nil {
 		return nil
 	}
@@ -306,12 +329,12 @@ func (channel *Channel) validateModelPriceConfigs(configs map[string]ModelPriceL
 }
 
 // GetModelPriceConfigs returns the channel-specific model price configurations in the new unified format
-func (channel *Channel) GetModelPriceConfigs() map[string]ModelPriceLocal {
+func (channel *Channel) GetModelPriceConfigs() map[string]ModelConfigLocal {
 	if channel.ModelConfigs == nil || *channel.ModelConfigs == "" || *channel.ModelConfigs == "{}" {
 		return nil
 	}
 
-	modelPriceConfigs := make(map[string]ModelPriceLocal)
+	modelPriceConfigs := make(map[string]ModelConfigLocal)
 	err := json.Unmarshal([]byte(*channel.ModelConfigs), &modelPriceConfigs)
 	if err != nil {
 		logger.SysError(fmt.Sprintf("failed to unmarshal model price configs for channel %d, error: %s", channel.Id, err.Error()))
@@ -322,7 +345,7 @@ func (channel *Channel) GetModelPriceConfigs() map[string]ModelPriceLocal {
 }
 
 // SetModelPriceConfigs sets the channel-specific model price configurations in the new unified format
-func (channel *Channel) SetModelPriceConfigs(modelPriceConfigs map[string]ModelPriceLocal) error {
+func (channel *Channel) SetModelPriceConfigs(modelPriceConfigs map[string]ModelConfigLocal) error {
 	if modelPriceConfigs == nil || len(modelPriceConfigs) == 0 {
 		channel.ModelConfigs = nil
 		return nil
@@ -344,7 +367,7 @@ func (channel *Channel) SetModelPriceConfigs(modelPriceConfigs map[string]ModelP
 }
 
 // GetModelPriceConfig returns the price configuration for a specific model
-func (channel *Channel) GetModelPriceConfig(modelName string) *ModelPriceLocal {
+func (channel *Channel) GetModelPriceConfig(modelName string) *ModelConfigLocal {
 	configs := channel.GetModelPriceConfigs()
 	if configs == nil {
 		return nil
@@ -716,44 +739,52 @@ func (channel *Channel) MigrateHistoricalPricingToModelConfigs() error {
 		// Merge historical pricing with existing MaxTokens data
 		logger.SysLog(fmt.Sprintf("Channel %d has MaxTokens data, merging with historical pricing", channel.Id))
 	} else {
-		existingConfigs = make(map[string]ModelPriceLocal)
+		existingConfigs = make(map[string]ModelConfigLocal)
 	}
 
-	// Collect all model names from both ratios and existing configs
+	// Collect all valid model names from both ratios and existing configs
 	allModelNames := make(map[string]bool)
 	if modelRatios != nil {
-		for modelName := range modelRatios {
-			allModelNames[modelName] = true
+		for modelName, ratio := range modelRatios {
+			// Skip invalid entries
+			if modelName != "" && ratio >= 0 {
+				allModelNames[modelName] = true
+			}
 		}
 	}
 	if completionRatios != nil {
-		for modelName := range completionRatios {
-			allModelNames[modelName] = true
+		for modelName, ratio := range completionRatios {
+			// Skip invalid entries
+			if modelName != "" && ratio >= 0 {
+				allModelNames[modelName] = true
+			}
 		}
 	}
 	for modelName := range existingConfigs {
-		allModelNames[modelName] = true
+		if modelName != "" {
+			allModelNames[modelName] = true
+		}
 	}
 
 	// Create unified ModelConfigs from all data sources
-	modelConfigs := make(map[string]ModelPriceLocal)
+	modelConfigs := make(map[string]ModelConfigLocal)
 	for modelName := range allModelNames {
-		config := ModelPriceLocal{}
+		config := ModelConfigLocal{}
 
 		// Start with existing config if available
 		if existingConfig, exists := existingConfigs[modelName]; exists {
 			config = existingConfig
 		}
 
-		// Add/override pricing data from historical sources
+		// Add/override pricing data from historical sources (only valid data)
 		if modelRatios != nil {
-			if ratio, exists := modelRatios[modelName]; exists {
+			if ratio, exists := modelRatios[modelName]; exists && ratio >= 0 {
 				config.Ratio = ratio
 			}
 		}
 
 		if completionRatios != nil {
-			if completionRatio, exists := completionRatios[modelName]; exists {
+			if completionRatio, exists := completionRatios[modelName]; exists && completionRatio >= 0 {
 				config.CompletionRatio = completionRatio
 			}
 		}

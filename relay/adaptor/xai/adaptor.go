@@ -51,10 +51,10 @@ func (a *Adaptor) GetChannelName() string {
 
 // GetDefaultModelPricing returns the pricing information for XAI models
 // Based on XAI pricing: https://console.x.ai/
-func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelConfig {
 	const MilliTokensUsd = 0.5 // 0.000001 * 500000 = 0.5 quota per milli-token
 
-	return map[string]adaptor.ModelPrice{
+	return map[string]adaptor.ModelConfig{
 		// XAI Models - Based on https://console.x.ai/
 		"grok-2":               {Ratio: 5.0 * MilliTokensUsd, CompletionRatio: 1},
 		"grok-vision-beta":     {Ratio: 7.5 * MilliTokensUsd, CompletionRatio: 1},

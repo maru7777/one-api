@@ -63,7 +63,6 @@
     - [Troubleshooting Quick Guide](#troubleshooting-quick-guide)
     - [Support Escalation Path](#support-escalation-path)
 
-
 ## Overview
 
 The Channel Settings page is the central hub for configuring and managing API channels in One API. Channels represent connections to different AI service providers (OpenAI, Claude, etc.) and define how requests are routed, authenticated, and billed.
@@ -91,11 +90,13 @@ The Channel Settings page is the central hub for configuring and managing API ch
 #### **Channel Information**
 
 **Name**
+
 - **Purpose**: Human-readable identifier for the channel
 - **Format**: Any descriptive text (e.g., "OpenAI GPT-4 Production", "Claude Development")
 - **Best Practice**: Use clear, descriptive names that indicate provider, model type, and environment
 
 **Type**
+
 - **Purpose**: Specifies the AI service provider and determines available configuration options
 - **Available Types**:
   - `1` - OpenAI (GPT models, DALL-E, Whisper, TTS)
@@ -104,12 +105,13 @@ The Channel Settings page is the central hub for configuring and managing API ch
   - `14` - Gemini (Google AI)
   - `16` - Cohere
   - `18` - Baidu (文心一言)
-  - `19` - Zhipu (智谱AI)
+  - `19` - Zhipu (智谱 AI)
   - `23` - Tencent (腾讯混元)
   - And many more...
 - **Impact**: Determines available models, authentication methods, and API endpoints
 
 **Status**
+
 - **Purpose**: Controls whether the channel is active and can receive requests
 - **Options**:
   - `1` - Enabled (channel accepts requests)
@@ -117,6 +119,7 @@ The Channel Settings page is the central hub for configuring and managing API ch
 - **Use Cases**: Disable for maintenance, testing, or when API keys are invalid
 
 **Priority**
+
 - **Purpose**: Determines channel selection order when multiple channels support the same model
 - **Range**: Integer values (lower numbers = higher priority)
 - **Behavior**: System tries channels in ascending priority order
@@ -125,6 +128,7 @@ The Channel Settings page is the central hub for configuring and managing API ch
 #### **Authentication & Connection**
 
 **Base URL**
+
 - **Purpose**: API endpoint for the service provider
 - **Format**: Complete URL including protocol (https://)
 - **Examples**:
@@ -134,6 +138,7 @@ The Channel Settings page is the central hub for configuring and managing API ch
 - **Notes**: Leave empty to use provider defaults
 
 **API Key**
+
 - **Purpose**: Authentication credentials for the service provider
 - **Format**: Provider-specific key format
 - **Security**: Stored encrypted in the database
@@ -143,12 +148,14 @@ The Channel Settings page is the central hub for configuring and managing API ch
   - Azure: Resource-specific key
 
 **Organization**
+
 - **Purpose**: Organization identifier for providers that support it
 - **Providers**: Primarily OpenAI and Azure
 - **Format**: Organization ID string
 - **Optional**: Leave empty if not using organization-scoped access
 
 **Headers**
+
 - **Purpose**: Custom HTTP headers sent with each API request
 - **Format**: JSON object with header name-value pairs
 - **Example**:
@@ -163,6 +170,7 @@ The Channel Settings page is the central hub for configuring and managing API ch
 #### **Access Control & Models**
 
 **Groups**
+
 - **Purpose**: Restricts channel access to specific user groups
 - **Format**: Comma-separated list of group names
 - **Behavior**:
@@ -171,6 +179,7 @@ The Channel Settings page is the central hub for configuring and managing API ch
 - **Example**: `admin,premium,developers`
 
 **Models**
+
 - **Purpose**: Defines which AI models are available through this channel
 - **Format**: Comma-separated list of model names
 - **Behavior**:
@@ -181,6 +190,7 @@ The Channel Settings page is the central hub for configuring and managing API ch
   - Claude: `claude-3-opus-20240229,claude-3-sonnet-20240229`
 
 **Model Mapping**
+
 - **Purpose**: Maps external model names to internal provider model names
 - **Format**: JSON object with mapping pairs
 - **Use Cases**:
@@ -199,6 +209,7 @@ The Channel Settings page is the central hub for configuring and managing API ch
 #### **Advanced Configuration**
 
 **Config**
+
 - **Purpose**: Provider-specific advanced configuration options
 - **Format**: JSON object with provider-specific settings
 - **Common Options**:
@@ -217,12 +228,14 @@ The Channel Settings page is the central hub for configuring and managing API ch
   ```
 
 **Test Model**
+
 - **Purpose**: Specific model used for channel health checks
 - **Format**: Single model name
 - **Behavior**: System uses this model to test channel connectivity
 - **Default**: Uses the first available model if not specified
 
 **Weight**
+
 - **Purpose**: Load balancing weight for channels with same priority
 - **Range**: Integer values (higher = more requests)
 - **Behavior**: Distributes requests proportionally among same-priority channels
@@ -893,14 +906,14 @@ Low Priority (51-100): Development and testing
 
 ### Troubleshooting Quick Guide
 
-| Issue | Symptoms | Quick Fix |
-|-------|----------|-----------|
-| **Authentication Error** | 401 responses | Check API key validity |
-| **Rate Limiting** | 429 responses | Reduce request frequency |
-| **Model Not Found** | 404 responses | Verify model name spelling |
-| **Mixed Model Data** | Wrong models showing | Use Debug Panel → Fix Channel |
-| **Invalid JSON** | Validation errors | Use "Format JSON" button |
-| **Channel Offline** | No responses | Check provider status page |
+| Issue                    | Symptoms             | Quick Fix                     |
+| ------------------------ | -------------------- | ----------------------------- |
+| **Authentication Error** | 401 responses        | Check API key validity        |
+| **Rate Limiting**        | 429 responses        | Reduce request frequency      |
+| **Model Not Found**      | 404 responses        | Verify model name spelling    |
+| **Mixed Model Data**     | Wrong models showing | Use Debug Panel → Fix Channel |
+| **Invalid JSON**         | Validation errors    | Use "Format JSON" button      |
+| **Channel Offline**      | No responses         | Check provider status page    |
 
 ### Support Escalation Path
 
