@@ -161,8 +161,14 @@ const EditChannel = () => {
         let defaultModelConfigs = '';
 
         if (res.data.data.model_configs) {
-          // Already in new format
-          defaultModelConfigs = res.data.data.model_configs;
+          // Already in new format, but ensure it's properly formatted
+          try {
+            const parsed = JSON.parse(res.data.data.model_configs);
+            defaultModelConfigs = JSON.stringify(parsed, null, 2);
+          } catch (e) {
+            // If parsing fails, use as-is
+            defaultModelConfigs = res.data.data.model_configs;
+          }
         } else if (res.data.data.model_ratio || res.data.data.completion_ratio) {
           // Convert from old format to new format
           const modelRatio = res.data.data.model_ratio ? JSON.parse(res.data.data.model_ratio) : {};
@@ -183,6 +189,8 @@ const EditChannel = () => {
 
           defaultModelConfigs = JSON.stringify(unifiedConfigs, null, 2);
         }
+
+
 
         setDefaultPricing({
           model_configs: defaultModelConfigs,

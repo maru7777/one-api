@@ -253,10 +253,21 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
     try {
       const res = await API.get(`/api/channel/default-pricing?type=${channelType}`);
       if (res.data.success) {
+        // Format model_configs if it exists
+        let formattedModelConfigs = res.data.data.model_configs || '';
+        if (formattedModelConfigs && formattedModelConfigs !== '') {
+          try {
+            const parsed = JSON.parse(formattedModelConfigs);
+            formattedModelConfigs = JSON.stringify(parsed, null, 2);
+          } catch (e) {
+            // If parsing fails, use as-is
+          }
+        }
+
         setDefaultPricing({
           model_ratio: res.data.data.model_ratio || '',
           completion_ratio: res.data.data.completion_ratio || '',
-          model_configs: res.data.data.model_configs || '',
+          model_configs: formattedModelConfigs,
         });
       }
     } catch (error) {
