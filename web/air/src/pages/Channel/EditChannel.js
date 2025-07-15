@@ -273,7 +273,6 @@ const EditChannel = (props) => {
             }
             setInputs((inputs) => ({...inputs, models: localModels}));
             }
-        }
             loadDefaultPricing(value);
         }
         //setAutoBan
@@ -377,28 +376,6 @@ const EditChannel = (props) => {
         }
     };
 
-    const loadDefaultPricing = async (channelType) => {
-        try {
-            const res = await API.get(`/api/channel/default-pricing?type=${channelType}`);
-            if (res.data.success) {
-                setDefaultPricing({
-                    model_ratio: res.data.data.model_ratio || '',
-                    completion_ratio: res.data.data.completion_ratio || '',
-                });
-                // If current pricing is empty, populate with defaults
-                if (!inputs.model_ratio && !inputs.completion_ratio) {
-                    setInputs((inputs) => ({
-                        ...inputs,
-                        model_ratio: res.data.data.model_ratio || '',
-                        completion_ratio: res.data.data.completion_ratio || '',
-                    }));
-                }
-            }
-        } catch (error) {
-            console.error('Failed to load default pricing:', error);
-        }
-    };
-
     useEffect(() => {
         let localModelOptions = [...originModelOptions];
         inputs.models.forEach((model) => {
@@ -416,11 +393,7 @@ const EditChannel = (props) => {
         fetchModels().then();
         fetchGroups().then();
         if (isEdit) {
-            loadChannel().then(
-                () => {
-
-                }
-            );
+            loadChannel().then();
         } else {
             setInputs(originInputs);
             // Load default pricing for new channels
@@ -730,8 +703,21 @@ const EditChannel = (props) => {
                           }}
                         />
                     </div>
-                    <div style={{ marginTop: 10 }}>
+                    <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Typography.Text strong>模型重定向：</Typography.Text>
+                        <div>
+                            <Button
+                                theme="borderless"
+                                size="small"
+                                onClick={() => {
+                                    const formatted = formatJSON(inputs.model_mapping);
+                                    handleInputChange('model_mapping', formatted);
+                                }}
+                                disabled={!inputs.model_mapping || inputs.model_mapping.trim() === ''}
+                            >
+                                格式化JSON
+                            </Button>
+                        </div>
                     </div>
                     <TextArea
                       placeholder={`此项可选，用于修改请求体中的模型名称，为一个 JSON 字符串，键为请求中模型名称，值为要替换的模型名称，例如：\n${JSON.stringify(MODEL_MAPPING_EXAMPLE, null, 2)}`}
@@ -742,7 +728,31 @@ const EditChannel = (props) => {
                       autosize
                       value={inputs.model_mapping}
                       autoComplete='new-password'
+                      style={{
+                          fontFamily: 'JetBrains Mono, Consolas, Monaco, "Courier New", monospace',
+                          fontSize: '13px',
+                          lineHeight: '1.4',
+                          backgroundColor: '#f8f9fa',
+                          border: `1px solid ${isValidJSON(inputs.model_mapping) ? 'var(--semi-color-border)' : 'var(--semi-color-danger)'}`,
+                      }}
                     />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '5px' }}>
+                        <Typography.Text style={{
+                            color: 'rgba(var(--semi-blue-5), 1)',
+                            fontSize: '12px'
+                        }}>
+                            此项可选，用于修改请求体中的模型名称。
+                        </Typography.Text>
+                        {inputs.model_mapping && inputs.model_mapping.trim() !== '' && (
+                            <Typography.Text style={{
+                                color: isValidJSON(inputs.model_mapping) ? 'var(--semi-color-success)' : 'var(--semi-color-danger)',
+                                fontWeight: 'bold',
+                                fontSize: '11px'
+                            }}>
+                                {isValidJSON(inputs.model_mapping) ? '✓ 有效JSON' : '✗ 无效JSON'}
+                            </Typography.Text>
+                        )}
+                    </div>
                     <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Typography.Text strong>模型配置：</Typography.Text>
                         <div>

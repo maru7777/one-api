@@ -751,11 +751,36 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
                 })}
 
               <FormControl fullWidth error={Boolean(touched.model_mapping && errors.model_mapping)} sx={{ ...theme.typography.otherInput }}>
-                {/* <InputLabel htmlFor="channel-model_mapping-label">{inputLabel.model_mapping}</InputLabel> */}
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                  <InputLabel
+                    htmlFor="channel-model_mapping-label"
+                    sx={{
+                      position: 'relative',
+                      transform: 'none',
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                      color: theme.palette.text.primary
+                    }}
+                  >
+                    {inputLabel.model_mapping}
+                  </InputLabel>
+                  <Box>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => {
+                        const formattedValue = formatJSON(values.model_mapping);
+                        setFieldValue('model_mapping', formattedValue);
+                      }}
+                      disabled={!values.model_mapping || values.model_mapping.trim() === ''}
+                    >
+                      格式化JSON
+                    </Button>
+                  </Box>
+                </Box>
                 <TextField
                   multiline
                   id="channel-model_mapping-label"
-                  label={inputLabel.model_mapping}
                   value={values.model_mapping}
                   name="model_mapping"
                   onBlur={handleBlur}
@@ -763,13 +788,42 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
                   aria-describedby="helper-text-channel-model_mapping-label"
                   minRows={5}
                   placeholder={inputPrompt.model_mapping}
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      fontFamily: 'JetBrains Mono, Consolas, Monaco, "Courier New", monospace',
+                      fontSize: '13px',
+                      lineHeight: '1.4',
+                      backgroundColor: '#f8f9fa',
+                    },
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': {
+                        borderColor: isValidJSON(values.model_mapping) ? theme.palette.grey[300] : theme.palette.error.main,
+                      },
+                    }
+                  }}
                 />
                 {touched.model_mapping && errors.model_mapping ? (
                   <FormHelperText error id="helper-tex-channel-model_mapping-label">
                     {errors.model_mapping}
                   </FormHelperText>
                 ) : (
-                  <FormHelperText id="helper-tex-channel-model_mapping-label"> {inputPrompt.model_mapping} </FormHelperText>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <FormHelperText id="helper-tex-channel-model_mapping-label">
+                      {inputPrompt.model_mapping}
+                    </FormHelperText>
+                    {values.model_mapping && values.model_mapping.trim() !== '' && (
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: isValidJSON(values.model_mapping) ? theme.palette.success.main : theme.palette.error.main,
+                          fontWeight: 'bold',
+                          fontSize: '11px'
+                        }}
+                      >
+                        {isValidJSON(values.model_mapping) ? '✓ 有效JSON' : '✗ 无效JSON'}
+                      </Typography>
+                    )}
+                  </Box>
                 )}
               </FormControl>
               <FormControl fullWidth error={Boolean(touched.system_prompt && errors.system_prompt)} sx={{ ...theme.typography.otherInput }}>

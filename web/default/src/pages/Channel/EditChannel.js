@@ -538,6 +538,7 @@ const EditChannel = () => {
                 onChange={handleInputChange}
               />
             </Form.Field>
+            {renderChannelTip(inputs.type)}
             <Form.Field>
               <Form.Input
                 label={t('channel.edit.name')}
@@ -565,7 +566,6 @@ const EditChannel = () => {
                 options={groupOptions}
               />
             </Form.Field>
-            {renderChannelTip(inputs.type)}
 
             {/* Azure OpenAI specific fields */}
             {inputs.type === 3 && (
@@ -759,8 +759,25 @@ const EditChannel = () => {
             {inputs.type !== 43 && (
               <>
                 <Form.Field>
+                  <label>
+                    {t('channel.edit.model_mapping')}
+                    <Button
+                      type="button"
+                      size="mini"
+                      onClick={() => {
+                        const formatted = formatJSON(inputs.model_mapping);
+                        setInputs((inputs) => ({
+                          ...inputs,
+                          model_mapping: formatted,
+                        }));
+                      }}
+                      style={{ marginLeft: '10px' }}
+                      disabled={!inputs.model_mapping || inputs.model_mapping.trim() === ''}
+                    >
+                      Format JSON
+                    </Button>
+                  </label>
                   <Form.TextArea
-                    label={t('channel.edit.model_mapping')}
                     placeholder={`${t(
                       'channel.edit.model_mapping_placeholder'
                     )}\n${JSON.stringify(MODEL_MAPPING_EXAMPLE, null, 2)}`}
@@ -769,10 +786,29 @@ const EditChannel = () => {
                     value={inputs.model_mapping}
                     style={{
                       minHeight: 150,
-                      fontFamily: 'JetBrains Mono, Consolas',
+                      fontFamily: 'JetBrains Mono, Consolas, Monaco, "Courier New", monospace',
+                      fontSize: '13px',
+                      lineHeight: '1.4',
+                      backgroundColor: '#f8f9fa',
+                      border: `1px solid ${isValidJSON(inputs.model_mapping) ? '#e1e5e9' : '#ff6b6b'}`,
+                      borderRadius: '4px',
                     }}
                     autoComplete='new-password'
                   />
+                  <div style={{ fontSize: '12px', marginTop: '5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#666' }}>
+                      {t('channel.edit.model_mapping_placeholder').split('\n')[0]}
+                    </span>
+                    {inputs.model_mapping && inputs.model_mapping.trim() !== '' && (
+                      <span style={{
+                        color: isValidJSON(inputs.model_mapping) ? '#28a745' : '#dc3545',
+                        fontWeight: 'bold',
+                        fontSize: '11px'
+                      }}>
+                        {isValidJSON(inputs.model_mapping) ? '✓ Valid JSON' : '✗ Invalid JSON'}
+                      </span>
+                    )}
+                  </div>
                 </Form.Field>
                 <Form.Field>
                   <label>
