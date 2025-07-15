@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/songquanpeng/one-api/common/ctxkey"
+	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/relay/channeltype"
 	"github.com/songquanpeng/one-api/relay/relaymode"
@@ -54,7 +55,38 @@ func GetMappedModelName(modelName string, mapping map[string]string) string {
 
 func GetByContext(c *gin.Context) *Meta {
 	if v, ok := c.Get(ctxkey.Meta); ok {
-		return v.(*Meta)
+		existingMeta := v.(*Meta)
+		// Check if channel information has changed (indicating a retry with new channel)
+		currentChannelId := c.GetInt(ctxkey.ChannelId)
+		if existingMeta.ChannelId != currentChannelId && currentChannelId != 0 {
+			// Channel has changed, update the cached meta with new channel information
+			logger.Infof(c.Request.Context(), "Channel changed during retry: %d -> %d, updating meta", existingMeta.ChannelId, currentChannelId)
+			existingMeta.ChannelType = c.GetInt(ctxkey.Channel)
+			existingMeta.ChannelId = currentChannelId
+			existingMeta.BaseURL = c.GetString(ctxkey.BaseURL)
+			existingMeta.APIKey = strings.TrimPrefix(c.Request.Header.Get("Authorization"), "Bearer ")
+			existingMeta.ChannelRatio = c.GetFloat64(ctxkey.ChannelRatio)
+			existingMeta.ModelMapping = c.GetStringMapString(ctxkey.ModelMapping)
+			existingMeta.ForcedSystemPrompt = c.GetString(ctxkey.SystemPrompt)
+
+			// Update config
+			if cfg, ok := c.Get(ctxkey.Config); ok {
+				existingMeta.Config = cfg.(model.ChannelConfig)
+			}
+
+			// Update BaseURL fallback if needed
+			if existingMeta.BaseURL == "" {
+				existingMeta.BaseURL = channeltype.ChannelBaseURLs[existingMeta.ChannelType]
+			}
+
+			// Update API type and actual model name
+			existingMeta.APIType = channeltype.ToAPIType(existingMeta.ChannelType)
+			existingMeta.ActualModelName = GetMappedModelName(existingMeta.OriginModelName, existingMeta.ModelMapping)
+
+			// Update the cached meta in context
+			Set2Context(c, existingMeta)
+		}
+		return existingMeta
 	}
 
 	meta := Meta{
