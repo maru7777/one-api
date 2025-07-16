@@ -43,6 +43,12 @@ func ToAPIType(channelType int) int {
 		apiType = apitype.Proxy
 	case DeepSeek:
 		apiType = apitype.DeepSeek
+	case Groq:
+		apiType = apitype.Groq
+	case Mistral:
+		apiType = apitype.Mistral
+	case Moonshot:
+		apiType = apitype.Moonshot
 	}
 
 	return apiType
