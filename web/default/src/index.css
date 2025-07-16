@@ -928,6 +928,70 @@ code {
     }
 }
 
+/* Progressive header disclosure styles */
+.header-more-dropdown .dropdown.menu {
+    min-width: 180px !important;
+}
+
+.header-more-dropdown .dropdown.item {
+    padding: 8px 16px !important;
+}
+
+/* Icon-only header buttons on medium screens */
+@media screen and (min-width: 768px) and (max-width: 1399px) {
+    .ui.menu .item {
+        padding-left: 0.6em !important;
+        padding-right: 0.6em !important;
+        min-width: auto !important;
+    }
+
+    /* Ensure icons are properly centered in icon-only mode */
+    .ui.menu .item > .icon:only-child {
+        margin: 0 !important;
+    }
+
+    /* For items with only icons, reduce padding further */
+    .ui.menu .item[title] {
+        padding-left: 0.5em !important;
+        padding-right: 0.5em !important;
+    }
+}
+
+/* Prevent header overflow and ensure proper layout */
+.ui.menu {
+    overflow: visible !important;
+}
+
+.ui.menu .ui.container {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+}
+
+/* Ensure right menu stays on the right */
+.ui.menu .menu.right {
+    margin-left: auto !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+/* Fix center alignment issue - ensure proper left-right balance */
+.ui.menu .ui.container {
+    width: 100% !important;
+}
+
+/* Ensure navigation buttons stay left-aligned */
+.ui.menu .ui.container > .item:not(.right) {
+    margin-right: 0 !important;
+}
+
+/* Force proper layout on all screen sizes */
+@media screen and (min-width: 1400px) {
+    .ui.menu .ui.container {
+        justify-content: space-between !important;
+    }
+}
+
 @media screen and (max-width: 768px) {
   .ui.container {
     width: 100% !important;
