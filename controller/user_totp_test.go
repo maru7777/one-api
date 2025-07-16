@@ -49,7 +49,9 @@ func setupTestEnvironment(t *testing.T) (*gorm.DB, func()) {
 
 	// Store original DB and replace with test DB
 	originalDB := model.DB
+	originalLogDB := model.LOG_DB
 	model.DB = testDB
+	model.LOG_DB = testDB // Use same DB for logging in tests
 
 	// Set SQLite flag for proper query handling
 	originalUsingSQLite := common.UsingSQLite
@@ -69,6 +71,7 @@ func setupTestEnvironment(t *testing.T) (*gorm.DB, func()) {
 		DisplayName: "Test User",
 		Email:       "test@example.com",
 		AccessToken: "test-access-token-1",
+		AffCode:     "TEST1",
 		TotpSecret:  "",
 	}
 	err := testDB.Create(testUser).Error
@@ -77,6 +80,7 @@ func setupTestEnvironment(t *testing.T) (*gorm.DB, func()) {
 	// Return cleanup function
 	cleanup := func() {
 		model.DB = originalDB
+		model.LOG_DB = originalLogDB
 		common.UsingSQLite = originalUsingSQLite
 		common.RedisEnabled = originalRedisEnabled
 	}
@@ -324,6 +328,7 @@ func TestAdminDisableUserTotp(t *testing.T) {
 		DisplayName: "Admin User",
 		Email:       "admin@example.com",
 		AccessToken: "test-access-token-2",
+		AffCode:     "ADMIN",
 	}
 	err := testDB.Create(adminUser).Error
 	require.NoError(t, err)
@@ -338,6 +343,7 @@ func TestAdminDisableUserTotp(t *testing.T) {
 		DisplayName: "Target User",
 		Email:       "target@example.com",
 		AccessToken: "test-access-token-3",
+		AffCode:     "TARG3",
 		TotpSecret:  "JBSWY3DPEHPK3PXP",
 	}
 	err = testDB.Create(targetUser).Error

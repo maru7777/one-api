@@ -1077,8 +1077,7 @@ func DisableTotp(c *gin.Context) {
 	}
 
 	// Clear the TOTP secret
-	user.TotpSecret = ""
-	err = user.Update(false)
+	err = user.ClearTotpSecret()
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -1202,8 +1201,7 @@ func AdminDisableUserTotp(c *gin.Context) {
 	}
 
 	// Clear the TOTP secret
-	user.TotpSecret = ""
-	err = user.Update(false)
+	err = user.ClearTotpSecret()
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
