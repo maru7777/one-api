@@ -368,10 +368,10 @@ func CacheGetRandomSatisfiedChannel(group string, model string, ignoreFirstPrior
 
 	minTokensChannel := candidateChannels[0]
 	minTokensModelConfig := minTokensChannel.GetModelConfig(model)
-	if minTokensModelConfig.MaxTokens > 0 {
+	if minTokensModelConfig != nil && minTokensModelConfig.MaxTokens > 0 {
 		for i := range candidateChannels {
 			modeConfig := candidateChannels[i].GetModelConfig(model)
-			if modeConfig.MaxTokens != minTokensModelConfig.MaxTokens {
+			if modeConfig != nil && modeConfig.MaxTokens != minTokensModelConfig.MaxTokens {
 				endIdx = i
 				break
 			}
@@ -429,12 +429,15 @@ func CacheGetRandomSatisfiedChannelExcluding(group string, model string, ignoreF
 		for _, channel := range channelsFromCache {
 			if excludeChannelIds[channel.Id] {
 				modelConfig := channel.GetModelConfig(model)
-				smallerMaxTokensSizes[modelConfig.MaxTokens] = true
+				if modelConfig != nil {
+					smallerMaxTokensSizes[modelConfig.MaxTokens] = true
+				}
 			}
 		}
 
 		var LargerMaxTokensSizeChannels []*Channel
-		for _, channel := range channelsFromCache {
+		// Work on already-filtered candidateChannels, not the original channelsFromCache
+		for _, channel := range candidateChannels {
 			modelConfig := channel.GetModelConfig(model)
 			if modelConfig != nil && !smallerMaxTokensSizes[modelConfig.MaxTokens] {
 				LargerMaxTokensSizeChannels = append(LargerMaxTokensSizeChannels, channel)

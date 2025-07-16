@@ -53,10 +53,8 @@ func IsModelsOnlySupportedByChatCompletionAPI(actualModel string) bool {
 	case strings.Contains(actualModel, "gpt") && strings.Contains(actualModel, "-search-"),
 		strings.Contains(actualModel, "gpt") && strings.Contains(actualModel, "-audio-"):
 		return true
-	case strings.Contains(actualModel, "gpt"):
-		return false
 	default:
-		return true
+		return false
 	}
 }
 

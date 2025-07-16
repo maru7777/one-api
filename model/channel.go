@@ -244,9 +244,35 @@ func (channel *Channel) MigrateModelConfigsToModelPrice() error {
 	modelRatios := channel.GetModelRatio()
 	completionRatios := channel.GetCompletionRatio()
 
-	for modelName, oldConfig := range oldFormatConfigs {
-		newConfig := ModelConfigLocal{
-			MaxTokens: oldConfig.MaxTokens,
+	// Collect all model names from all sources
+	allModelNames := make(map[string]bool)
+	for modelName := range oldFormatConfigs {
+		if modelName != "" {
+			allModelNames[modelName] = true
+		}
+	}
+	if modelRatios != nil {
+		for modelName := range modelRatios {
+			if modelName != "" {
+				allModelNames[modelName] = true
+			}
+		}
+	}
+	if completionRatios != nil {
+		for modelName := range completionRatios {
+			if modelName != "" {
+				allModelNames[modelName] = true
+			}
+		}
+	}
+
+	// Process all models from all sources
+	for modelName := range allModelNames {
+		newConfig := ModelConfigLocal{}
+
+		// Start with MaxTokens from old config if available
+		if oldConfig, exists := oldFormatConfigs[modelName]; exists {
+			newConfig.MaxTokens = oldConfig.MaxTokens
 		}
 
 		// Add pricing information if available
