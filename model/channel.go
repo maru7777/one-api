@@ -6,6 +6,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/logger"
@@ -33,10 +34,10 @@ type Channel struct {
 	Balance            float64 `json:"balance"` // in USD
 	BalanceUpdatedTime int64   `json:"balance_updated_time" gorm:"bigint"`
 	Models             string  `json:"models"`
-	ModelConfigs       *string `json:"model_configs" gorm:"type:varchar(1024);default:''"`
+	ModelConfigs       *string `json:"model_configs" gorm:"type:text;default:''"`
 	Group              string  `json:"group" gorm:"type:varchar(32);default:'default'"`
 	UsedQuota          int64   `json:"used_quota" gorm:"bigint;default:0"`
-	ModelMapping       *string `json:"model_mapping" gorm:"type:varchar(1024);default:''"`
+	ModelMapping       *string `json:"model_mapping" gorm:"type:text;default:''"`
 	Priority           *int64  `json:"priority" gorm:"bigint;default:0"`
 	Config             string  `json:"config"`
 	SystemPrompt       *string `json:"system_prompt" gorm:"type:text"`
@@ -840,6 +841,200 @@ func (channel *Channel) MigrateHistoricalPricingToModelConfigs() error {
 	}
 
 	return nil
+}
+
+// MigrateChannelFieldsToText migrates ModelConfigs and ModelMapping fields from varchar(1024) to text type.
+//
+// Background:
+// The original varchar(1024) length was insufficient for complex model configurations, especially when:
+// - Multiple models are configured with detailed pricing information (ratio, completion_ratio, max_tokens)
+// - Long model names or complex mapping values are used
+// - Channel-specific configurations grow beyond the 1024 character limit
+//
+// This migration is essential because:
+// 1. Modern AI models have longer names and more complex configurations
+// 2. Users need to configure pricing for dozens of models per channel
+// 3. JSON serialization of comprehensive model configs easily exceeds 1024 chars
+// 4. Truncated configurations lead to data loss and system errors
+//
+// The migration is designed to be:
+// - Idempotent: Can be run multiple times safely
+// - Database-agnostic: Supports MySQL, PostgreSQL, and SQLite
+// - Data-preserving: All existing data is maintained during the migration
+// - Transaction-safe: Uses database transactions to ensure data integrity
+//
+// This function should be called during application startup before any channel operations.
+func MigrateChannelFieldsToText() error {
+	logger.SysLog("Starting migration of ModelConfigs and ModelMapping fields to TEXT type")
+
+	// Check if migration is needed by examining current schema (idempotency check)
+	// This ensures the migration can be run multiple times safely
+	needsMigration, err := checkIfFieldMigrationNeeded()
+	if err != nil {
+		logger.SysError(fmt.Sprintf("Failed to check if field migration is needed: %s", err.Error()))
+		return fmt.Errorf("failed to check migration status: %w", err)
+	}
+
+	if !needsMigration {
+		logger.SysLog("ModelConfigs and ModelMapping fields are already TEXT type - no migration needed")
+		return nil
+	}
+
+	logger.SysLog("Column type migration required - proceeding with migration")
+
+	// Perform the actual migration with proper transaction handling
+	return performFieldMigration()
+}
+
+// performFieldMigration executes the actual database schema changes to migrate fields to TEXT type.
+// This function uses database transactions to ensure data integrity and provides detailed error handling.
+func performFieldMigration() error {
+	// Use transaction for data integrity - ensures all-or-nothing migration
+	tx := DB.Begin()
+	if tx.Error != nil {
+		logger.SysError(fmt.Sprintf("Failed to start column migration transaction: %s", tx.Error.Error()))
+		return fmt.Errorf("failed to start transaction: %w", tx.Error)
+	}
+
+	// Ensure transaction is properly handled in case of panic or error
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			logger.SysError(fmt.Sprintf("Column migration panicked, rolled back: %v", r))
+		}
+	}()
+
+	// Perform database-specific column type changes
+	var err error
+	if common.UsingMySQL {
+		err = performMySQLFieldMigration(tx)
+	} else if common.UsingPostgreSQL {
+		err = performPostgreSQLFieldMigration(tx)
+	} else {
+		// This should not happen due to the check in checkIfFieldMigrationNeeded,
+		// but we handle it for safety
+		tx.Rollback()
+		return fmt.Errorf("unsupported database type for field migration")
+	}
+
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Commit the transaction
+	if err := tx.Commit().Error; err != nil {
+		logger.SysError(fmt.Sprintf("Failed to commit column migration transaction: %s", err.Error()))
+		return fmt.Errorf("failed to commit migration: %w", err)
+	}
+
+	logger.SysLog("Successfully migrated ModelConfigs and ModelMapping columns to TEXT type")
+	return nil
+}
+
+// performMySQLFieldMigration performs the MySQL-specific column type migration.
+func performMySQLFieldMigration(tx *gorm.DB) error {
+	logger.SysLog("Performing MySQL field migration")
+
+	// MySQL: Use MODIFY COLUMN to change type while preserving data
+	err := tx.Exec("ALTER TABLE channels MODIFY COLUMN model_configs TEXT DEFAULT ''").Error
+	if err != nil {
+		logger.SysError(fmt.Sprintf("Failed to migrate model_configs column in MySQL: %s", err.Error()))
+		return fmt.Errorf("failed to migrate model_configs column: %w", err)
+	}
+
+	err = tx.Exec("ALTER TABLE channels MODIFY COLUMN model_mapping TEXT DEFAULT ''").Error
+	if err != nil {
+		logger.SysError(fmt.Sprintf("Failed to migrate model_mapping column in MySQL: %s", err.Error()))
+		return fmt.Errorf("failed to migrate model_mapping column: %w", err)
+	}
+
+	logger.SysLog("MySQL field migration completed successfully")
+	return nil
+}
+
+// performPostgreSQLFieldMigration performs the PostgreSQL-specific column type migration.
+func performPostgreSQLFieldMigration(tx *gorm.DB) error {
+	logger.SysLog("Performing PostgreSQL field migration")
+
+	// PostgreSQL: Use ALTER COLUMN TYPE to change column type
+	err := tx.Exec("ALTER TABLE channels ALTER COLUMN model_configs TYPE TEXT").Error
+	if err != nil {
+		logger.SysError(fmt.Sprintf("Failed to migrate model_configs column in PostgreSQL: %s", err.Error()))
+		return fmt.Errorf("failed to migrate model_configs column: %w", err)
+	}
+
+	err = tx.Exec("ALTER TABLE channels ALTER COLUMN model_mapping TYPE TEXT").Error
+	if err != nil {
+		logger.SysError(fmt.Sprintf("Failed to migrate model_mapping column in PostgreSQL: %s", err.Error()))
+		return fmt.Errorf("failed to migrate model_mapping column: %w", err)
+	}
+
+	logger.SysLog("PostgreSQL field migration completed successfully")
+	return nil
+}
+
+// checkIfFieldMigrationNeeded checks if ModelConfigs and ModelMapping fields need to be migrated to TEXT type.
+// This function provides idempotency by checking the current column types in the database.
+// Returns true if migration is needed, false if fields are already TEXT type.
+func checkIfFieldMigrationNeeded() (bool, error) {
+	if common.UsingMySQL {
+		// Check MySQL column types for both fields
+		var modelConfigsType, modelMappingType string
+
+		// Check model_configs column type
+		err := DB.Raw(`SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS
+			WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'channels' AND COLUMN_NAME = 'model_configs'`).
+			Scan(&modelConfigsType).Error
+		if err != nil {
+			return false, fmt.Errorf("failed to check model_configs column type in MySQL: %w", err)
+		}
+
+		// Check model_mapping column type
+		err = DB.Raw(`SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS
+			WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'channels' AND COLUMN_NAME = 'model_mapping'`).
+			Scan(&modelMappingType).Error
+		if err != nil {
+			return false, fmt.Errorf("failed to check model_mapping column type in MySQL: %w", err)
+		}
+
+		// Migration needed if either field is still varchar
+		return modelConfigsType == "varchar" || modelMappingType == "varchar", nil
+
+	} else if common.UsingPostgreSQL {
+		// Check PostgreSQL column types for both fields
+		var modelConfigsType, modelMappingType string
+
+		// Check model_configs column type
+		err := DB.Raw(`SELECT data_type FROM information_schema.columns
+			WHERE table_name = 'channels' AND column_name = 'model_configs'`).
+			Scan(&modelConfigsType).Error
+		if err != nil {
+			return false, fmt.Errorf("failed to check model_configs column type in PostgreSQL: %w", err)
+		}
+
+		// Check model_mapping column type
+		err = DB.Raw(`SELECT data_type FROM information_schema.columns
+			WHERE table_name = 'channels' AND column_name = 'model_mapping'`).
+			Scan(&modelMappingType).Error
+		if err != nil {
+			return false, fmt.Errorf("failed to check model_mapping column type in PostgreSQL: %w", err)
+		}
+
+		// Migration needed if either field is still character varying (varchar)
+		return modelConfigsType == "character varying" || modelMappingType == "character varying", nil
+
+	} else if common.UsingSQLite {
+		// SQLite is flexible with column types and doesn't enforce strict typing
+		// TEXT and VARCHAR are treated the same way, so no migration is needed
+		logger.SysLog("SQLite detected - column type migration not required (SQLite is flexible with text types)")
+		return false, nil
+
+	} else {
+		// Unknown database type - assume no migration needed to be safe
+		logger.SysLog("Unknown database type detected - skipping column type migration")
+		return false, nil
+	}
 }
 
 // MigrateAllChannelModelConfigs migrates all channels' ModelConfigs from old format to new format
