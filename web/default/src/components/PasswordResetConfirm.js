@@ -111,7 +111,7 @@ const PasswordResetConfirm = () => {
                   style={{
                     marginBottom: '1em',
                     cursor: 'pointer',
-                    backgroundColor: '#f8f9fa',
+                    backgroundColor: 'var(--bg-secondary)',
                   }}
                   onClick={(e) => {
                     e.target.select();
@@ -127,7 +127,7 @@ const PasswordResetConfirm = () => {
                 loading={loading}
                 disabled={disableButton}
                 style={{
-                  background: '#2F73FF',
+                  background: 'var(--button-primary)',
                   color: 'white',
                   marginBottom: '1.5em',
                 }}
@@ -139,7 +139,7 @@ const PasswordResetConfirm = () => {
             </Form>
             {newPassword && (
               <Message style={{ background: 'transparent', boxShadow: 'none' }}>
-                <p style={{ fontSize: '0.9em', color: '#666' }}>
+                <p style={{ fontSize: '0.9em', color: 'var(--text-secondary)' }}>
                   {t('auth.reset.confirm.notice')}
                 </p>
               </Message>

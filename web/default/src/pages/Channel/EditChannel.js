@@ -862,12 +862,12 @@ const EditChannel = () => {
                     autoComplete='new-password'
                   />
                   <div style={{ fontSize: '12px', marginTop: '5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#666' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>
                       {t('channel.edit.model_configs_help')}
                     </span>
                     {inputs.model_configs && inputs.model_configs.trim() !== '' && (
                       <span style={{
-                        color: isValidJSON(inputs.model_configs) ? '#28a745' : '#dc3545',
+                        color: isValidJSON(inputs.model_configs) ? 'var(--success-color)' : 'var(--error-color)',
                         fontWeight: 'bold',
                         fontSize: '11px'
                       }}>
@@ -1138,7 +1138,7 @@ const EditChannel = () => {
                   value={inputs.inference_profile_arn_map}
                   autoComplete="new-password"
                 />
-                <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '5px' }}>
                   JSON format: {`{"model_name": "arn:aws:bedrock:region:account:inference-profile/profile-id"}`}. Maps model names to AWS Bedrock Inference Profile ARNs. Leave empty to use default model IDs.
                 </div>
               </Form.Field>

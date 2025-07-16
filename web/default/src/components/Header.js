@@ -1,6 +1,7 @@
 import React, { useContext, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserContext } from '../context/User';
+import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -84,6 +85,7 @@ if (localStorage.getItem('chat_link')) {
 const Header = () => {
   const { t, i18n } = useTranslation();
   const [userState, userDispatch] = useContext(UserContext);
+  const { state: themeState, setTheme } = useTheme();
   let navigate = useNavigate();
 
   const [showSidebar, setShowSidebar] = useState(false);
@@ -128,7 +130,7 @@ const Header = () => {
           style={{
             fontSize: '15px',
             fontWeight: '400',
-            color: '#666',
+            color: 'var(--text-secondary)',
           }}
         >
           <Icon name={button.icon} style={{ marginRight: '4px' }} />
@@ -204,8 +206,82 @@ const Header = () => {
                 />
               </Menu.Item>
               <Menu.Item>
+                <Dropdown
+                  className="theme-dropdown"
+                  trigger={
+                    <Button className="theme-toggle-button">
+                      <Icon
+                        name={
+                          themeState.theme === 'system'
+                            ? 'desktop'
+                            : themeState.effectiveTheme === 'light'
+                            ? 'sun'
+                            : 'moon'
+                        }
+                        style={{ margin: 0, fontSize: '18px' }}
+                      />
+                    </Button>
+                  }
+                >
+                  <Dropdown.Menu
+                    style={{
+                      backgroundColor: 'var(--card-bg)',
+                      border: '1px solid var(--border-color)',
+                      boxShadow: '0 4px 12px var(--shadow-color)',
+                      minWidth: '140px'
+                    }}
+                  >
+                    <Dropdown.Item
+                      onClick={() => setTheme('light')}
+                      active={themeState.theme === 'light'}
+                      style={{
+                        backgroundColor: themeState.theme === 'light' ? 'var(--button-primary)' : 'var(--card-bg)',
+                        color: themeState.theme === 'light' ? 'white' : 'var(--text-primary)',
+                        padding: '12px 16px',
+                        borderBottom: '1px solid var(--border-color)',
+                        fontWeight: themeState.theme === 'light' ? '600' : '400',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Icon name="sun" style={{ marginRight: '8px' }} />
+                      {t('header.theme.light')}
+                    </Dropdown.Item>
+                    <Dropdown.Item
+                      onClick={() => setTheme('dark')}
+                      active={themeState.theme === 'dark'}
+                      style={{
+                        backgroundColor: themeState.theme === 'dark' ? 'var(--button-primary)' : 'var(--card-bg)',
+                        color: themeState.theme === 'dark' ? 'white' : 'var(--text-primary)',
+                        padding: '12px 16px',
+                        borderBottom: '1px solid var(--border-color)',
+                        fontWeight: themeState.theme === 'dark' ? '600' : '400',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Icon name="moon" style={{ marginRight: '8px' }} />
+                      {t('header.theme.dark')}
+                    </Dropdown.Item>
+                    <Dropdown.Item
+                      onClick={() => setTheme('system')}
+                      active={themeState.theme === 'system'}
+                      style={{
+                        backgroundColor: themeState.theme === 'system' ? 'var(--button-primary)' : 'var(--card-bg)',
+                        color: themeState.theme === 'system' ? 'white' : 'var(--text-primary)',
+                        padding: '12px 16px',
+                        borderBottom: 'none',
+                        fontWeight: themeState.theme === 'system' ? '600' : '400',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Icon name="desktop" style={{ marginRight: '8px' }} />
+                      {t('header.theme.system')}
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                </Dropdown>
+              </Menu.Item>
+              <Menu.Item>
                 {userState.user ? (
-                  <Button onClick={logout} style={{ color: '#666666' }}>
+                  <Button onClick={logout} style={{ color: 'var(--text-secondary)' }}>
                     {t('header.logout')}
                   </Button>
                 ) : (
@@ -261,7 +337,7 @@ const Header = () => {
               style={{
                 fontSize: '18px',
                 fontWeight: '500',
-                color: '#333',
+                color: 'var(--text-primary)',
               }}
             >
               {systemName}
@@ -280,10 +356,89 @@ const Header = () => {
               style={{
                 fontSize: '16px',
                 fontWeight: '400',
-                color: '#666',
+                color: 'var(--text-secondary)',
                 padding: '0 10px',
               }}
             />
+            <Dropdown
+              item
+              className="theme-dropdown"
+              trigger={
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Icon
+                    name={
+                      themeState.theme === 'system'
+                        ? 'desktop'
+                        : themeState.effectiveTheme === 'light'
+                        ? 'sun'
+                        : 'moon'
+                    }
+                    style={{ margin: 0, fontSize: '18px' }}
+                  />
+                </span>
+              }
+              style={{
+                fontSize: '16px',
+                fontWeight: '400',
+                color: 'var(--text-secondary)',
+                padding: '0 10px',
+              }}
+            >
+              <Dropdown.Menu
+                style={{
+                  backgroundColor: 'var(--card-bg)',
+                  border: '1px solid var(--border-color)',
+                  boxShadow: '0 4px 12px var(--shadow-color)',
+                  minWidth: '140px'
+                }}
+              >
+                <Dropdown.Item
+                  onClick={() => setTheme('light')}
+                  active={themeState.theme === 'light'}
+                  style={{
+                    backgroundColor: themeState.theme === 'light' ? 'var(--button-primary)' : 'var(--card-bg)',
+                    color: themeState.theme === 'light' ? 'white' : 'var(--text-primary)',
+                    padding: '12px 16px',
+                    borderBottom: '1px solid var(--border-color)',
+                    fontWeight: themeState.theme === 'light' ? '600' : '400',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Icon name="sun" style={{ marginRight: '8px' }} />
+                  {t('header.theme.light')}
+                </Dropdown.Item>
+                <Dropdown.Item
+                  onClick={() => setTheme('dark')}
+                  active={themeState.theme === 'dark'}
+                  style={{
+                    backgroundColor: themeState.theme === 'dark' ? 'var(--button-primary)' : 'var(--card-bg)',
+                    color: themeState.theme === 'dark' ? 'white' : 'var(--text-primary)',
+                    padding: '12px 16px',
+                    borderBottom: '1px solid var(--border-color)',
+                    fontWeight: themeState.theme === 'dark' ? '600' : '400',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Icon name="moon" style={{ marginRight: '8px' }} />
+                  {t('header.theme.dark')}
+                </Dropdown.Item>
+                <Dropdown.Item
+                  onClick={() => setTheme('system')}
+                  active={themeState.theme === 'system'}
+                  style={{
+                    backgroundColor: themeState.theme === 'system' ? 'var(--button-primary)' : 'var(--card-bg)',
+                    color: themeState.theme === 'system' ? 'white' : 'var(--text-primary)',
+                    padding: '12px 16px',
+                    borderBottom: 'none',
+                    fontWeight: themeState.theme === 'system' ? '600' : '400',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Icon name="desktop" style={{ marginRight: '8px' }} />
+                  {t('header.theme.system')}
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
             {userState.user ? (
               <Dropdown
                 text={userState.user.username}
@@ -292,7 +447,7 @@ const Header = () => {
                 style={{
                   fontSize: '15px',
                   fontWeight: '400',
-                  color: '#666',
+                  color: 'var(--text-secondary)',
                 }}
               >
                 <Dropdown.Menu>
@@ -301,7 +456,7 @@ const Header = () => {
                     style={{
                       fontSize: '15px',
                       fontWeight: '400',
-                      color: '#666',
+                      color: 'var(--text-secondary)',
                     }}
                   >
                     {t('header.logout')}
@@ -317,7 +472,7 @@ const Header = () => {
                 style={{
                   fontSize: '15px',
                   fontWeight: '400',
-                  color: '#666',
+                  color: 'var(--text-secondary)',
                 }}
               />
             )}

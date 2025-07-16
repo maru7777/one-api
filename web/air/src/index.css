@@ -114,3 +114,132 @@ body {
 body::-webkit-scrollbar {
     width: 0;  /* 隐藏滚动条的宽度 */
 }
+
+/* Dark mode enhancements for Semi-UI components */
+[theme-mode="dark"] .semi-input,
+[theme-mode="dark"] .semi-input-wrapper,
+[theme-mode="dark"] .semi-textarea-wrapper {
+    background-color: var(--semi-color-fill-0) !important;
+    border-color: var(--semi-color-border) !important;
+    color: var(--semi-color-text-0) !important;
+}
+
+[theme-mode="dark"] .semi-input:focus,
+[theme-mode="dark"] .semi-input-wrapper:focus-within,
+[theme-mode="dark"] .semi-textarea-wrapper:focus-within {
+    border-color: var(--semi-color-primary) !important;
+    background-color: var(--semi-color-fill-0) !important;
+}
+
+[theme-mode="dark"] .semi-textarea {
+    background-color: var(--semi-color-fill-0) !important;
+    color: var(--semi-color-text-0) !important;
+    border-color: var(--semi-color-border) !important;
+}
+
+[theme-mode="dark"] .semi-textarea:focus {
+    border-color: var(--semi-color-primary) !important;
+    background-color: var(--semi-color-fill-0) !important;
+}
+
+[theme-mode="dark"] .semi-select,
+[theme-mode="dark"] .semi-select-selection {
+    background-color: var(--semi-color-fill-0) !important;
+    border-color: var(--semi-color-border) !important;
+    color: var(--semi-color-text-0) !important;
+}
+
+[theme-mode="dark"] .semi-select:focus,
+[theme-mode="dark"] .semi-select-selection:focus {
+    border-color: var(--semi-color-primary) !important;
+}
+
+[theme-mode="dark"] .semi-select-option-list {
+    background-color: var(--semi-color-bg-2) !important;
+    border-color: var(--semi-color-border) !important;
+}
+
+[theme-mode="dark"] .semi-select-option {
+    background-color: var(--semi-color-bg-2) !important;
+    color: var(--semi-color-text-0) !important;
+}
+
+[theme-mode="dark"] .semi-select-option:hover {
+    background-color: var(--semi-color-fill-1) !important;
+}
+
+[theme-mode="dark"] .semi-form-field-label {
+    color: var(--semi-color-text-0) !important;
+}
+
+[theme-mode="dark"] .semi-tabs-content {
+    background-color: var(--semi-color-bg-1) !important;
+}
+
+[theme-mode="dark"] .semi-tabs-tab {
+    color: var(--semi-color-text-1) !important;
+}
+
+[theme-mode="dark"] .semi-tabs-tab-active {
+    color: var(--semi-color-text-0) !important;
+}
+
+/* Code blocks and pre elements for dark mode */
+[theme-mode="dark"] pre {
+    background-color: var(--semi-color-fill-0) !important;
+    color: var(--semi-color-text-0) !important;
+    border: 1px solid var(--semi-color-border) !important;
+}
+
+[theme-mode="dark"] code {
+    background-color: var(--semi-color-fill-0) !important;
+    color: var(--semi-color-text-0) !important;
+}
+
+/* Message and notification components */
+[theme-mode="dark"] .semi-notification {
+    background-color: var(--semi-color-bg-2) !important;
+    border-color: var(--semi-color-border) !important;
+    color: var(--semi-color-text-0) !important;
+}
+
+[theme-mode="dark"] .semi-toast {
+    background-color: var(--semi-color-bg-2) !important;
+    color: var(--semi-color-text-0) !important;
+}
+
+/* Ensure all generic inputs have dark styling */
+[theme-mode="dark"] input,
+[theme-mode="dark"] textarea,
+[theme-mode="dark"] select {
+    background-color: var(--semi-color-fill-0) !important;
+    color: var(--semi-color-text-0) !important;
+    border: 1px solid var(--semi-color-border) !important;
+}
+
+[theme-mode="dark"] input:focus,
+[theme-mode="dark"] textarea:focus,
+[theme-mode="dark"] select:focus {
+    border-color: var(--semi-color-primary) !important;
+    background-color: var(--semi-color-fill-0) !important;
+    outline: none !important;
+}
+
+/* Custom scrollbar for dark mode */
+[theme-mode="dark"] *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+[theme-mode="dark"] *::-webkit-scrollbar-track {
+    background: var(--semi-color-fill-0);
+}
+
+[theme-mode="dark"] *::-webkit-scrollbar-thumb {
+    background-color: var(--semi-color-border);
+    border-radius: 4px;
+}
+
+[theme-mode="dark"] *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--semi-color-text-2);
+}

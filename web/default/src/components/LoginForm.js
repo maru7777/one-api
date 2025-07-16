@@ -174,7 +174,7 @@ const LoginForm = () => {
                 fluid
                 size='large'
                 style={{
-                  background: '#2F73FF', // Use a more modern blue
+                  background: 'var(--button-primary)', // Use a more modern blue
                   color: 'white',
                   marginBottom: totpRequired ? '1em' : '1.5em',
                 }}
@@ -188,7 +188,7 @@ const LoginForm = () => {
                   fluid
                   size='large'
                   style={{
-                    background: '#666',
+                    background: 'var(--button-secondary)',
                     color: 'white',
                     marginBottom: '1.5em',
                   }}
@@ -209,14 +209,14 @@ const LoginForm = () => {
                   display: 'flex',
                   justifyContent: 'space-between',
                   fontSize: '0.9em',
-                  color: '#666',
+                  color: 'var(--text-secondary)',
                 }}
               >
                 <div>
                   {t('auth.login.forgot_password')}
                   <Link
                     to='/reset'
-                    style={{ color: '#2185d0', marginLeft: '2px' }}
+                    style={{ color: 'var(--button-primary)', marginLeft: '2px' }}
                   >
                     {t('auth.login.reset_password')}
                   </Link>
@@ -225,7 +225,7 @@ const LoginForm = () => {
                   {t('auth.login.no_account')}
                   <Link
                     to='/register'
-                    style={{ color: '#2185d0', marginLeft: '2px' }}
+                    style={{ color: 'var(--button-primary)', marginLeft: '2px' }}
                   >
                     {t('auth.login.register')}
                   </Link>
@@ -239,7 +239,7 @@ const LoginForm = () => {
               <>
                 <Divider
                   horizontal
-                  style={{ color: '#666', fontSize: '0.9em' }}
+                  style={{ color: 'var(--text-secondary)', fontSize: '0.9em' }}
                 >
                   {t('auth.login.other_methods')}
                 </Divider>
@@ -272,8 +272,7 @@ const LoginForm = () => {
                   {status.lark_client_id && (
                     <div
                       style={{
-                        background:
-                          'radial-gradient(circle, #FFFFFF, #FFFFFF, #FFFFFF, #FFFFFF, #FFFFFF)',
+                        background: 'var(--card-bg)',
                         width: '36px',
                         height: '36px',
                         borderRadius: '10em',
@@ -323,7 +322,7 @@ const LoginForm = () => {
                   fluid
                   size='large'
                   style={{
-                    background: '#2F73FF',
+                    background: 'var(--button-primary)',
                     color: 'white',
                     marginBottom: '1.5em',
                   }}

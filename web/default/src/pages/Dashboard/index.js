@@ -20,7 +20,7 @@ import './Dashboard.css';
 const chartConfig = {
   lineChart: {
     style: {
-      background: '#fff',
+      background: 'var(--card-bg)',
       borderRadius: '8px',
     },
     line: {
@@ -224,7 +224,7 @@ const Dashboard = () => {
     tickLine: false,
     tick: {
       fontSize: 12,
-      fill: '#A3AED0',
+      fill: 'var(--text-secondary)',
       textAnchor: 'middle', // 文本居中对齐
     },
     tickFormatter: formatDate,
@@ -261,10 +261,11 @@ const Dashboard = () => {
                     <YAxis hide={true} />
                     <Tooltip
                       contentStyle={{
-                        background: '#fff',
+                        background: 'var(--card-bg)',
                         border: 'none',
                         borderRadius: '4px',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                        boxShadow: '0 2px 8px var(--shadow-color)',
+                        color: 'var(--text-primary)',
                       }}
                       formatter={(value) => [
                         value,
@@ -317,10 +318,11 @@ const Dashboard = () => {
                     <YAxis hide={true} />
                     <Tooltip
                       contentStyle={{
-                        background: '#fff',
+                        background: 'var(--card-bg)',
                         border: 'none',
                         borderRadius: '4px',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                        boxShadow: '0 2px 8px var(--shadow-color)',
+                        color: 'var(--text-primary)',
                       }}
                       formatter={(value) => [
                         value.toFixed(6),
@@ -371,10 +373,11 @@ const Dashboard = () => {
                     <YAxis hide={true} />
                     <Tooltip
                       contentStyle={{
-                        background: '#fff',
+                        background: 'var(--card-bg)',
                         border: 'none',
                         borderRadius: '4px',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                        boxShadow: '0 2px 8px var(--shadow-color)',
+                        color: 'var(--text-primary)',
                       }}
                       formatter={(value) => [
                         value,
@@ -418,14 +421,15 @@ const Dashboard = () => {
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 12, fill: '#A3AED0' }}
+                  tick={{ fontSize: 12, fill: 'var(--text-secondary)' }}
                 />
                 <Tooltip
                   contentStyle={{
-                    background: '#fff',
+                    background: 'var(--card-bg)',
                     border: 'none',
                     borderRadius: '4px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                    boxShadow: '0 2px 8px var(--shadow-color)',
+                    color: 'var(--text-primary)',
                   }}
                   labelFormatter={(label) =>
                     `${t('dashboard.statistics.tooltip.date')}: ${formatDate(

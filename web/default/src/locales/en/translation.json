@@ -13,7 +13,13 @@
     "chat": "Chat",
     "login": "Login",
     "logout": "Logout",
-    "register": "Register"
+    "register": "Register",
+    "toggleTheme": "Toggle Theme",
+    "theme": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    }
   },
   "topup": {
     "title": "Top Up Center",
