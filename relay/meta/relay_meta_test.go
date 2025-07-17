@@ -6,18 +6,19 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/model"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestGetByContext_ChannelRetry(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	// Create a test context
 	c, _ := gin.CreateTestContext(nil)
 	c.Request = &http.Request{
-		URL: &url.URL{Path: "/v1/chat/completions"},
+		URL:    &url.URL{Path: "/v1/chat/completions"},
 		Header: make(http.Header),
 	}
 	c.Request.Header.Set("Authorization", "Bearer test-key")
@@ -57,7 +58,7 @@ func TestGetByContext_ChannelRetry(t *testing.T) {
 
 	// Third call with different channel - should update cached meta
 	meta3 := GetByContext(c)
-	assert.Same(t, meta1, meta3) // Should still be the same object (updated in place)
+	assert.Same(t, meta1, meta3)          // Should still be the same object (updated in place)
 	assert.Equal(t, 200, meta3.ChannelId) // But with updated channel info
 	assert.Equal(t, 2, meta3.ChannelType)
 	assert.Equal(t, "https://api.anthropic.com", meta3.BaseURL)
@@ -73,11 +74,11 @@ func TestGetByContext_ChannelRetry(t *testing.T) {
 
 func TestGetByContext_NoChannelChange(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	// Create a test context
 	c, _ := gin.CreateTestContext(nil)
 	c.Request = &http.Request{
-		URL: &url.URL{Path: "/v1/chat/completions"},
+		URL:    &url.URL{Path: "/v1/chat/completions"},
 		Header: make(http.Header),
 	}
 	c.Request.Header.Set("Authorization", "Bearer test-key")
