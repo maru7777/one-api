@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {Button, Col, Form, Layout, Row, Spin} from "@douyinfe/semi-ui";
+import {Button, Col, Form, Layout, Row, Spin, AutoComplete} from "@douyinfe/semi-ui";
 import VChart from '@visactor/vchart';
 import {API, isAdmin, showError, timestamp2string, timestamp2string1} from "../../helpers";
 import {
@@ -32,6 +32,8 @@ const Detail = (props) => {
     const [consumeQuota, setConsumeQuota] = useState(0);
     const [times, setTimes] = useState(0);
     const [dataExportDefaultTime, setDataExportDefaultTime] = useState(localStorage.getItem('data_export_default_time') || 'hour');
+    const [users, setUsers] = useState([]);
+    const [userOptions, setUserOptions] = useState([]);
 
     const handleInputChange = (value, name) => {
         if (name === 'data_export_default_time') {
@@ -39,6 +41,29 @@ const Detail = (props) => {
             return
         }
         setInputs((inputs) => ({...inputs, [name]: value}));
+    };
+
+    const fetchUsers = async () => {
+        if (!isAdminUser) return;
+
+        try {
+            const res = await API.get('/api/user/dashboard/users');
+            const { success, message, data } = res.data;
+            if (success) {
+                setUsers(data || []);
+                // Create options for AutoComplete
+                const options = data.map(user => ({
+                    value: user.username,
+                    label: user.id === 0 ? user.display_name : `${user.display_name || user.username} (${user.username})`,
+                    user: user
+                }));
+                setUserOptions(options);
+            } else {
+                showError(message);
+            }
+        } catch (error) {
+            console.error('Failed to fetch users:', error);
+        }
     };
 
     const spec_line = {
@@ -295,6 +320,11 @@ const Detail = (props) => {
             initialized.current = true;
             initChart();
         }
+
+        // Fetch users for admin users
+        if (isAdminUser) {
+            fetchUsers();
+        }
     }, []);
 
     return (
@@ -330,9 +360,28 @@ const Detail = (props) => {
                             </Form.Select>
                             {
                                 isAdminUser && <>
-                                    <Form.Input field="username" label='用户名称' style={{width: 176}} value={username}
-                                                placeholder={'可选值'} name='username'
-                                                onChange={value => handleInputChange(value, 'username')}/>
+                                    <AutoComplete
+                                        style={{width: 200}}
+                                        data={userOptions}
+                                        value={username}
+                                        placeholder="搜索并选择用户"
+                                        emptyContent="未找到用户"
+                                        onSelect={(value, option) => {
+                                            handleInputChange(value, 'username');
+                                        }}
+                                        onChange={(value) => {
+                                            handleInputChange(value, 'username');
+                                        }}
+                                        renderSelectedItem={(option) => option.label}
+                                        renderItem={(option) => (
+                                            <div>
+                                                <div>{option.label}</div>
+                                                <div style={{ fontSize: '12px', color: '#666' }}>
+                                                    {option.user.id === 0 ? '查看全站统计' : `用户ID: ${option.user.id}`}
+                                                </div>
+                                            </div>
+                                        )}
+                                    />
                                 </>
                             }
                             <Form.Section>

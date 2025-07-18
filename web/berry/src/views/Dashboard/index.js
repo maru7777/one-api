@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Grid, Typography, FormControl, InputLabel, Select, MenuItem, Card, CardContent, TextField, Button, Alert } from '@mui/material';
+import { Grid, Typography, Card, CardContent, TextField, Button, Alert, Autocomplete } from '@mui/material';
 import { gridSpacing } from 'store/constant';
 import StatisticalLineChartCard from './component/StatisticalLineChartCard';
 import StatisticalBarChart from './component/StatisticalBarChart';
@@ -28,8 +28,10 @@ const Dashboard = () => {
       const { success, message, data } = res.data;
       if (success) {
         setDashboardUsers(data || []);
-        // Set default selection to "All Users" for root users
-        setSelectedUserId('all');
+        // Only set default selection if no user is currently selected
+        if (!selectedUserId) {
+          setSelectedUserId('all');
+        }
       } else {
         showError(message);
       }
@@ -109,9 +111,7 @@ const Dashboard = () => {
     }
   }, [selectedUserId]);
 
-  const handleUserChange = (event) => {
-    setSelectedUserId(event.target.value);
-  };
+
 
   const handleDateChange = (field, value) => {
     if (field === 'from') {
@@ -158,23 +158,39 @@ const Dashboard = () => {
             {isRootUser && (
               <Grid container spacing={2} sx={{ mb: 2 }}>
                 <Grid item xs={12}>
-                  <FormControl fullWidth>
-                    <InputLabel>Select User</InputLabel>
-                    <Select
-                      value={selectedUserId}
-                      onChange={handleUserChange}
-                      label="Select User"
-                    >
-                      {dashboardUsers.map(user => (
-                        <MenuItem
-                          key={user.id}
-                          value={user.id === 0 ? 'all' : user.id.toString()}
-                        >
-                          {user.display_name || user.username}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                  <Autocomplete
+                    fullWidth
+                    options={dashboardUsers}
+                    getOptionLabel={(option) =>
+                      option.id === 0 ? option.display_name : `${option.display_name || option.username} (${option.username})`
+                    }
+                    value={dashboardUsers.find(user =>
+                      (user.id === 0 ? 'all' : user.id.toString()) === selectedUserId
+                    ) || null}
+                    onChange={(_, newValue) => {
+                      const value = newValue ? (newValue.id === 0 ? 'all' : newValue.id.toString()) : '';
+                      setSelectedUserId(value);
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Select User"
+                        placeholder="Search and select a user to view dashboard"
+                      />
+                    )}
+                    renderOption={(props, option) => (
+                      <li {...props}>
+                        <div>
+                          <div>{option.id === 0 ? option.display_name : `${option.display_name || option.username} (${option.username})`}</div>
+                          <div style={{ fontSize: '0.8em', color: '#666' }}>
+                            {option.id === 0 ? 'View site-wide statistics' : `User ID: ${option.id}`}
+                          </div>
+                        </div>
+                      </li>
+                    )}
+                    noOptionsText="No users found"
+                    clearOnEscape
+                  />
                 </Grid>
               </Grid>
             )}

@@ -185,13 +185,15 @@ const Dashboard = () => {
       const response = await axios.get('/api/user/dashboard/users');
       if (response.data.success) {
         setUsers(response.data.data || []);
-        // Set default selection to "All Users" for root users
-        setSelectedUserId('all');
+        // Only set default selection if no user is currently selected
+        if (!selectedUserId) {
+          setSelectedUserId('all');
+        }
       }
     } catch (error) {
       console.error('Failed to fetch users:', error);
     }
-  }, []);
+  }, [selectedUserId]);
 
   const calculateSummary = useCallback((dashboardData) => {
     if (!Array.isArray(dashboardData) || dashboardData.length === 0) {
@@ -677,16 +679,20 @@ const Dashboard = () => {
             <Form.Field style={{ marginBottom: '1rem' }}>
               <label>{t('dashboard.user_selector.title', 'Select User')}</label>
               <Dropdown
-                placeholder={t('dashboard.user_selector.placeholder', 'Select a user to view dashboard')}
+                placeholder={t('dashboard.user_selector.placeholder', 'Search and select a user to view dashboard')}
                 fluid
                 selection
+                search
+                clearable
                 value={selectedUserId}
                 onChange={handleUserChange}
                 options={users.map(user => ({
                   key: user.id,
                   value: user.id === 0 ? 'all' : user.id.toString(),
-                  text: user.display_name || user.username
+                  text: user.id === 0 ? user.display_name : `${user.display_name || user.username} (${user.username})`,
+                  description: user.id === 0 ? 'View site-wide statistics' : `User ID: ${user.id}`
                 }))}
+                noResultsMessage={t('dashboard.user_selector.no_results', 'No users found')}
               />
             </Form.Field>
           )}
