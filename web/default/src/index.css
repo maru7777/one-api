@@ -390,25 +390,110 @@ code {
     color: var(--text-primary) !important;
 }
 
+/* Dark mode label styles - comprehensive coverage for all colors */
 [data-theme="dark"] .ui.label {
     background-color: var(--bg-secondary) !important;
     color: var(--text-primary) !important;
     border: 1px solid var(--border-color) !important;
 }
 
-[data-theme="dark"] .ui.label.green {
-    background-color: var(--success-color) !important;
-    color: white !important;
+/* Basic labels with dark-friendly colors */
+[data-theme="dark"] .ui.label.basic {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
 }
 
-[data-theme="dark"] .ui.label.red {
-    background-color: var(--error-color) !important;
-    color: white !important;
+/* Color-specific label styles for dark mode */
+[data-theme="dark"] .ui.label.red,
+[data-theme="dark"] .ui.label.basic.red {
+    background-color: rgba(244, 67, 54, 0.15) !important;
+    color: #ff8a80 !important;
+    border: 1px solid rgba(244, 67, 54, 0.3) !important;
 }
 
-[data-theme="dark"] .ui.label.orange {
-    background-color: var(--warning-color) !important;
-    color: white !important;
+[data-theme="dark"] .ui.label.orange,
+[data-theme="dark"] .ui.label.basic.orange {
+    background-color: rgba(255, 152, 0, 0.15) !important;
+    color: #ffb74d !important;
+    border: 1px solid rgba(255, 152, 0, 0.3) !important;
+}
+
+[data-theme="dark"] .ui.label.yellow,
+[data-theme="dark"] .ui.label.basic.yellow {
+    background-color: rgba(255, 235, 59, 0.15) !important;
+    color: #fff176 !important;
+    border: 1px solid rgba(255, 235, 59, 0.3) !important;
+}
+
+[data-theme="dark"] .ui.label.olive,
+[data-theme="dark"] .ui.label.basic.olive {
+    background-color: rgba(139, 195, 74, 0.15) !important;
+    color: #aed581 !important;
+    border: 1px solid rgba(139, 195, 74, 0.3) !important;
+}
+
+[data-theme="dark"] .ui.label.green,
+[data-theme="dark"] .ui.label.basic.green {
+    background-color: rgba(76, 175, 80, 0.15) !important;
+    color: #81c784 !important;
+    border: 1px solid rgba(76, 175, 80, 0.3) !important;
+}
+
+[data-theme="dark"] .ui.label.teal,
+[data-theme="dark"] .ui.label.basic.teal {
+    background-color: rgba(0, 150, 136, 0.15) !important;
+    color: #4db6ac !important;
+    border: 1px solid rgba(0, 150, 136, 0.3) !important;
+}
+
+[data-theme="dark"] .ui.label.blue,
+[data-theme="dark"] .ui.label.basic.blue {
+    background-color: rgba(33, 150, 243, 0.15) !important;
+    color: #64b5f6 !important;
+    border: 1px solid rgba(33, 150, 243, 0.3) !important;
+}
+
+[data-theme="dark"] .ui.label.violet,
+[data-theme="dark"] .ui.label.basic.violet {
+    background-color: rgba(156, 39, 176, 0.15) !important;
+    color: #ba68c8 !important;
+    border: 1px solid rgba(156, 39, 176, 0.3) !important;
+}
+
+[data-theme="dark"] .ui.label.purple,
+[data-theme="dark"] .ui.label.basic.purple {
+    background-color: rgba(103, 58, 183, 0.15) !important;
+    color: #9575cd !important;
+    border: 1px solid rgba(103, 58, 183, 0.3) !important;
+}
+
+[data-theme="dark"] .ui.label.pink,
+[data-theme="dark"] .ui.label.basic.pink {
+    background-color: rgba(233, 30, 99, 0.15) !important;
+    color: #f06292 !important;
+    border: 1px solid rgba(233, 30, 99, 0.3) !important;
+}
+
+[data-theme="dark"] .ui.label.brown,
+[data-theme="dark"] .ui.label.basic.brown {
+    background-color: rgba(121, 85, 72, 0.15) !important;
+    color: #a1887f !important;
+    border: 1px solid rgba(121, 85, 72, 0.3) !important;
+}
+
+[data-theme="dark"] .ui.label.grey,
+[data-theme="dark"] .ui.label.basic.grey {
+    background-color: rgba(158, 158, 158, 0.15) !important;
+    color: #bdbdbd !important;
+    border: 1px solid rgba(158, 158, 158, 0.3) !important;
+}
+
+[data-theme="dark"] .ui.label.black,
+[data-theme="dark"] .ui.label.basic.black {
+    background-color: rgba(97, 97, 97, 0.15) !important;
+    color: #9e9e9e !important;
+    border: 1px solid rgba(97, 97, 97, 0.3) !important;
 }
 
 /* Theme toggle button styles */
