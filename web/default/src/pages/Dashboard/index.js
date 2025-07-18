@@ -15,6 +15,7 @@ import {
 } from 'recharts';
 import axios from 'axios';
 import {isRoot} from '../../helpers/utils';
+import {renderNumberWithTooltip, renderNumberForChart, renderQuota} from '../../helpers/render';
 import './Dashboard.css';
 
 // Add custom configuration inside Dashboard component
@@ -786,7 +787,7 @@ const Dashboard = () => {
                 </div>
                 <div className='summary-stats'>
                   <Statistic size='small'>
-                    <Statistic.Value>{summaryData.todayRequests.toLocaleString()}</Statistic.Value>
+                    <Statistic.Value>{renderNumberWithTooltip(summaryData.todayRequests)}</Statistic.Value>
                     <Statistic.Label>{t('dashboard.summary.requests', 'Total Requests')}</Statistic.Label>
                   </Statistic>
                   <div className='trend-indicator'>
@@ -814,7 +815,7 @@ const Dashboard = () => {
                 </div>
                 <div className='summary-stats'>
                   <Statistic size='small'>
-                    <Statistic.Value>${summaryData.todayQuota.toFixed(3)}</Statistic.Value>
+                    <Statistic.Value>{renderQuota(summaryData.todayQuota, t, 3)}</Statistic.Value>
                     <Statistic.Label>{t('dashboard.summary.quota', 'Total Quota Used')}</Statistic.Label>
                   </Statistic>
                   <div className='trend-indicator'>
@@ -842,7 +843,7 @@ const Dashboard = () => {
                 </div>
                 <div className='summary-stats'>
                   <Statistic size='small'>
-                    <Statistic.Value>{summaryData.todayTokens.toLocaleString()}</Statistic.Value>
+                    <Statistic.Value>{renderNumberWithTooltip(summaryData.todayTokens)}</Statistic.Value>
                     <Statistic.Label>{t('dashboard.summary.tokens', 'Total Tokens Used')}</Statistic.Label>
                   </Statistic>
                   <div className='trend-indicator'>
@@ -875,7 +876,7 @@ const Dashboard = () => {
                   </Statistic>
                   <div className='secondary-metric'>
                     <span className='metric-label'>Avg Tokens:</span>
-                    <span className='metric-value'>{summaryData.avgTokensPerRequest.toFixed(0)}</span>
+                    <span className='metric-value'>{renderNumberWithTooltip(Math.round(summaryData.avgTokensPerRequest))}</span>
                   </div>
                 </div>
               </div>
@@ -1024,7 +1025,7 @@ const Dashboard = () => {
                       }}
                       formatter={(value) => [
                         <span style={{ color: chartConfig.colors.requests, fontWeight: '600' }}>
-                          {value.toLocaleString()}
+                          {renderNumberForChart(value)}
                         </span>,
                         t('dashboard.charts.requests.tooltip'),
                       ]}
@@ -1154,7 +1155,7 @@ const Dashboard = () => {
                       }}
                       formatter={(value) => [
                         <span style={{ color: chartConfig.colors.tokens, fontWeight: '600' }}>
-                          {value.toLocaleString()}
+                          {renderNumberForChart(value)}
                         </span>,
                         t('dashboard.charts.tokens.tooltip'),
                       ]}
@@ -1241,7 +1242,7 @@ const Dashboard = () => {
                                 marginRight: '8px'
                               }}></span>
                               <span style={{ fontWeight: '600' }}>
-                                {entry.name}: {entry.value.toLocaleString()}
+                                {entry.name}: {renderNumberForChart(entry.value)}
                               </span>
                             </div>
                           ))}
@@ -1297,7 +1298,7 @@ const Dashboard = () => {
                       <div className='model-rank'>{index + 1}</div>
                       <span>{model.name}</span>
                     </div>
-                    <div className='table-cell'>{model.requests.toLocaleString()}</div>
+                    <div className='table-cell'>{renderNumberWithTooltip(model.requests)}</div>
                     <div className='table-cell'>${model.avgCostPerRequest.toFixed(4)}</div>
                     <div className='table-cell'>{model.avgTokensPerRequest.toFixed(0)}</div>
                     <div className='table-cell'>

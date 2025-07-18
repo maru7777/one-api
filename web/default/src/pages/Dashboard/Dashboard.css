@@ -93,6 +93,10 @@
     font-size: 1.8rem !important;
     font-weight: 700 !important;
     line-height: 1.2 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 100% !important;
 }
 
 .summary-card .ui.statistic > .label {
@@ -549,6 +553,11 @@
     .summary-card .ui.statistic > .value {
         font-size: 1.5rem !important;
     }
+
+    /* Ensure large numbers fit on smaller screens */
+    .summary-card .ui.statistic > .value {
+        font-size: clamp(1.2rem, 4vw, 1.5rem) !important;
+    }
 }
 
 @media (max-width: 480px) {
@@ -558,6 +567,11 @@
 
     .summary-card {
         margin-bottom: 0.75rem;
+    }
+
+    /* Further reduce font size for very small screens to prevent truncation */
+    .summary-card .ui.statistic > .value {
+        font-size: clamp(1rem, 3.5vw, 1.3rem) !important;
     }
 
     .chart-card {
@@ -1001,4 +1015,36 @@
     border: none !important;
     box-shadow: none !important;
     padding: 1rem 0 !important;
+}
+
+/* Number tooltip styling */
+.summary-card .ui.statistic > .value span[title] {
+    transition: all 0.2s ease;
+    border-bottom: 1px dotted currentColor;
+}
+
+.summary-card .ui.statistic > .value span[title]:hover {
+    color: var(--button-primary) !important;
+    border-bottom-style: solid;
+    transform: translateY(-1px);
+}
+
+/* Table cell tooltip styling */
+.table-cell span[title] {
+    transition: all 0.2s ease;
+}
+
+.table-cell span[title]:hover {
+    color: var(--button-primary);
+    transform: translateY(-1px);
+}
+
+/* Secondary metric tooltip styling */
+.secondary-metric span[title] {
+    transition: all 0.2s ease;
+}
+
+.secondary-metric span[title]:hover {
+    color: var(--button-primary);
+    transform: translateY(-1px);
 }
