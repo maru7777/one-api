@@ -1215,9 +1215,11 @@ const Dashboard = () => {
                   }}
                   content={({ active, payload, label }) => {
                     if (active && payload && payload.length) {
-                      // Models are already sorted by request count in descending order
-                      // Filter out entries with zero values to avoid showing meaningless data
-                      const filteredPayload = payload.filter(entry => entry.value > 0);
+                      // Filter out entries with zero values and sort by value in descending order
+                      // This ensures the tooltip shows models ordered by their usage for this specific day
+                      const filteredAndSortedPayload = payload
+                        .filter(entry => entry.value > 0)
+                        .sort((a, b) => b.value - a.value);
 
                       return (
                         <div style={{
@@ -1231,7 +1233,7 @@ const Dashboard = () => {
                           <div style={{ fontWeight: '600', marginBottom: '8px' }}>
                             {formatDate(label)}
                           </div>
-                          {filteredPayload.map((entry, index) => (
+                          {filteredAndSortedPayload.map((entry, index) => (
                             <div key={index} style={{ marginBottom: '4px' }}>
                               <span style={{
                                 display: 'inline-block',
