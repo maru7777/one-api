@@ -160,7 +160,7 @@ func (a *Adaptor) GetChannelName() string {
 }
 
 // Pricing methods - Zhipu adapter manages its own model pricing
-func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelConfig {
 	const MilliRmb = 0.0001
 
 	// Direct map definition - much easier to maintain and edit

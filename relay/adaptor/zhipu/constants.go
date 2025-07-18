@@ -8,7 +8,7 @@ import (
 // ModelRatios contains all supported models and their pricing ratios
 // Model list is derived from the keys of this map, eliminating redundancy
 // Based on Zhipu pricing: https://open.bigmodel.cn/pricing
-var ModelRatios = map[string]adaptor.ModelPrice{
+var ModelRatios = map[string]adaptor.ModelConfig{
 	// GLM Zero Models
 	"glm-zero-preview": {Ratio: 0.7 * ratio.MilliTokensRmb, CompletionRatio: 1},
 

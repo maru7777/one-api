@@ -4,6 +4,7 @@ import { CHANNEL_OPTIONS } from 'constants/ChannelConstants';
 import { useTheme } from '@mui/material/styles';
 import { API } from 'utils/api';
 import { showError, showSuccess, getChannelModels } from 'utils/common';
+import ChannelDebugPanel from '../../../components/ChannelDebugPanel';
 import {
   Dialog,
   DialogTitle,
@@ -23,7 +24,8 @@ import {
   FormHelperText,
   Switch,
   Checkbox,
-  Box
+  Box,
+  Typography
 } from '@mui/material';
 
 import { Formik } from 'formik';
@@ -67,33 +69,59 @@ const validationSchema = Yup.object().shape({
     }
     return false;
   }),
-  model_ratio: Yup.string().nullable().test('is-json', '必须是有效的JSON字符串', function (value) {
-    try {
-      if (value === '' || value === null || value === undefined) {
-        return true;
-      }
-      const parsedValue = JSON.parse(value);
-      if (typeof parsedValue === 'object') {
-        return true;
-      }
-    } catch (e) {
-      return false;
+  // model_ratio and completion_ratio validation removed - now handled through model_configs
+  model_configs: Yup.string().nullable().test('is-valid-model-configs', '模型配置格式无效', function (value) {
+    if (value === '' || value === null || value === undefined) {
+      return true;
     }
-    return false;
-  }),
-  completion_ratio: Yup.string().nullable().test('is-json', '必须是有效的JSON字符串', function (value) {
+
     try {
-      if (value === '' || value === null || value === undefined) {
-        return true;
+      const configs = JSON.parse(value);
+
+      if (typeof configs !== 'object' || configs === null || Array.isArray(configs)) {
+        return this.createError({ message: '模型配置必须是JSON对象' });
       }
-      const parsedValue = JSON.parse(value);
-      if (typeof parsedValue === 'object') {
-        return true;
+
+      for (const [modelName, config] of Object.entries(configs)) {
+        if (!modelName || modelName.trim() === '') {
+          return this.createError({ message: '模型名称不能为空' });
+        }
+
+        if (typeof config !== 'object' || config === null || Array.isArray(config)) {
+          return this.createError({ message: `模型"${modelName}"的配置必须是对象` });
+        }
+
+        // Validate ratio
+        if (config.ratio !== undefined) {
+          if (typeof config.ratio !== 'number' || config.ratio < 0) {
+            return this.createError({ message: `模型"${modelName}"的ratio无效：必须是非负数` });
+          }
+        }
+
+        // Validate completion_ratio
+        if (config.completion_ratio !== undefined) {
+          if (typeof config.completion_ratio !== 'number' || config.completion_ratio < 0) {
+            return this.createError({ message: `模型"${modelName}"的completion_ratio无效：必须是非负数` });
+          }
+        }
+
+        // Validate max_tokens
+        if (config.max_tokens !== undefined) {
+          if (!Number.isInteger(config.max_tokens) || config.max_tokens < 0) {
+            return this.createError({ message: `模型"${modelName}"的max_tokens无效：必须是非负整数` });
+          }
+        }
+
+        // Check if at least one meaningful field is provided
+        if (config.ratio === undefined && config.completion_ratio === undefined && config.max_tokens === undefined) {
+          return this.createError({ message: `模型"${modelName}"必须至少有一个配置字段（ratio、completion_ratio或max_tokens）` });
+        }
       }
-    } catch (e) {
-      return false;
+
+      return true;
+    } catch (error) {
+      return this.createError({ message: `JSON格式无效：${error.message}` });
     }
-    return false;
   }),
   inference_profile_arn_map: Yup.string().nullable().test('is-json', '必须是有效的JSON字符串', function (value) {
     try {
@@ -113,7 +141,7 @@ const validationSchema = Yup.object().shape({
 
 const EditModal = ({ open, channelId, onCancel, onOk }) => {
   const theme = useTheme();
-  // const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [initialInput, setInitialInput] = useState(defaultConfig.input);
   const [inputLabel, setInputLabel] = useState(defaultConfig.inputLabel); //
   const [inputPrompt, setInputPrompt] = useState(defaultConfig.prompt);
@@ -124,7 +152,28 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
   const [defaultPricing, setDefaultPricing] = useState({
     model_ratio: '',
     completion_ratio: '',
+    model_configs: '',
   });
+
+  const formatJSON = (jsonString) => {
+    if (!jsonString || jsonString.trim() === '') return '';
+    try {
+      const parsed = JSON.parse(jsonString);
+      return JSON.stringify(parsed, null, 2);
+    } catch (e) {
+      return jsonString; // Return original if parsing fails
+    }
+  };
+
+  const isValidJSON = (jsonString) => {
+    if (!jsonString || jsonString.trim() === '') return true; // Empty is valid
+    try {
+      JSON.parse(jsonString);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
 
   const initChannel = (typeValue) => {
     if (typeConfig[typeValue]?.inputLabel) {
@@ -200,13 +249,25 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
     }
   };
 
-  const loadDefaultPricing = async (channelType) => {
+  const loadDefaultPricing = async (channelType, existingModelConfigs = null) => {
     try {
       const res = await API.get(`/api/channel/default-pricing?type=${channelType}`);
       if (res.data.success) {
+        // Format model_configs if it exists
+        let formattedModelConfigs = res.data.data.model_configs || '';
+        if (formattedModelConfigs && formattedModelConfigs !== '') {
+          try {
+            const parsed = JSON.parse(formattedModelConfigs);
+            formattedModelConfigs = JSON.stringify(parsed, null, 2);
+          } catch (e) {
+            // If parsing fails, use as-is
+          }
+        }
+
         setDefaultPricing({
           model_ratio: res.data.data.model_ratio || '',
           completion_ratio: res.data.data.completion_ratio || '',
+          model_configs: formattedModelConfigs,
         });
       }
     } catch (error) {
@@ -244,6 +305,9 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
     }
     if (values.completion_ratio === '') {
       values.completion_ratio = null;
+    }
+    if (values.model_configs === '') {
+      values.model_configs = null;
     }
     if (channelId) {
       res = await API.put(`/api/channel/`, {
@@ -292,8 +356,12 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
   }
 
   const loadChannel = async () => {
-    let res = await API.get(`/api/channel/${channelId}`);
-    const { success, message, data } = res.data;
+    setLoading(true);
+    try {
+      // Add cache busting parameter to ensure fresh data
+      const cacheBuster = Date.now();
+      let res = await API.get(`/api/channel/${channelId}?_cb=${cacheBuster}`);
+      const { success, message, data } = res.data;
     if (success) {
       if (data.models === '') {
         data.models = [];
@@ -326,15 +394,31 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
           console.error('Failed to parse completion_ratio:', e);
         }
       }
+      if (data.model_configs && data.model_configs !== '') {
+        try {
+          const parsedConfigs = JSON.parse(data.model_configs);
+          // Pretty format with proper indentation
+          data.model_configs = JSON.stringify(parsedConfigs, null, 2);
+          console.log('Loaded model_configs for channel:', data.id, 'type:', data.type, 'models:', Object.keys(parsedConfigs));
+        } catch (e) {
+          console.error('Failed to parse model_configs:', e);
+          // If parsing fails, keep original value but log the error
+        }
+      }
 
       data.base_url = data.base_url ?? '';
       data.is_edit = true;
       initChannel(data.type);
       setInitialInput(data);
-      // Load default pricing for this channel type
-      loadDefaultPricing(data.type);
+      // Load default pricing for this channel type, but don't override existing model_configs
+      loadDefaultPricing(data.type, data.model_configs);
     } else {
       showError(message);
+    }
+    } catch (error) {
+      showError(error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -364,15 +448,51 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
           fontWeight: 700,
           lineHeight: '1.55556',
           padding: '24px',
-          fontSize: '1.125rem'
+          fontSize: '1.125rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
         }}
       >
-        {channelId ? '编辑渠道' : '新建渠道'}
+        <span>{channelId ? '编辑渠道' : '新建渠道'}</span>
+        {channelId && (
+          <ChannelDebugPanel
+            channelId={channelId}
+            channelType={initialInput.type}
+            channelName={initialInput.name}
+          />
+        )}
       </DialogTitle>
       <Divider />
       <DialogContent>
-        <Formik initialValues={initialInput} enableReinitialize validationSchema={validationSchema} onSubmit={submit}>
-          {({ errors, handleBlur, handleChange, handleSubmit, isSubmitting, touched, values, setFieldValue }) => (
+        {loading ? (
+          <Box
+            sx={{
+              minHeight: '400px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'background.paper',
+              borderRadius: '8px',
+              margin: '1rem 0'
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '1rem',
+                color: 'text.secondary'
+              }}
+            >
+              <div className="ui active inline loader"></div>
+              <Typography>正在加载渠道信息...</Typography>
+            </Box>
+          </Box>
+        ) : (
+          <Formik initialValues={initialInput} enableReinitialize validationSchema={validationSchema} onSubmit={submit}>
+            {({ errors, handleBlur, handleChange, handleSubmit, isSubmitting, touched, values, setFieldValue }) => (
             <form noValidate onSubmit={handleSubmit}>
               <FormControl fullWidth error={Boolean(touched.type && errors.type)} sx={{ ...theme.typography.otherInput }}>
                 <InputLabel htmlFor="channel-type-label">{inputLabel.type}</InputLabel>
@@ -664,11 +784,36 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
                 })}
 
               <FormControl fullWidth error={Boolean(touched.model_mapping && errors.model_mapping)} sx={{ ...theme.typography.otherInput }}>
-                {/* <InputLabel htmlFor="channel-model_mapping-label">{inputLabel.model_mapping}</InputLabel> */}
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                  <InputLabel
+                    htmlFor="channel-model_mapping-label"
+                    sx={{
+                      position: 'relative',
+                      transform: 'none',
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                      color: theme.palette.text.primary
+                    }}
+                  >
+                    {inputLabel.model_mapping}
+                  </InputLabel>
+                  <Box>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => {
+                        const formattedValue = formatJSON(values.model_mapping);
+                        setFieldValue('model_mapping', formattedValue);
+                      }}
+                      disabled={!values.model_mapping || values.model_mapping.trim() === ''}
+                    >
+                      格式化JSON
+                    </Button>
+                  </Box>
+                </Box>
                 <TextField
                   multiline
                   id="channel-model_mapping-label"
-                  label={inputLabel.model_mapping}
                   value={values.model_mapping}
                   name="model_mapping"
                   onBlur={handleBlur}
@@ -676,13 +821,42 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
                   aria-describedby="helper-text-channel-model_mapping-label"
                   minRows={5}
                   placeholder={inputPrompt.model_mapping}
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      fontFamily: 'JetBrains Mono, Consolas, Monaco, "Courier New", monospace',
+                      fontSize: '13px',
+                      lineHeight: '1.4',
+                      backgroundColor: '#f8f9fa',
+                    },
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': {
+                        borderColor: isValidJSON(values.model_mapping) ? theme.palette.grey[300] : theme.palette.error.main,
+                      },
+                    }
+                  }}
                 />
                 {touched.model_mapping && errors.model_mapping ? (
                   <FormHelperText error id="helper-tex-channel-model_mapping-label">
                     {errors.model_mapping}
                   </FormHelperText>
                 ) : (
-                  <FormHelperText id="helper-tex-channel-model_mapping-label"> {inputPrompt.model_mapping} </FormHelperText>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <FormHelperText id="helper-tex-channel-model_mapping-label">
+                      {inputPrompt.model_mapping}
+                    </FormHelperText>
+                    {values.model_mapping && values.model_mapping.trim() !== '' && (
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: isValidJSON(values.model_mapping) ? theme.palette.success.main : theme.palette.error.main,
+                          fontWeight: 'bold',
+                          fontSize: '11px'
+                        }}
+                      >
+                        {isValidJSON(values.model_mapping) ? '✓ 有效JSON' : '✗ 无效JSON'}
+                      </Typography>
+                    )}
+                  </Box>
                 )}
               </FormControl>
               <FormControl fullWidth error={Boolean(touched.system_prompt && errors.system_prompt)} sx={{ ...theme.typography.otherInput }}>
@@ -708,11 +882,12 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
                 )}
               </FormControl>
 
-              {/* Channel-specific pricing fields */}
-              <FormControl fullWidth error={Boolean(touched.model_ratio && errors.model_ratio)} sx={{ ...theme.typography.otherInput }}>
+              {/* Channel-specific pricing fields - now handled through model_configs */}
+
+              <FormControl fullWidth error={Boolean(touched.model_configs && errors.model_configs)} sx={{ ...theme.typography.otherInput }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                   <InputLabel
-                    htmlFor="channel-model_ratio-label"
+                    htmlFor="channel-model_configs-label"
                     sx={{
                       position: 'relative',
                       transform: 'none',
@@ -721,105 +896,79 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
                       color: theme.palette.text.primary
                     }}
                   >
-                    {inputLabel.model_ratio}
+                    模型配置
                   </InputLabel>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={() => {
-                      // Format the JSON string for better display
-                      let formattedValue = defaultPricing.model_ratio;
-                      if (formattedValue && formattedValue !== '') {
-                        try {
-                          const parsed = JSON.parse(formattedValue);
-                          formattedValue = JSON.stringify(parsed, null, 2);
-                        } catch (e) {
-                          console.error('Failed to format model_ratio JSON:', e);
-                        }
-                      }
-
-                      setFieldValue('model_ratio', formattedValue);
-                    }}
-                  >
-                    加载默认值
-                  </Button>
+                  <Box>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => {
+                        const formattedValue = formatJSON(defaultPricing.model_configs);
+                        setFieldValue('model_configs', formattedValue);
+                      }}
+                      sx={{ mr: 1 }}
+                    >
+                      加载默认值
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => {
+                        const formattedValue = formatJSON(values.model_configs);
+                        setFieldValue('model_configs', formattedValue);
+                      }}
+                      disabled={!values.model_configs || values.model_configs.trim() === ''}
+                    >
+                      格式化JSON
+                    </Button>
+                  </Box>
                 </Box>
                 <TextField
                   multiline
-                  id="channel-model_ratio-label"
-                  value={values.model_ratio}
-                  name="model_ratio"
+                  id="channel-model_configs-label"
+                  value={values.model_configs}
+                  name="model_configs"
                   onBlur={handleBlur}
                   onChange={handleChange}
-                  aria-describedby="helper-text-channel-model_ratio-label"
-                  minRows={5}
-                  placeholder={inputPrompt.model_ratio}
+                  aria-describedby="helper-text-channel-model_configs-label"
+                  minRows={8}
+                  placeholder='统一的模型配置包括定价和属性。JSON格式，键为模型名称，值包含ratio、completion_ratio和max_tokens字段，例如：{"gpt-3.5-turbo": {"ratio": 0.0015, "completion_ratio": 2.0, "max_tokens": 65536}}'
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      fontFamily: 'JetBrains Mono, Consolas, Monaco, "Courier New", monospace',
+                      fontSize: '13px',
+                      lineHeight: '1.4',
+                      backgroundColor: '#f8f9fa',
+                    },
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': {
+                        borderColor: isValidJSON(values.model_configs) ? theme.palette.grey[300] : theme.palette.error.main,
+                      },
+                    }
+                  }}
                 />
-                {touched.model_ratio && errors.model_ratio ? (
-                  <FormHelperText error id="helper-tex-channel-model_ratio-label">
-                    {errors.model_ratio}
+                {touched.model_configs && errors.model_configs ? (
+                  <FormHelperText error id="helper-tex-channel-model_configs-label">
+                    {errors.model_configs}
                   </FormHelperText>
                 ) : (
-                  <FormHelperText id="helper-tex-channel-model_ratio-label">
-                    JSON 格式：{`{"模型名称": 价格倍率}`}。价格倍率乘以 token 数量计算费用。
-                  </FormHelperText>
-                )}
-              </FormControl>
-
-              <FormControl fullWidth error={Boolean(touched.completion_ratio && errors.completion_ratio)} sx={{ ...theme.typography.otherInput }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                  <InputLabel
-                    htmlFor="channel-completion_ratio-label"
-                    sx={{
-                      position: 'relative',
-                      transform: 'none',
-                      fontSize: '0.875rem',
-                      fontWeight: 500,
-                      color: theme.palette.text.primary
-                    }}
-                  >
-                    {inputLabel.completion_ratio}
-                  </InputLabel>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={() => {
-                      // Format the JSON string for better display
-                      let formattedValue = defaultPricing.completion_ratio;
-                      if (formattedValue && formattedValue !== '') {
-                        try {
-                          const parsed = JSON.parse(formattedValue);
-                          formattedValue = JSON.stringify(parsed, null, 2);
-                        } catch (e) {
-                          console.error('Failed to format completion_ratio JSON:', e);
-                        }
-                      }
-
-                      setFieldValue('completion_ratio', formattedValue);
-                    }}
-                  >
-                    加载默认值
-                  </Button>
-                </Box>
-                <TextField
-                  multiline
-                  id="channel-completion_ratio-label"
-                  value={values.completion_ratio}
-                  name="completion_ratio"
-                  onBlur={handleBlur}
-                  onChange={handleChange}
-                  aria-describedby="helper-text-channel-completion_ratio-label"
-                  minRows={5}
-                  placeholder={inputPrompt.completion_ratio}
-                />
-                {touched.completion_ratio && errors.completion_ratio ? (
-                  <FormHelperText error id="helper-tex-channel-completion_ratio-label">
-                    {errors.completion_ratio}
-                  </FormHelperText>
-                ) : (
-                  <FormHelperText id="helper-tex-channel-completion_ratio-label">
-                    JSON 格式：{`{"模型名称": 输出倍率}`}。输出倍率乘以输出 token 数量。
-                  </FormHelperText>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <FormHelperText id="helper-tex-channel-model_configs-label">
+                      JSON 格式：统一的模型配置包括定价和属性。键为模型名称，值包含ratio、completion_ratio和max_tokens字段。
+                    </FormHelperText>
+                    {values.model_configs && values.model_configs.trim() !== '' && (
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: isValidJSON(values.model_configs) ? theme.palette.success.main : theme.palette.error.main,
+                          fontWeight: 'bold',
+                          fontSize: '11px'
+                        }}
+                      >
+                        {isValidJSON(values.model_configs) ? '✓ 有效JSON' : '✗ 无效JSON'}
+                      </Typography>
+                    )}
+                  </Box>
                 )}
               </FormControl>
 
@@ -870,6 +1019,7 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
             </form>
           )}
         </Formik>
+        )}
       </DialogContent>
     </Dialog>
   );

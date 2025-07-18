@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -14,7 +15,12 @@ import (
 
 func TestConvertRequest_EmptyAssistantMessageWithToolCalls(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	c, _ := gin.CreateTestContext(nil)
+
+	// Create a proper test context with a request
+	req := httptest.NewRequest("POST", "/v1/chat/completions", nil)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
 
 	// Test case: assistant message with empty content but with tool calls
 	temp := 0.7
@@ -129,7 +135,12 @@ func TestConvertRequest_EmptyAssistantMessageWithToolCalls(t *testing.T) {
 
 func TestConvertRequest_AssistantMessageWithTextAndToolCalls(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	c, _ := gin.CreateTestContext(nil)
+
+	// Create a proper test context with a request
+	req := httptest.NewRequest("POST", "/v1/chat/completions", nil)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
 
 	// Test case: assistant message with both text content and tool calls
 	openaiRequest := model.GeneralOpenAIRequest{
@@ -203,7 +214,12 @@ func TestConvertRequest_AssistantMessageWithTextAndToolCalls(t *testing.T) {
 
 func TestConvertRequest_EmptyTextContent(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	c, _ := gin.CreateTestContext(nil)
+
+	// Create a proper test context with a request
+	req := httptest.NewRequest("POST", "/v1/chat/completions", nil)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
 
 	// Test case: message with empty text content (using ParseContent path)
 	// This should result in an error since the message has no valid content
@@ -230,7 +246,12 @@ func TestConvertRequest_EmptyTextContent(t *testing.T) {
 
 func TestConvertRequest_ValidJSONGeneration(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	c, _ := gin.CreateTestContext(nil)
+
+	// Create a proper test context with a request
+	req := httptest.NewRequest("POST", "/v1/chat/completions", nil)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
 
 	// Test the original failing case from the bug report
 	openaiRequest := model.GeneralOpenAIRequest{
@@ -320,7 +341,12 @@ func TestConvertRequest_ValidJSONGeneration(t *testing.T) {
 
 func TestConvertRequest_MessageWithNoContent(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	c, _ := gin.CreateTestContext(nil)
+
+	// Create a proper test context with a request
+	req := httptest.NewRequest("POST", "/v1/chat/completions", nil)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
 
 	// Test case: message with no content at all
 	openaiRequest := model.GeneralOpenAIRequest{
@@ -346,11 +372,15 @@ func TestConvertRequest_MessageWithNoContent(t *testing.T) {
 func TestConvertRequest_ThinkingBlocksConversion(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// Initialize signature cache
+	InitSignatureCache(time.Hour)
+
 	// Create a proper test context with a request
 	req := httptest.NewRequest("POST", "/v1/chat/completions?thinking=true", nil)
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
+	c.Set("token_id", 12345)
 
 	// Test case: assistant message with reasoning content that should be converted to thinking blocks
 	// This simulates the bug scenario where the first request works but the second fails
@@ -417,6 +447,14 @@ func TestConvertRequest_ThinkingBlocksConversion(t *testing.T) {
 		},
 	}
 
+	// Pre-cache a signature to ensure thinking block is created (not fallback)
+	tokenIDStr := getTokenIDFromRequest(12345)
+	conversationID := generateConversationID(openaiRequest.Messages)
+	cacheKey := generateSignatureKey(tokenIDStr, conversationID, 1, 0) // messageIndex=1 (based on len(claudeRequest.Messages) at processing time)
+	testSignature := "test_signature_123"
+
+	GetSignatureCache().Store(cacheKey, testSignature)
+
 	claudeRequest, err := ConvertRequest(c, openaiRequest)
 	require.NoError(t, err)
 
@@ -472,11 +510,15 @@ func TestConvertRequest_ThinkingBlocksConversion(t *testing.T) {
 func TestConvertRequest_ThinkingBlocksWithComplexContent(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// Initialize signature cache
+	InitSignatureCache(time.Hour)
+
 	// Create a proper test context with a request
 	req := httptest.NewRequest("POST", "/v1/chat/completions?thinking=true", nil)
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
+	c.Set("token_id", 12345)
 
 	// Test case: assistant message with complex content structure and reasoning
 	// This tests the non-string content path in the conversion logic
@@ -546,6 +588,14 @@ func TestConvertRequest_ThinkingBlocksWithComplexContent(t *testing.T) {
 			},
 		},
 	}
+
+	// Pre-cache a signature to ensure thinking block is created (not fallback)
+	tokenIDStr := getTokenIDFromRequest(12345)
+	conversationID := generateConversationID(openaiRequest.Messages)
+	cacheKey := generateSignatureKey(tokenIDStr, conversationID, 1, 0) // messageIndex=1 (based on len(claudeRequest.Messages) at processing time)
+	testSignature := "test_signature_123"
+
+	GetSignatureCache().Store(cacheKey, testSignature)
 
 	claudeRequest, err := ConvertRequest(c, openaiRequest)
 	require.NoError(t, err)
@@ -664,11 +714,15 @@ func TestConvertRequest_BackwardCompatibility_NoThinking(t *testing.T) {
 func TestConvertRequest_BugScenario_FullWorkflow(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// Initialize signature cache
+	InitSignatureCache(time.Hour)
+
 	// Create a test context with thinking parameter
 	req := httptest.NewRequest("POST", "/v1/chat/completions?thinking=true", nil)
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
+	c.Set("token_id", 12345)
 
 	// Test the exact scenario from the bug report
 	// First request: user asks to read vite.config.ts
@@ -712,6 +766,14 @@ func TestConvertRequest_BugScenario_FullWorkflow(t *testing.T) {
 			},
 		},
 	}
+
+	// Pre-cache a signature to ensure thinking block is created (not fallback)
+	tokenIDStr := getTokenIDFromRequest(12345)
+	conversationID := generateConversationID(firstRequest.Messages)
+	cacheKey := generateSignatureKey(tokenIDStr, conversationID, 1, 0) // messageIndex=1 (based on len(claudeRequest.Messages) at processing time)
+	testSignature := "test_signature_123"
+
+	GetSignatureCache().Store(cacheKey, testSignature)
 
 	// First request should work (this was working in the bug report)
 	claudeRequest1, err := ConvertRequest(c, firstRequest)
@@ -783,6 +845,13 @@ func TestConvertRequest_BugScenario_FullWorkflow(t *testing.T) {
 			},
 		},
 	}
+
+	// Pre-cache a signature for the second request too
+	conversationID2 := generateConversationID(secondRequest.Messages)
+	cacheKey2 := generateSignatureKey(tokenIDStr, conversationID2, 1, 0) // messageIndex=1 for assistant message
+	testSignature2 := "test_signature_456"
+
+	GetSignatureCache().Store(cacheKey2, testSignature2)
 
 	// Second request should now work (this was failing before the fix)
 	claudeRequest2, err := ConvertRequest(c, secondRequest)

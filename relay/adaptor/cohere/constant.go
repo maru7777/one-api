@@ -7,7 +7,7 @@ import (
 
 // ModelRatios contains all supported models and their pricing ratios
 // Model list is derived from the keys of this map, eliminating redundancy
-var ModelRatios = map[string]adaptor.ModelPrice{
+var ModelRatios = map[string]adaptor.ModelConfig{
 	// Command Models
 	"command":         {Ratio: 15 * ratio.MilliTokensUsd, CompletionRatio: 2}, // $15/$30 per 1M tokens
 	"command-nightly": {Ratio: 15 * ratio.MilliTokensUsd, CompletionRatio: 2}, // $15/$30 per 1M tokens

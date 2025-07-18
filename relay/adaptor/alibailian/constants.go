@@ -8,7 +8,7 @@ import (
 // ModelRatios contains all supported models and their pricing ratios
 // Model list is derived from the keys of this map, eliminating redundancy
 // Based on Alibaba Bailian pricing: https://help.aliyun.com/zh/model-studio/getting-started/models
-var ModelRatios = map[string]adaptor.ModelPrice{
+var ModelRatios = map[string]adaptor.ModelConfig{
 	// Qwen Models
 	"qwen-turbo":              {Ratio: 0.3 * ratio.MilliTokensRmb, CompletionRatio: 1},
 	"qwen-plus":               {Ratio: 0.8 * ratio.MilliTokensRmb, CompletionRatio: 1},

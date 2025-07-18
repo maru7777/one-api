@@ -290,6 +290,24 @@ func SyncChannelCache(frequency int) {
 	}
 }
 
+func GetChannelsFromCache(group string, model string) ([]*Channel, error) {
+	if !config.MemoryCacheEnabled {
+		return nil, errors.New("MemoryCache is disabled")
+	}
+	channelSyncLock.RLock()
+	channelsFromCache := group2model2channels[group][model]
+	if len(channelsFromCache) == 0 {
+		channelSyncLock.RUnlock()
+		return nil, errors.New("channel not found in memory cache")
+	}
+
+	candidateChannels := make([]*Channel, len(channelsFromCache))
+	copy(candidateChannels, channelsFromCache)
+	channelSyncLock.RUnlock()
+
+	return candidateChannels, nil
+}
+
 func CacheGetRandomSatisfiedChannel(group string, model string, ignoreFirstPriority bool) (*Channel, error) {
 	if !config.MemoryCacheEnabled {
 		return GetRandomSatisfiedChannel(group, model, ignoreFirstPriority)
@@ -332,6 +350,34 @@ func CacheGetRandomSatisfiedChannel(group string, model string, ignoreFirstPrior
 			}
 		}
 	}
+
+	candidateChannels = candidateChannels[:endIdx]
+
+	sort.Slice(candidateChannels, func(i, j int) bool {
+		iModelConfig, jModelConfig := candidateChannels[i].GetModelConfig(model), candidateChannels[j].GetModelConfig(model)
+		// Treat 0 as infinity (no limit)
+		if iModelConfig == nil || iModelConfig.MaxTokens == 0 {
+			return false // i has no limit, so it's not less than j
+		}
+		if jModelConfig == nil || jModelConfig.MaxTokens == 0 {
+			return true // j has no limit, so i is less than j
+		}
+
+		return iModelConfig.MaxTokens < jModelConfig.MaxTokens
+	})
+
+	minTokensChannel := candidateChannels[0]
+	minTokensModelConfig := minTokensChannel.GetModelConfig(model)
+	if minTokensModelConfig != nil && minTokensModelConfig.MaxTokens > 0 {
+		for i := range candidateChannels {
+			modeConfig := candidateChannels[i].GetModelConfig(model)
+			if modeConfig != nil && modeConfig.MaxTokens != minTokensModelConfig.MaxTokens {
+				endIdx = i
+				break
+			}
+		}
+	}
+
 	idx := rand.Intn(endIdx)
 	if ignoreFirstPriority {
 		if endIdx < len(candidateChannels) { // which means there are more than one priority
@@ -356,7 +402,7 @@ func CacheGetRandomSatisfiedChannel(group string, model string, ignoreFirstPrior
 }
 
 // CacheGetRandomSatisfiedChannelExcluding gets a random satisfied channel while excluding specified channel IDs
-func CacheGetRandomSatisfiedChannelExcluding(group string, model string, ignoreFirstPriority bool, excludeChannelIds map[int]bool) (*Channel, error) {
+func CacheGetRandomSatisfiedChannelExcluding(group string, model string, ignoreFirstPriority bool, excludeChannelIds map[int]bool, tryLargerMaxTokens bool) (*Channel, error) {
 	if !config.MemoryCacheEnabled {
 		return GetRandomSatisfiedChannelExcluding(group, model, ignoreFirstPriority, excludeChannelIds)
 	}
@@ -374,6 +420,33 @@ func CacheGetRandomSatisfiedChannelExcluding(group string, model string, ignoreF
 		if !excludeChannelIds[channel.Id] {
 			candidateChannels = append(candidateChannels, channel)
 		}
+	}
+
+	// For HTTP Code 413
+	// Filter out small max_tokens channels
+	if tryLargerMaxTokens {
+		smallerMaxTokensSizes := make(map[int32]bool)
+		for _, channel := range channelsFromCache {
+			if excludeChannelIds[channel.Id] {
+				modelConfig := channel.GetModelConfig(model)
+				if modelConfig != nil {
+					smallerMaxTokensSizes[modelConfig.MaxTokens] = true
+				}
+			}
+		}
+
+		var LargerMaxTokensSizeChannels []*Channel
+		// Work on already-filtered candidateChannels, not the original channelsFromCache
+		for _, channel := range candidateChannels {
+			modelConfig := channel.GetModelConfig(model)
+			if modelConfig != nil && !smallerMaxTokensSizes[modelConfig.MaxTokens] {
+				LargerMaxTokensSizeChannels = append(LargerMaxTokensSizeChannels, channel)
+			} else if modelConfig == nil {
+				LargerMaxTokensSizeChannels = append(LargerMaxTokensSizeChannels, channel)
+			}
+		}
+
+		candidateChannels = LargerMaxTokensSizeChannels
 	}
 	channelSyncLock.RUnlock()
 

@@ -1,6 +1,7 @@
 import React, { useContext, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserContext } from '../context/User';
+import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -21,8 +22,8 @@ import {
 } from '../helpers';
 import '../index.css';
 
-// Header Buttons
-let headerButtons = [
+// Priority buttons - always visible on medium+ screens
+let priorityButtons = [
   {
     name: 'header.channel',
     to: '/channel',
@@ -33,6 +34,26 @@ let headerButtons = [
     name: 'header.token',
     to: '/token',
     icon: 'key',
+  },
+  {
+    name: 'header.dashboard',
+    to: '/dashboard',
+    icon: 'chart bar',
+  },
+  {
+    name: 'header.log',
+    to: '/log',
+    icon: 'book',
+  },
+];
+
+// Secondary buttons - shown in "More" dropdown on medium screens, inline on large screens
+let secondaryButtons = [
+  {
+    name: 'header.user',
+    to: '/user',
+    icon: 'user',
+    admin: true,
   },
   {
     name: 'header.redemption',
@@ -46,22 +67,6 @@ let headerButtons = [
     icon: 'cart',
   },
   {
-    name: 'header.user',
-    to: '/user',
-    icon: 'user',
-    admin: true,
-  },
-  {
-    name: 'header.dashboard',
-    to: '/dashboard',
-    icon: 'chart bar',
-  },
-  {
-    name: 'header.log',
-    to: '/log',
-    icon: 'book',
-  },
-  {
     name: 'header.setting',
     to: '/setting',
     icon: 'setting',
@@ -73,22 +78,52 @@ let headerButtons = [
   },
 ];
 
+// Add chat button to priority if chat_link exists
 if (localStorage.getItem('chat_link')) {
-  headerButtons.splice(1, 0, {
+  priorityButtons.splice(1, 0, {
     name: 'header.chat',
     to: '/chat',
     icon: 'comments',
   });
 }
 
+// All buttons combined for mobile and large screens
+let allButtons = [...priorityButtons, ...secondaryButtons];
+
+// Hook to detect screen size
+const useScreenSize = () => {
+  const [screenSize, setScreenSize] = useState('large');
+
+  React.useEffect(() => {
+    const checkScreenSize = () => {
+      const width = window.innerWidth;
+      if (width < 768) {
+        setScreenSize('mobile');
+      } else if (width < 1400) {
+        setScreenSize('medium');
+      } else {
+        setScreenSize('large');
+      }
+    };
+
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
+  return screenSize;
+};
+
 const Header = () => {
   const { t, i18n } = useTranslation();
   const [userState, userDispatch] = useContext(UserContext);
+  const { state: themeState, setTheme } = useTheme();
   let navigate = useNavigate();
 
   const [showSidebar, setShowSidebar] = useState(false);
   const systemName = getSystemName();
   const logo = getLogo();
+  const screenSize = useScreenSize();
 
   async function logout() {
     setShowSidebar(false);
@@ -103,23 +138,281 @@ const Header = () => {
     setShowSidebar(!showSidebar);
   };
 
-  const renderButtons = (isMobile) => {
-    return headerButtons.map((button) => {
-      if (button.admin && !isAdmin()) return <></>;
-      if (isMobile) {
-        return (
-          <Menu.Item
-            key={button.name}
-            onClick={() => {
-              navigate(button.to);
-              setShowSidebar(false);
+  const renderRightMenuItems = () => {
+    if (screenSize === 'large') {
+      // Large screens: show language, theme, and user dropdown
+      return (
+        <>
+          <Dropdown
+            item
+            trigger={
+              <Icon name='language' style={{ margin: 0, fontSize: '18px' }} />
+            }
+            options={languageOptions}
+            value={i18n.language}
+            onChange={(_, { value }) => changeLanguage(value)}
+            style={{
+              fontSize: '16px',
+              fontWeight: '400',
+              color: 'var(--text-secondary)',
+              padding: '0 10px',
             }}
-            style={{ fontSize: '15px' }}
+          />
+          <Dropdown
+            item
+            className="theme-dropdown"
+            trigger={
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Icon
+                  name={
+                    themeState.theme === 'system'
+                      ? 'desktop'
+                      : themeState.effectiveTheme === 'light'
+                      ? 'sun'
+                      : 'moon'
+                  }
+                  style={{ margin: 0, fontSize: '18px' }}
+                />
+              </span>
+            }
+            style={{
+              fontSize: '16px',
+              fontWeight: '400',
+              color: 'var(--text-secondary)',
+              padding: '0 10px',
+            }}
           >
-            {t(button.name)}
-          </Menu.Item>
-        );
-      }
+            <Dropdown.Menu
+              style={{
+                backgroundColor: 'var(--card-bg)',
+                border: '1px solid var(--border-color)',
+                boxShadow: '0 4px 12px var(--shadow-color)',
+                minWidth: '140px'
+              }}
+            >
+              <Dropdown.Item
+                onClick={() => setTheme('light')}
+                active={themeState.theme === 'light'}
+                style={{
+                  backgroundColor: themeState.theme === 'light' ? 'var(--button-primary)' : 'var(--card-bg)',
+                  color: themeState.theme === 'light' ? 'white' : 'var(--text-primary)',
+                  padding: '12px 16px',
+                  borderBottom: '1px solid var(--border-color)',
+                  fontWeight: themeState.theme === 'light' ? '600' : '400',
+                  cursor: 'pointer'
+                }}
+              >
+                <Icon name="sun" style={{ marginRight: '8px' }} />
+                {t('header.theme.light')}
+              </Dropdown.Item>
+              <Dropdown.Item
+                onClick={() => setTheme('dark')}
+                active={themeState.theme === 'dark'}
+                style={{
+                  backgroundColor: themeState.theme === 'dark' ? 'var(--button-primary)' : 'var(--card-bg)',
+                  color: themeState.theme === 'dark' ? 'white' : 'var(--text-primary)',
+                  padding: '12px 16px',
+                  borderBottom: '1px solid var(--border-color)',
+                  fontWeight: themeState.theme === 'dark' ? '600' : '400',
+                  cursor: 'pointer'
+                }}
+              >
+                <Icon name="moon" style={{ marginRight: '8px' }} />
+                {t('header.theme.dark')}
+              </Dropdown.Item>
+              <Dropdown.Item
+                onClick={() => setTheme('system')}
+                active={themeState.theme === 'system'}
+                style={{
+                  backgroundColor: themeState.theme === 'system' ? 'var(--button-primary)' : 'var(--card-bg)',
+                  color: themeState.theme === 'system' ? 'white' : 'var(--text-primary)',
+                  padding: '12px 16px',
+                  borderBottom: 'none',
+                  fontWeight: themeState.theme === 'system' ? '600' : '400',
+                  cursor: 'pointer'
+                }}
+              >
+                <Icon name="desktop" style={{ marginRight: '8px' }} />
+                {t('header.theme.system')}
+              </Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown>
+          {userState.user ? (
+            <Dropdown
+              text={userState.user.username}
+              pointing
+              className='link item'
+              style={{
+                fontSize: '15px',
+                fontWeight: '400',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              <Dropdown.Menu>
+                <Dropdown.Item
+                  onClick={logout}
+                  style={{
+                    fontSize: '15px',
+                    fontWeight: '400',
+                    color: 'var(--text-secondary)',
+                  }}
+                >
+                  {t('header.logout')}
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
+          ) : (
+            <Menu.Item
+              name={t('header.login')}
+              as={Link}
+              to='/login'
+              className='btn btn-link'
+              style={{
+                fontSize: '15px',
+                fontWeight: '400',
+                color: 'var(--text-secondary)',
+              }}
+            />
+          )}
+        </>
+      );
+    } else {
+      // Medium screens: show "More" dropdown with secondary buttons + settings
+      const secondaryItems = secondaryButtons.filter(button => !button.admin || isAdmin());
+
+      return (
+        <Dropdown
+          item
+          text={t('header.more')}
+          icon="ellipsis horizontal"
+          className="header-more-dropdown"
+          style={{
+            fontSize: '15px',
+            fontWeight: '400',
+            color: 'var(--text-secondary)',
+          }}
+        >
+          <Dropdown.Menu>
+            {secondaryItems.map((button) => (
+              <Dropdown.Item
+                key={button.name}
+                as={Link}
+                to={button.to}
+                style={{
+                  fontSize: '15px',
+                  fontWeight: '400',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                <Icon name={button.icon} style={{ marginRight: '8px' }} />
+                {t(button.name)}
+              </Dropdown.Item>
+            ))}
+            {secondaryItems.length > 0 && <Dropdown.Divider />}
+            <Dropdown.Item
+              style={{
+                fontSize: '15px',
+                fontWeight: '400',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              <Icon name="language" style={{ marginRight: '8px' }} />
+              <Dropdown
+                trigger={<span>{t('header.language')}</span>}
+                options={languageOptions}
+                value={i18n.language}
+                onChange={(_, { value }) => changeLanguage(value)}
+                direction="left"
+                style={{ border: 'none', background: 'none' }}
+              />
+            </Dropdown.Item>
+            <Dropdown.Item
+              style={{
+                fontSize: '15px',
+                fontWeight: '400',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              <Icon name={
+                themeState.theme === 'system'
+                  ? 'desktop'
+                  : themeState.effectiveTheme === 'light'
+                  ? 'sun'
+                  : 'moon'
+              } style={{ marginRight: '8px' }} />
+              <Dropdown
+                trigger={<span>{t('header.theme.' + themeState.theme)}</span>}
+                direction="left"
+                style={{ border: 'none', background: 'none' }}
+              >
+                <Dropdown.Menu>
+                  <Dropdown.Item onClick={() => setTheme('light')}>
+                    <Icon name="sun" style={{ marginRight: '8px' }} />
+                    {t('header.theme.light')}
+                  </Dropdown.Item>
+                  <Dropdown.Item onClick={() => setTheme('dark')}>
+                    <Icon name="moon" style={{ marginRight: '8px' }} />
+                    {t('header.theme.dark')}
+                  </Dropdown.Item>
+                  <Dropdown.Item onClick={() => setTheme('system')}>
+                    <Icon name="desktop" style={{ marginRight: '8px' }} />
+                    {t('header.theme.system')}
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
+            </Dropdown.Item>
+            <Dropdown.Divider />
+            {userState.user ? (
+              <Dropdown.Item
+                onClick={logout}
+                style={{
+                  fontSize: '15px',
+                  fontWeight: '400',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                <Icon name="user" style={{ marginRight: '8px' }} />
+                {t('header.logout')} ({userState.user.username})
+              </Dropdown.Item>
+            ) : (
+              <Dropdown.Item
+                as={Link}
+                to='/login'
+                style={{
+                  fontSize: '15px',
+                  fontWeight: '400',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                <Icon name="sign in" style={{ marginRight: '8px' }} />
+                {t('header.login')}
+              </Dropdown.Item>
+            )}
+          </Dropdown.Menu>
+        </Dropdown>
+      );
+    }
+  };
+
+  const renderButton = (button, isMobile = false, iconOnly = false) => {
+    if (button.admin && !isAdmin()) return null;
+
+    if (isMobile) {
+      return (
+        <Menu.Item
+          key={button.name}
+          onClick={() => {
+            navigate(button.to);
+            setShowSidebar(false);
+          }}
+          style={{ fontSize: '15px' }}
+        >
+          {t(button.name)}
+        </Menu.Item>
+      );
+    }
+
+    if (iconOnly) {
       return (
         <Menu.Item
           key={button.name}
@@ -128,15 +421,49 @@ const Header = () => {
           style={{
             fontSize: '15px',
             fontWeight: '400',
-            color: '#666',
+            color: 'var(--text-secondary)',
+            padding: '0.8em',
           }}
+          title={t(button.name)} // Tooltip for accessibility
         >
-          <Icon name={button.icon} style={{ marginRight: '4px' }} />
-          {t(button.name)}
+          <Icon name={button.icon} style={{ margin: 0, fontSize: '18px' }} />
         </Menu.Item>
       );
-    });
+    }
+
+    return (
+      <Menu.Item
+        key={button.name}
+        as={Link}
+        to={button.to}
+        style={{
+          fontSize: '15px',
+          fontWeight: '400',
+          color: 'var(--text-secondary)',
+        }}
+      >
+        <Icon name={button.icon} style={{ marginRight: '4px' }} />
+        {t(button.name)}
+      </Menu.Item>
+    );
   };
+
+  const renderButtons = (isMobile) => {
+    if (isMobile) {
+      // Mobile: show all buttons in sidebar
+      return allButtons.map((button) => renderButton(button, true));
+    }
+
+    if (screenSize === 'large') {
+      // Large screens: show all buttons with text
+      return allButtons.map((button) => renderButton(button, false, false));
+    }
+
+    // Medium screens: show only priority buttons with icons only
+    return priorityButtons.map((button) => renderButton(button, false, true));
+  };
+
+
 
   // Add language switcher dropdown
   const languageOptions = [
@@ -204,8 +531,82 @@ const Header = () => {
                 />
               </Menu.Item>
               <Menu.Item>
+                <Dropdown
+                  className="theme-dropdown"
+                  trigger={
+                    <Button className="theme-toggle-button">
+                      <Icon
+                        name={
+                          themeState.theme === 'system'
+                            ? 'desktop'
+                            : themeState.effectiveTheme === 'light'
+                            ? 'sun'
+                            : 'moon'
+                        }
+                        style={{ margin: 0, fontSize: '18px' }}
+                      />
+                    </Button>
+                  }
+                >
+                  <Dropdown.Menu
+                    style={{
+                      backgroundColor: 'var(--card-bg)',
+                      border: '1px solid var(--border-color)',
+                      boxShadow: '0 4px 12px var(--shadow-color)',
+                      minWidth: '140px'
+                    }}
+                  >
+                    <Dropdown.Item
+                      onClick={() => setTheme('light')}
+                      active={themeState.theme === 'light'}
+                      style={{
+                        backgroundColor: themeState.theme === 'light' ? 'var(--button-primary)' : 'var(--card-bg)',
+                        color: themeState.theme === 'light' ? 'white' : 'var(--text-primary)',
+                        padding: '12px 16px',
+                        borderBottom: '1px solid var(--border-color)',
+                        fontWeight: themeState.theme === 'light' ? '600' : '400',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Icon name="sun" style={{ marginRight: '8px' }} />
+                      {t('header.theme.light')}
+                    </Dropdown.Item>
+                    <Dropdown.Item
+                      onClick={() => setTheme('dark')}
+                      active={themeState.theme === 'dark'}
+                      style={{
+                        backgroundColor: themeState.theme === 'dark' ? 'var(--button-primary)' : 'var(--card-bg)',
+                        color: themeState.theme === 'dark' ? 'white' : 'var(--text-primary)',
+                        padding: '12px 16px',
+                        borderBottom: '1px solid var(--border-color)',
+                        fontWeight: themeState.theme === 'dark' ? '600' : '400',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Icon name="moon" style={{ marginRight: '8px' }} />
+                      {t('header.theme.dark')}
+                    </Dropdown.Item>
+                    <Dropdown.Item
+                      onClick={() => setTheme('system')}
+                      active={themeState.theme === 'system'}
+                      style={{
+                        backgroundColor: themeState.theme === 'system' ? 'var(--button-primary)' : 'var(--card-bg)',
+                        color: themeState.theme === 'system' ? 'white' : 'var(--text-primary)',
+                        padding: '12px 16px',
+                        borderBottom: 'none',
+                        fontWeight: themeState.theme === 'system' ? '600' : '400',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Icon name="desktop" style={{ marginRight: '8px' }} />
+                      {t('header.theme.system')}
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                </Dropdown>
+              </Menu.Item>
+              <Menu.Item>
                 {userState.user ? (
-                  <Button onClick={logout} style={{ color: '#666666' }}>
+                  <Button onClick={logout} style={{ color: 'var(--text-secondary)' }}>
                     {t('header.logout')}
                   </Button>
                 ) : (
@@ -255,13 +656,13 @@ const Header = () => {
             padding: isMobile() ? '0 10px' : '0 20px',
           }}
         >
-          <Menu.Item as={Link} to='/' className={'hide-on-mobile'}>
+          <Menu.Item as={Link} to='/'>
             <img src={logo} alt='logo' style={{ marginRight: '0.75em' }} />
             <div
               style={{
                 fontSize: '18px',
                 fontWeight: '500',
-                color: '#333',
+                color: 'var(--text-primary)',
               }}
             >
               {systemName}
@@ -269,58 +670,7 @@ const Header = () => {
           </Menu.Item>
           {renderButtons(false)}
           <Menu.Menu position='right'>
-            <Dropdown
-              item
-              trigger={
-                <Icon name='language' style={{ margin: 0, fontSize: '18px' }} />
-              }
-              options={languageOptions}
-              value={i18n.language}
-              onChange={(_, { value }) => changeLanguage(value)}
-              style={{
-                fontSize: '16px',
-                fontWeight: '400',
-                color: '#666',
-                padding: '0 10px',
-              }}
-            />
-            {userState.user ? (
-              <Dropdown
-                text={userState.user.username}
-                pointing
-                className='link item'
-                style={{
-                  fontSize: '15px',
-                  fontWeight: '400',
-                  color: '#666',
-                }}
-              >
-                <Dropdown.Menu>
-                  <Dropdown.Item
-                    onClick={logout}
-                    style={{
-                      fontSize: '15px',
-                      fontWeight: '400',
-                      color: '#666',
-                    }}
-                  >
-                    {t('header.logout')}
-                  </Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown>
-            ) : (
-              <Menu.Item
-                name={t('header.login')}
-                as={Link}
-                to='/login'
-                className='btn btn-link'
-                style={{
-                  fontSize: '15px',
-                  fontWeight: '400',
-                  color: '#666',
-                }}
-              />
-            )}
+            {renderRightMenuItems()}
           </Menu.Menu>
         </Container>
       </Menu>

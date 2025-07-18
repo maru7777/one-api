@@ -143,6 +143,18 @@ func InitDB() {
 		return
 	}
 	logger.SysLog("database migrated")
+
+	// Migrate ModelConfigs and ModelMapping columns from varchar(1024) to text
+	if err = MigrateChannelFieldsToText(); err != nil {
+		logger.SysError("failed to migrate channel field types: " + err.Error())
+		// Don't fail startup for this migration, just log the error
+	}
+
+	// Migrate existing ModelConfigs data from old format to new format
+	if err = MigrateAllChannelModelConfigs(); err != nil {
+		logger.SysError("failed to migrate channel ModelConfigs: " + err.Error())
+		// Don't fail startup for this migration, just log the error
+	}
 }
 
 func migrateDB() error {

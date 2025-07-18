@@ -229,7 +229,7 @@ const RegisterForm = () => {
                 size='large'
                 onClick={handleSubmit}
                 style={{
-                  background: '#2F73FF', // Use a more modern blue
+                  background: 'var(--button-primary)', // Use a more modern blue
                   color: 'white',
                   marginBottom: '1.5em',
                 }}
@@ -245,13 +245,13 @@ const RegisterForm = () => {
                 style={{
                   textAlign: 'center',
                   fontSize: '0.9em',
-                  color: '#666',
+                  color: 'var(--text-secondary)',
                 }}
               >
                 {t('auth.register.has_account')}
                 <Link
                   to='/login'
-                  style={{ color: '#2185d0', marginLeft: '2px' }}
+                  style={{ color: 'var(--button-primary)', marginLeft: '2px' }}
                 >
                   {t('auth.register.login')}
                 </Link>

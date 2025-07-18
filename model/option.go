@@ -68,9 +68,7 @@ func InitOptionMap() {
 	config.OptionMap["QuotaForInvitee"] = strconv.FormatInt(config.QuotaForInvitee, 10)
 	config.OptionMap["QuotaRemindThreshold"] = strconv.FormatInt(config.QuotaRemindThreshold, 10)
 	config.OptionMap["PreConsumedQuota"] = strconv.FormatInt(config.PreConsumedQuota, 10)
-	config.OptionMap["ModelRatio"] = billingratio.ModelRatio2JSONString()
 	config.OptionMap["GroupRatio"] = billingratio.GroupRatio2JSONString()
-	config.OptionMap["CompletionRatio"] = billingratio.CompletionRatio2JSONString()
 	config.OptionMap["TopUpLink"] = config.TopUpLink
 	config.OptionMap["ChatLink"] = config.ChatLink
 	config.OptionMap["QuotaPerUnit"] = strconv.FormatFloat(config.QuotaPerUnit, 'f', -1, 64)
@@ -83,8 +81,9 @@ func InitOptionMap() {
 func loadOptionsFromDatabase() {
 	options, _ := AllOption()
 	for _, option := range options {
-		if option.Key == "ModelRatio" {
-			option.Value = billingratio.AddNewMissingRatio(option.Value)
+		// Skip deprecated global pricing options
+		if option.Key == "ModelRatio" || option.Key == "CompletionRatio" {
+			continue
 		}
 		err := updateOptionMap(option.Key, option.Value)
 		if err != nil {
@@ -224,12 +223,11 @@ func updateOptionMap(key string, value string) (err error) {
 		config.PreConsumedQuota, _ = strconv.ParseInt(value, 10, 64)
 	case "RetryTimes":
 		config.RetryTimes, _ = strconv.Atoi(value)
-	case "ModelRatio":
-		err = billingratio.UpdateModelRatioByJSONString(value)
+	case "ModelRatio", "CompletionRatio":
+		// Skip deprecated global pricing options - they are now handled by individual adapters
+		return nil
 	case "GroupRatio":
 		err = billingratio.UpdateGroupRatioByJSONString(value)
-	case "CompletionRatio":
-		err = billingratio.UpdateCompletionRatioByJSONString(value)
 	case "TopUpLink":
 		config.TopUpLink = value
 	case "ChatLink":

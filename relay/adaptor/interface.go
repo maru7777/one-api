@@ -10,11 +10,16 @@ import (
 	"github.com/songquanpeng/one-api/relay/model"
 )
 
-// ModelPrice represents pricing information for a model
-type ModelPrice struct {
+// ModelConfig represents pricing and configuration information for a model
+// This structure consolidates both pricing (Ratio, CompletionRatio) and
+// configuration (MaxTokens, etc.) to eliminate the need for separate ModelConfig
+type ModelConfig struct {
 	Ratio float64 `json:"ratio"`
 	// CompletionRatio represents the output rate / input rate
 	CompletionRatio float64 `json:"completion_ratio,omitempty"`
+	// MaxTokens represents the maximum token limit for this model on this channel
+	// 0 means no limit (infinity)
+	MaxTokens int32 `json:"max_tokens,omitempty"`
 }
 
 type Adaptor interface {
@@ -29,7 +34,7 @@ type Adaptor interface {
 	GetChannelName() string
 
 	// Pricing methods - each adapter manages its own model pricing
-	GetDefaultModelPricing() map[string]ModelPrice
+	GetDefaultModelPricing() map[string]ModelConfig
 	GetModelRatio(modelName string) float64
 	GetCompletionRatio(modelName string) float64
 }
@@ -37,8 +42,8 @@ type Adaptor interface {
 // DefaultPricingMethods provides default implementations for adapters without specific pricing
 type DefaultPricingMethods struct{}
 
-func (d *DefaultPricingMethods) GetDefaultModelPricing() map[string]ModelPrice {
-	return make(map[string]ModelPrice) // Empty pricing map
+func (d *DefaultPricingMethods) GetDefaultModelPricing() map[string]ModelConfig {
+	return make(map[string]ModelConfig) // Empty pricing map
 }
 
 func (d *DefaultPricingMethods) GetModelRatio(modelName string) float64 {
@@ -52,7 +57,7 @@ func (d *DefaultPricingMethods) GetCompletionRatio(modelName string) float64 {
 
 // GetModelListFromPricing derives model list from pricing map keys
 // This eliminates the need for separate ModelList variables
-func GetModelListFromPricing(pricing map[string]ModelPrice) []string {
+func GetModelListFromPricing(pricing map[string]ModelConfig) []string {
 	models := make([]string, 0, len(pricing))
 	for model := range pricing {
 		models = append(models, model)

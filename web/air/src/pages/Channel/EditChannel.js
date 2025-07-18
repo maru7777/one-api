@@ -4,11 +4,80 @@ import {API, isMobile, showError, showInfo, showSuccess, verifyJSON} from '../..
 import {CHANNEL_OPTIONS} from '../../constants';
 import Title from "@douyinfe/semi-ui/lib/es/typography/title";
 import {SideSheet, Space, Spin, Button, Input, Typography, Select, TextArea, Checkbox, Banner} from "@douyinfe/semi-ui";
+import ChannelDebugPanel from '../../components/ChannelDebugPanel';
 
 const MODEL_MAPPING_EXAMPLE = {
     'gpt-3.5-turbo-0301': 'gpt-3.5-turbo',
     'gpt-4-0314': 'gpt-4',
     'gpt-4-32k-0314': 'gpt-4-32k'
+};
+
+const MODEL_CONFIGS_EXAMPLE = {
+    'gpt-3.5-turbo-0301': {
+        'ratio': 0.0015,
+        'completion_ratio': 2.0,
+        'max_tokens': 65536,
+    },
+    'gpt-4': {
+        'ratio': 0.03,
+        'completion_ratio': 2.0,
+        'max_tokens': 128000,
+    }
+};
+
+// Enhanced validation for model configs
+const validateModelConfigs = (configStr) => {
+    if (!configStr || configStr.trim() === '') {
+        return { valid: true };
+    }
+
+    try {
+        const configs = JSON.parse(configStr);
+
+        if (typeof configs !== 'object' || configs === null || Array.isArray(configs)) {
+            return { valid: false, error: '模型配置必须是JSON对象' };
+        }
+
+        for (const [modelName, config] of Object.entries(configs)) {
+            if (!modelName || modelName.trim() === '') {
+                return { valid: false, error: '模型名称不能为空' };
+            }
+
+            if (typeof config !== 'object' || config === null || Array.isArray(config)) {
+                return { valid: false, error: `模型"${modelName}"的配置必须是对象` };
+            }
+
+            // Validate ratio
+            if (config.ratio !== undefined) {
+                if (typeof config.ratio !== 'number' || config.ratio < 0) {
+                    return { valid: false, error: `模型"${modelName}"的ratio无效：必须是非负数` };
+                }
+            }
+
+            // Validate completion_ratio
+            if (config.completion_ratio !== undefined) {
+                if (typeof config.completion_ratio !== 'number' || config.completion_ratio < 0) {
+                    return { valid: false, error: `模型"${modelName}"的completion_ratio无效：必须是非负数` };
+                }
+            }
+
+            // Validate max_tokens
+            if (config.max_tokens !== undefined) {
+                if (!Number.isInteger(config.max_tokens) || config.max_tokens < 0) {
+                    return { valid: false, error: `模型"${modelName}"的max_tokens无效：必须是非负整数` };
+                }
+            }
+
+            // Check if at least one meaningful field is provided
+            if (config.ratio === undefined && config.completion_ratio === undefined && config.max_tokens === undefined) {
+                return { valid: false, error: `模型"${modelName}"必须至少有一个配置字段（ratio、completion_ratio或max_tokens）` };
+            }
+        }
+
+        return { valid: true };
+    } catch (error) {
+        return { valid: false, error: `JSON格式无效：${error.message}` };
+    }
 };
 
 function type2secretPrompt(type) {
@@ -49,6 +118,7 @@ const EditChannel = (props) => {
         groups: ['default'],
         model_ratio: '',
         completion_ratio: '',
+        model_configs: '',
         inference_profile_arn_map: ''
     };
     const [batch, setBatch] = useState(false);
@@ -62,13 +132,88 @@ const EditChannel = (props) => {
     const [fullModels, setFullModels] = useState([]);
     const [customModel, setCustomModel] = useState('');
     const [defaultPricing, setDefaultPricing] = useState({
-        model_ratio: '',
-        completion_ratio: '',
+        model_configs: '',
     });
+
+    const loadDefaultPricing = async (channelType, existingModelConfigs = null) => {
+        try {
+            const res = await API.get(`/api/channel/default-pricing?type=${channelType}`);
+            if (res.data.success) {
+                // Convert old format to new unified format if needed
+                let defaultModelConfigs = '';
+
+                if (res.data.data.model_configs) {
+                    // Already in new format, but ensure it's properly formatted
+                    try {
+                        const parsed = JSON.parse(res.data.data.model_configs);
+                        defaultModelConfigs = JSON.stringify(parsed, null, 2);
+                    } catch (e) {
+                        // If parsing fails, use as-is
+                        defaultModelConfigs = res.data.data.model_configs;
+                    }
+                } else if (res.data.data.model_ratio || res.data.data.completion_ratio) {
+                    // Convert from old format to new format
+                    const modelRatio = res.data.data.model_ratio ? JSON.parse(res.data.data.model_ratio) : {};
+                    const completionRatio = res.data.data.completion_ratio ? JSON.parse(res.data.data.completion_ratio) : {};
+
+                    const unifiedConfigs = {};
+                    const allModels = new Set([...Object.keys(modelRatio), ...Object.keys(completionRatio)]);
+
+                    for (const modelName of allModels) {
+                        unifiedConfigs[modelName] = {};
+                        if (modelRatio[modelName]) {
+                            unifiedConfigs[modelName].ratio = modelRatio[modelName];
+                        }
+                        if (completionRatio[modelName]) {
+                            unifiedConfigs[modelName].completion_ratio = completionRatio[modelName];
+                        }
+                    }
+
+                    defaultModelConfigs = JSON.stringify(unifiedConfigs, null, 2);
+                }
+
+                setDefaultPricing({
+                    model_configs: defaultModelConfigs,
+                });
+
+                // If current model_configs is empty, populate with defaults
+                // Don't override if we have existing model_configs from loadChannel
+                if (!inputs.model_configs && !existingModelConfigs) {
+                    handleInputChange('model_configs', defaultModelConfigs);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load default pricing:', error);
+        }
+    };
+    const formatJSON = (jsonString) => {
+        if (!jsonString || jsonString.trim() === '') return '';
+        try {
+            const parsed = JSON.parse(jsonString);
+            return JSON.stringify(parsed, null, 2);
+        } catch (e) {
+            return jsonString; // Return original if parsing fails
+        }
+    };
+
+    const isValidJSON = (jsonString) => {
+        if (!jsonString || jsonString.trim() === '') return true; // Empty is valid
+        try {
+            JSON.parse(jsonString);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    };
+
     const handleInputChange = (name, value) => {
         setInputs((inputs) => ({...inputs, [name]: value}));
-        if (name === 'type' && inputs.models.length === 0) {
-            let localModels = [];
+        if (name === 'type') {
+            // Load default pricing for the new channel type
+            loadDefaultPricing(value);
+
+            if (inputs.models.length === 0) {
+                let localModels = [];
             switch (value) {
                 case 14:
                     localModels = ["claude-instant-1.2", "claude-2", "claude-2.0", "claude-2.1", "claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307", "claude-3-5-haiku-20241022", "claude-3-5-sonnet-20240620", "claude-3-5-sonnet-20241022"];
@@ -127,9 +272,7 @@ const EditChannel = (props) => {
                     break;
             }
             setInputs((inputs) => ({...inputs, models: localModels}));
-        }
-        if (name === 'type') {
-            // Load default pricing for the new channel type
+            }
             loadDefaultPricing(value);
         }
         //setAutoBan
@@ -138,7 +281,9 @@ const EditChannel = (props) => {
 
     const loadChannel = async () => {
         setLoading(true)
-        let res = await API.get(`/api/channel/${channelId}`);
+        // Add cache busting parameter to ensure fresh data
+        const cacheBuster = Date.now();
+        let res = await API.get(`/api/channel/${channelId}?_cb=${cacheBuster}`);
         const {success, message, data} = res.data;
         if (success) {
             if (data.models === '') {
@@ -169,6 +314,17 @@ const EditChannel = (props) => {
                     console.error('Failed to parse completion_ratio:', e);
                 }
             }
+            if (data.model_configs && data.model_configs !== '') {
+                try {
+                    const parsedConfigs = JSON.parse(data.model_configs);
+                    // Pretty format with proper indentation
+                    data.model_configs = JSON.stringify(parsedConfigs, null, 2);
+                    console.log('Loaded model_configs for channel:', data.id, 'type:', data.type, 'models:', Object.keys(parsedConfigs));
+                } catch (e) {
+                    console.error('Failed to parse model_configs:', e);
+                    // If parsing fails, keep original value but log the error
+                }
+            }
             if (data.inference_profile_arn_map && data.inference_profile_arn_map !== '') {
                 try {
                     data.inference_profile_arn_map = JSON.stringify(JSON.parse(data.inference_profile_arn_map), null, 2);
@@ -177,8 +333,8 @@ const EditChannel = (props) => {
                 }
             }
             setInputs(data);
-            // Load default pricing for this channel type
-            loadDefaultPricing(data.type);
+            // Load default pricing for this channel type, but don't override existing model_configs
+            loadDefaultPricing(data.type, data.model_configs);
             if (data.auto_ban === 0) {
                 setAutoBan(false);
             } else {
@@ -220,28 +376,6 @@ const EditChannel = (props) => {
         }
     };
 
-    const loadDefaultPricing = async (channelType) => {
-        try {
-            const res = await API.get(`/api/channel/default-pricing?type=${channelType}`);
-            if (res.data.success) {
-                setDefaultPricing({
-                    model_ratio: res.data.data.model_ratio || '',
-                    completion_ratio: res.data.data.completion_ratio || '',
-                });
-                // If current pricing is empty, populate with defaults
-                if (!inputs.model_ratio && !inputs.completion_ratio) {
-                    setInputs((inputs) => ({
-                        ...inputs,
-                        model_ratio: res.data.data.model_ratio || '',
-                        completion_ratio: res.data.data.completion_ratio || '',
-                    }));
-                }
-            }
-        } catch (error) {
-            console.error('Failed to load default pricing:', error);
-        }
-    };
-
     useEffect(() => {
         let localModelOptions = [...originModelOptions];
         inputs.models.forEach((model) => {
@@ -259,11 +393,7 @@ const EditChannel = (props) => {
         fetchModels().then();
         fetchGroups().then();
         if (isEdit) {
-            loadChannel().then(
-                () => {
-
-                }
-            );
+            loadChannel().then();
         } else {
             setInputs(originInputs);
             // Load default pricing for new channels
@@ -285,14 +415,12 @@ const EditChannel = (props) => {
             showInfo('模型映射必须是合法的 JSON 格式！');
             return;
         }
-        // Validate pricing fields
-        if (inputs.model_ratio !== '' && !verifyJSON(inputs.model_ratio)) {
-            showInfo('模型定价必须是合法的 JSON 格式！');
-            return;
-        }
-        if (inputs.completion_ratio !== '' && !verifyJSON(inputs.completion_ratio)) {
-            showInfo('输出定价必须是合法的 JSON 格式！');
-            return;
+        if (inputs.model_configs !== '') {
+            const validation = validateModelConfigs(inputs.model_configs);
+            if (!validation.valid) {
+                showInfo(`模型配置无效：${validation.error}`);
+                return;
+            }
         }
         if (inputs.inference_profile_arn_map !== '' && !verifyJSON(inputs.inference_profile_arn_map)) {
             showInfo('推理配置文件ARN映射必须是合法的 JSON 格式！');
@@ -368,7 +496,18 @@ const EditChannel = (props) => {
             <SideSheet
                 maskClosable={false}
                 placement={isEdit ? 'right' : 'left'}
-                title={<Title level={3}>{isEdit ? '更新渠道信息' : '创建新的渠道'}</Title>}
+                title={
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                        <Title level={3}>{isEdit ? '更新渠道信息' : '创建新的渠道'}</Title>
+                        {isEdit && (
+                            <ChannelDebugPanel
+                                channelId={channelId}
+                                channelType={inputs.type}
+                                channelName={inputs.name}
+                            />
+                        )}
+                    </div>
+                }
                 headerStyle={{borderBottom: '1px solid var(--semi-color-border)'}}
                 bodyStyle={{borderBottom: '1px solid var(--semi-color-border)'}}
                 visible={props.visible}
@@ -384,10 +523,32 @@ const EditChannel = (props) => {
                 onCancel={() => handleCancel()}
                 width={isMobile() ? '100%' : 600}
             >
-                <Spin spinning={loading}>
-                    <div style={{ marginTop: 10 }}>
-                        <Typography.Text strong>类型：</Typography.Text>
+                {loading ? (
+                    <div style={{
+                        minHeight: '400px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: 'var(--semi-color-bg-2)',
+                        borderRadius: '8px',
+                        margin: '1rem 0'
+                    }}>
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '1rem',
+                            color: 'var(--semi-color-text-1)'
+                        }}>
+                            <Spin size="large" />
+                            <span>正在加载渠道信息...</span>
+                        </div>
                     </div>
+                ) : (
+                    <>
+                        <div style={{ marginTop: 10 }}>
+                            <Typography.Text strong>类型：</Typography.Text>
+                        </div>
                     <Select
                       name='type'
                       required
@@ -564,8 +725,21 @@ const EditChannel = (props) => {
                           }}
                         />
                     </div>
-                    <div style={{ marginTop: 10 }}>
+                    <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Typography.Text strong>模型重定向：</Typography.Text>
+                        <div>
+                            <Button
+                                theme="borderless"
+                                size="small"
+                                onClick={() => {
+                                    const formatted = formatJSON(inputs.model_mapping);
+                                    handleInputChange('model_mapping', formatted);
+                                }}
+                                disabled={!inputs.model_mapping || inputs.model_mapping.trim() === ''}
+                            >
+                                格式化JSON
+                            </Button>
+                        </div>
                     </div>
                     <TextArea
                       placeholder={`此项可选，用于修改请求体中的模型名称，为一个 JSON 字符串，键为请求中模型名称，值为要替换的模型名称，例如：\n${JSON.stringify(MODEL_MAPPING_EXAMPLE, null, 2)}`}
@@ -576,7 +750,105 @@ const EditChannel = (props) => {
                       autosize
                       value={inputs.model_mapping}
                       autoComplete='new-password'
+                      style={{
+                          fontFamily: 'JetBrains Mono, Consolas, Monaco, "Courier New", monospace',
+                          fontSize: '13px',
+                          lineHeight: '1.4',
+                          backgroundColor: '#f8f9fa',
+                          border: `1px solid ${isValidJSON(inputs.model_mapping) ? 'var(--semi-color-border)' : 'var(--semi-color-danger)'}`,
+                      }}
                     />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '5px' }}>
+                        <Typography.Text style={{
+                            color: 'rgba(var(--semi-blue-5), 1)',
+                            fontSize: '12px'
+                        }}>
+                            此项可选，用于修改请求体中的模型名称。
+                        </Typography.Text>
+                        {inputs.model_mapping && inputs.model_mapping.trim() !== '' && (
+                            <Typography.Text style={{
+                                color: isValidJSON(inputs.model_mapping) ? 'var(--semi-color-success)' : 'var(--semi-color-danger)',
+                                fontWeight: 'bold',
+                                fontSize: '11px'
+                            }}>
+                                {isValidJSON(inputs.model_mapping) ? '✓ 有效JSON' : '✗ 无效JSON'}
+                            </Typography.Text>
+                        )}
+                    </div>
+                    <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography.Text strong>模型配置：</Typography.Text>
+                        <div>
+                            <Button
+                                theme="borderless"
+                                size="small"
+                                onClick={() => {
+                                    const formatted = formatJSON(defaultPricing.model_configs);
+                                    handleInputChange('model_configs', formatted);
+                                }}
+                                style={{ marginRight: 8 }}
+                            >
+                                加载默认值
+                            </Button>
+                            <Button
+                                theme="borderless"
+                                size="small"
+                                onClick={() => {
+                                    const formatted = formatJSON(inputs.model_configs);
+                                    handleInputChange('model_configs', formatted);
+                                }}
+                                disabled={!inputs.model_configs || inputs.model_configs.trim() === ''}
+                            >
+                                格式化JSON
+                            </Button>
+                        </div>
+                    </div>
+                    <TextArea
+                      placeholder={`此项可选，统一的模型配置包括定价和属性。JSON格式，键为模型名称，值包含ratio、completion_ratio和max_tokens字段，例如：\n${JSON.stringify(MODEL_CONFIGS_EXAMPLE, null, 2)}`}
+                      name='model_configs'
+                      onChange={value => {
+                          handleInputChange('model_configs', value)
+                      }}
+
+                      autosize
+                      minRows={8}
+                      value={inputs.model_configs}
+                      autoComplete='new-password'
+                      style={{
+                          fontFamily: 'JetBrains Mono, Consolas, Monaco, "Courier New", monospace',
+                          fontSize: '13px',
+                          lineHeight: '1.4',
+                          backgroundColor: '#f8f9fa',
+                          border: `1px solid ${isValidJSON(inputs.model_configs) ? 'var(--semi-color-border)' : 'var(--semi-color-danger)'}`,
+                      }}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '5px' }}>
+                        <Typography.Text style={{
+                            color: 'rgba(var(--semi-blue-5), 1)',
+                            fontSize: '12px'
+                        }}>
+                            此项可选，统一的模型配置包括定价和属性。
+                        </Typography.Text>
+                        {inputs.model_configs && inputs.model_configs.trim() !== '' && (
+                            <Typography.Text style={{
+                                color: isValidJSON(inputs.model_configs) ? 'var(--semi-color-success)' : 'var(--semi-color-danger)',
+                                fontWeight: 'bold',
+                                fontSize: '11px'
+                            }}>
+                                {isValidJSON(inputs.model_configs) ? '✓ 有效JSON' : '✗ 无效JSON'}
+                            </Typography.Text>
+                        )}
+                    </div>
+                    <Typography.Text style={{
+                        color: 'rgba(var(--semi-blue-5), 1)',
+                        userSelect: 'none',
+                        cursor: 'pointer'
+                    }} onClick={
+                        () => {
+                            handleInputChange('model_configs', JSON.stringify(MODEL_CONFIGS_EXAMPLE, null, 2))
+                        }
+                    }>
+                        填入模板
+                    </Typography.Text>
                     <div style={{ marginTop: 10 }}>
                         <Typography.Text strong>系统提示词：</Typography.Text>
                     </div>
@@ -713,60 +985,7 @@ const EditChannel = (props) => {
                       )
                     }
 
-                    {/* Channel-specific pricing fields */}
-                    <div style={{ marginTop: 20 }}>
-                        <Typography.Text strong>模型定价：</Typography.Text>
-                        <Button
-                            theme="borderless"
-                            size="small"
-                            onClick={() => {
-                                handleInputChange('model_ratio', defaultPricing.model_ratio);
-                            }}
-                            style={{ marginLeft: 10 }}
-                        >
-                            加载默认值
-                        </Button>
-                    </div>
-                    <TextArea
-                        placeholder="可选，渠道专用模型定价，JSON 格式。留空则使用默认定价。"
-                        style={{
-                            minHeight: 150,
-                            fontFamily: 'JetBrains Mono, Consolas',
-                        }}
-                        onChange={(value) => handleInputChange('model_ratio', value)}
-                        value={inputs.model_ratio}
-                        autoComplete="new-password"
-                    />
-                    <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
-                        JSON 格式：{`{"模型名称": 价格倍率}`}。价格倍率乘以 token 数量计算费用。
-                    </div>
-
-                    <div style={{ marginTop: 20 }}>
-                        <Typography.Text strong>输出定价：</Typography.Text>
-                        <Button
-                            theme="borderless"
-                            size="small"
-                            onClick={() => {
-                                handleInputChange('completion_ratio', defaultPricing.completion_ratio);
-                            }}
-                            style={{ marginLeft: 10 }}
-                        >
-                            加载默认值
-                        </Button>
-                    </div>
-                    <TextArea
-                        placeholder="可选，渠道专用输出 token 定价倍率，JSON 格式。"
-                        style={{
-                            minHeight: 150,
-                            fontFamily: 'JetBrains Mono, Consolas',
-                        }}
-                        onChange={(value) => handleInputChange('completion_ratio', value)}
-                        value={inputs.completion_ratio}
-                        autoComplete="new-password"
-                    />
-                    <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
-                        JSON 格式：{`{"模型名称": 输出倍率}`}。输出倍率乘以输出 token 数量。
-                    </div>
+                    {/* Channel-specific pricing fields - now handled through model_configs */}
 
                     {/* AWS-specific inference profile ARN mapping */}
                     {inputs.type === 33 && (
@@ -792,8 +1011,8 @@ const EditChannel = (props) => {
                             </div>
                         </>
                     )}
-
-                </Spin>
+                    </>
+                )}
             </SideSheet>
         </>
     );

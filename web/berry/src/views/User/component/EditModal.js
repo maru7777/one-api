@@ -17,7 +17,9 @@ import {
   Select,
   MenuItem,
   IconButton,
-  FormHelperText
+  FormHelperText,
+  Box,
+  Typography
 } from '@mui/material';
 
 import Visibility from '@mui/icons-material/Visibility';
@@ -58,6 +60,7 @@ const originInputs = {
 
 const EditModal = ({ open, userId, onCancel, onOk }) => {
   const theme = useTheme();
+  const [loading, setLoading] = useState(false);
   const [inputs, setInputs] = useState(originInputs);
   const [groupOptions, setGroupOptions] = useState([]);
   const [showPassword, setShowPassword] = useState(false);
@@ -100,8 +103,10 @@ const EditModal = ({ open, userId, onCancel, onOk }) => {
   };
 
   const loadUser = async () => {
-    let res = await API.get(`/api/user/${userId}`);
-    const { success, message, data } = res.data;
+    setLoading(true);
+    try {
+      let res = await API.get(`/api/user/${userId}`);
+      const { success, message, data } = res.data;
     if (success) {
       data.is_edit = true;
       setInputs(data);
@@ -109,6 +114,11 @@ const EditModal = ({ open, userId, onCancel, onOk }) => {
       setTotpEnabled(data.totp_secret && data.totp_secret !== '');
     } else {
       showError(message);
+    }
+    } catch (error) {
+      showError(error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -153,8 +163,34 @@ const EditModal = ({ open, userId, onCancel, onOk }) => {
       </DialogTitle>
       <Divider />
       <DialogContent>
-        <Formik initialValues={inputs} enableReinitialize validationSchema={validationSchema} onSubmit={submit}>
-          {({ errors, handleBlur, handleChange, handleSubmit, touched, values, isSubmitting }) => (
+        {loading ? (
+          <Box
+            sx={{
+              minHeight: '400px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'background.paper',
+              borderRadius: '8px',
+              margin: '1rem 0'
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '1rem',
+                color: 'text.secondary'
+              }}
+            >
+              <div className="ui active inline loader"></div>
+              <Typography>正在加载用户信息...</Typography>
+            </Box>
+          </Box>
+        ) : (
+          <Formik initialValues={inputs} enableReinitialize validationSchema={validationSchema} onSubmit={submit}>
+            {({ errors, handleBlur, handleChange, handleSubmit, touched, values, isSubmitting }) => (
             <form noValidate onSubmit={handleSubmit}>
               <FormControl fullWidth error={Boolean(touched.username && errors.username)} sx={{ ...theme.typography.otherInput }}>
                 <InputLabel htmlFor="channel-username-label">用户名</InputLabel>
@@ -342,6 +378,7 @@ const EditModal = ({ open, userId, onCancel, onOk }) => {
             </form>
           )}
         </Formik>
+        )}
       </DialogContent>
     </Dialog>
   );

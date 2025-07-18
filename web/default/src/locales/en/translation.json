@@ -11,9 +11,17 @@
     "setting": "Settings",
     "about": "About",
     "chat": "Chat",
+    "more": "More",
+    "language": "Language",
     "login": "Login",
     "logout": "Logout",
-    "register": "Register"
+    "register": "Register",
+    "toggleTheme": "Toggle Theme",
+    "theme": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    }
   },
   "topup": {
     "title": "Top Up Center",
@@ -92,6 +100,7 @@
     "edit": {
       "title_edit": "Update Channel Information",
       "title_create": "Create New Channel",
+      "loading": "Loading channel information...",
       "type": "Type",
       "name": "Name",
       "name_placeholder": "Please enter name",
@@ -102,6 +111,8 @@
       "models_placeholder": "Please select models supported by this channel",
       "model_mapping": "Model Mapping",
       "model_mapping_placeholder": "Optional, used to modify model names in request body. A JSON string where keys are request model names and values are target model names",
+      "model_configs": "Model Configs",
+      "model_configs_placeholder": "Optional, unified model configuration including pricing and properties. JSON format where keys are model names and values contain ratio, completion_ratio, and max_tokens fields.",
       "system_prompt": "System Prompt",
       "system_prompt_placeholder": "Optional, used to force set system prompt. Use with custom model & model mapping. First create a unique custom model name above, then map it to a natively supported model",
       "proxy_url": "Proxy",
@@ -141,6 +152,7 @@
         "name_required": "Please enter channel name and key!",
         "models_required": "Please select at least one model!",
         "model_mapping_invalid": "Model mapping must be valid JSON format!",
+        "model_configs_invalid": "Model configs must be valid JSON format!",
         "model_ratio_invalid": "Model pricing must be valid JSON format!",
         "completion_ratio_invalid": "Completion pricing must be valid JSON format!",
         "update_success": "Channel updated successfully!",
@@ -212,6 +224,7 @@
     "edit": {
       "title_edit": "Update Token Information",
       "title_create": "Create New Token",
+      "loading": "Loading token information...",
       "name": "Name",
       "name_placeholder": "Please enter name",
       "models": "Model Scope",
@@ -299,6 +312,7 @@
     "edit": {
       "title_edit": "Update Redemption Code",
       "title_create": "Create New Redemption Code",
+      "loading": "Loading redemption information...",
       "name": "Name",
       "name_placeholder": "Please enter name",
       "quota": "Quota",
@@ -360,6 +374,7 @@
     "title": "User Management",
     "edit": {
       "title": "Update User Information",
+      "loading": "Loading user information...",
       "username": "Username",
       "username_placeholder": "Please enter new username",
       "password": "Password",

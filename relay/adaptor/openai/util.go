@@ -3,9 +3,9 @@ package openai
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/relay/adaptor/openai_compatible"
 	"github.com/songquanpeng/one-api/relay/model"
 )
 
@@ -23,10 +23,8 @@ func ErrorWrapper(err error, code string, statusCode int) *model.ErrorWithStatus
 	}
 }
 
+// NormalizeDataLine normalizes SSE data lines
+// This function delegates to the shared implementation for consistency
 func NormalizeDataLine(data string) string {
-	if strings.HasPrefix(data, "data:") {
-		content := strings.TrimLeft(data[len("data:"):], " ")
-		return "data: " + content
-	}
-	return data
+	return openai_compatible.NormalizeDataLine(data)
 }

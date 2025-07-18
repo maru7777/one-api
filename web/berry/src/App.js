@@ -25,9 +25,33 @@ const App = () => {
   const customization = useSelector((state) => state.customization);
 
   useEffect(() => {
-    const storedTheme = localStorage.getItem('theme');
-    if (storedTheme) {
-      dispatch({ type: SET_THEME, theme: storedTheme });
+    const storedTheme = localStorage.getItem('theme') || 'system';
+
+    let effectiveTheme = storedTheme;
+    if (storedTheme === 'system') {
+      // Detect system preference
+      if (typeof window !== 'undefined' && window.matchMedia) {
+        effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      } else {
+        effectiveTheme = 'light';
+      }
+    }
+
+    dispatch({ type: SET_THEME, theme: effectiveTheme });
+
+    // Listen for system theme changes when in system mode
+    if (storedTheme === 'system' && typeof window !== 'undefined' && window.matchMedia) {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+      const handleChange = (e) => {
+        if (localStorage.getItem('theme') === 'system') {
+          const newTheme = e.matches ? 'dark' : 'light';
+          dispatch({ type: SET_THEME, theme: newTheme });
+        }
+      };
+
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
     }
   }, [dispatch]);
 

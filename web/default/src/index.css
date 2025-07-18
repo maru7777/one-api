@@ -1,3 +1,52 @@
+/* CSS Variables for Theme Support */
+:root {
+  /* Light theme colors */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-tertiary: #e9ecef;
+  --text-primary: #212529;
+  --text-secondary: #6c757d;
+  --text-muted: #adb5bd;
+  --border-color: #dee2e6;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --menu-bg: #ffffff;
+  --menu-hover: #f8f9fa;
+  --menu-active: #e9ecef;
+  --card-bg: #ffffff;
+  --input-bg: #ffffff;
+  --input-border: #ced4da;
+  --button-primary: #007bff;
+  --button-secondary: #6c757d;
+  --success-color: #28a745;
+  --warning-color: #ffc107;
+  --error-color: #dc3545;
+  --info-color: #17a2b8;
+}
+
+[data-theme="dark"] {
+  /* Dark theme colors - More refined palette */
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #2a2a2a;
+  --bg-tertiary: #363636;
+  --text-primary: #e4e4e4;
+  --text-secondary: #b8b8b8;
+  --text-muted: #888888;
+  --border-color: #3a3a3a;
+  --shadow-color: rgba(0, 0, 0, 0.4);
+  --menu-bg: #2a2a2a;
+  --menu-hover: #363636;
+  --menu-active: #404040;
+  --card-bg: #2a2a2a;
+  --input-bg: #363636;
+  --input-border: #4a4a4a;
+  --button-primary: #4a9eff;
+  --button-secondary: #5a5a5a;
+  --success-color: #4caf50;
+  --warning-color: #ff9800;
+  --error-color: #f44336;
+  --info-color: #2196f3;
+}
+
 body {
     margin: 0;
     padding-top: 55px;
@@ -6,6 +55,21 @@ body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     scrollbar-width: none;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
+    min-height: 100vh;
+}
+
+html {
+    height: 100%;
+}
+
+#root {
+    min-height: calc(100vh - 55px);
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-primary);
 }
 
 body::-webkit-scrollbar {
@@ -18,6 +82,921 @@ code {
 
 .main-content {
     padding: 4px;
+    background-color: var(--bg-primary);
+    flex: 1;
+    min-height: calc(100vh - 55px - 60px); /* Account for header and footer */
+}
+
+/* Footer positioning */
+.ui.vertical.segment {
+    background-color: var(--bg-secondary) !important;
+    margin-top: auto !important;
+    padding: 1rem 0 !important;
+}
+
+[data-theme="dark"] .ui.vertical.segment {
+    background-color: var(--bg-secondary) !important;
+    border-top: 1px solid var(--border-color) !important;
+}
+
+/* Dashboard and settings container */
+.dashboard-container {
+    background-color: var(--bg-primary) !important;
+    min-height: calc(100vh - 55px - 60px);
+    padding: 1rem;
+}
+
+[data-theme="dark"] .dashboard-container {
+    background-color: var(--bg-primary) !important;
+}
+
+/* Settings page specific styling */
+[data-theme="dark"] .chart-card {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 2px 4px var(--shadow-color) !important;
+}
+
+[data-theme="dark"] .chart-card .content {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .chart-card .header {
+    color: var(--text-primary) !important;
+    background-color: var(--card-bg) !important;
+}
+
+/* Settings tabs styling */
+[data-theme="dark"] .settings-tab .item {
+    color: var(--text-primary) !important;
+    background-color: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .settings-tab .active.item {
+    color: var(--text-primary) !important;
+    background-color: var(--card-bg) !important;
+    border-color: var(--button-primary) !important;
+    border-bottom-color: var(--card-bg) !important;
+}
+
+[data-theme="dark"] .settings-tab .item:hover {
+    background-color: var(--menu-hover) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Ensure all page backgrounds are properly themed */
+[data-theme="dark"] .ui.container {
+    background-color: transparent !important;
+}
+
+[data-theme="dark"] .ui.grid {
+    background-color: transparent !important;
+}
+
+[data-theme="dark"] .ui.grid > .row {
+    background-color: transparent !important;
+}
+
+[data-theme="dark"] .ui.grid > .column {
+    background-color: transparent !important;
+}
+
+/* Fix any remaining white backgrounds */
+[data-theme="dark"] * {
+    background-color: inherit;
+}
+
+[data-theme="dark"] .ui.card,
+[data-theme="dark"] .ui.cards > .card {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .ui.card > .content,
+[data-theme="dark"] .ui.cards > .card > .content {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Footer text color fix */
+[data-theme="dark"] .custom-footer {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .custom-footer a {
+    color: var(--button-primary) !important;
+}
+
+[data-theme="dark"] .custom-footer a:hover {
+    color: var(--text-primary) !important;
+}
+
+/* Theme-aware Semantic UI overrides */
+[data-theme="dark"] .ui.menu {
+    background-color: var(--menu-bg) !important;
+    border-color: var(--border-color) !important;
+    box-shadow: 0 1px 3px var(--shadow-color) !important;
+}
+
+[data-theme="dark"] .ui.menu .item {
+    color: var(--text-secondary) !important;
+    transition: all 0.2s ease !important;
+}
+
+[data-theme="dark"] .ui.menu .item:hover {
+    background-color: var(--menu-hover) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .ui.menu .active.item {
+    background-color: var(--menu-active) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .ui.container {
+    background-color: transparent !important;
+}
+
+[data-theme="dark"] .ui.segment {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+    box-shadow: 0 2px 8px var(--shadow-color) !important;
+}
+
+[data-theme="dark"] .ui.card {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+    box-shadow: 0 2px 8px var(--shadow-color) !important;
+}
+
+[data-theme="dark"] .ui.table {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+[data-theme="dark"] .ui.table thead th {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+[data-theme="dark"] .ui.table tbody tr {
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+[data-theme="dark"] .ui.table tbody tr:hover {
+    background-color: var(--menu-hover) !important;
+}
+
+[data-theme="dark"] .ui.table tbody td {
+    border-top: 1px solid var(--border-color) !important;
+}
+
+[data-theme="dark"] .ui.input input {
+    background-color: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--input-border) !important;
+}
+
+[data-theme="dark"] .ui.input input:focus {
+    border-color: var(--button-primary) !important;
+    background-color: var(--input-bg) !important;
+}
+
+/* Text areas and form inputs */
+[data-theme="dark"] textarea {
+    background-color: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--input-border) !important;
+}
+
+[data-theme="dark"] textarea:focus {
+    border-color: var(--button-primary) !important;
+    background-color: var(--input-bg) !important;
+    outline: none !important;
+}
+
+[data-theme="dark"] .ui.form textarea {
+    background-color: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--input-border) !important;
+}
+
+[data-theme="dark"] .ui.form textarea:focus {
+    border-color: var(--button-primary) !important;
+    background-color: var(--input-bg) !important;
+}
+
+[data-theme="dark"] .ui.form input[type="text"],
+[data-theme="dark"] .ui.form input[type="email"],
+[data-theme="dark"] .ui.form input[type="password"],
+[data-theme="dark"] .ui.form input[type="number"],
+[data-theme="dark"] .ui.form input[type="url"] {
+    background-color: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--input-border) !important;
+}
+
+[data-theme="dark"] .ui.form input[type="text"]:focus,
+[data-theme="dark"] .ui.form input[type="email"]:focus,
+[data-theme="dark"] .ui.form input[type="password"]:focus,
+[data-theme="dark"] .ui.form input[type="number"]:focus,
+[data-theme="dark"] .ui.form input[type="url"]:focus {
+    border-color: var(--button-primary) !important;
+    background-color: var(--input-bg) !important;
+}
+
+[data-theme="dark"] .ui.dropdown {
+    background-color: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--input-border) !important;
+}
+
+[data-theme="dark"] .ui.dropdown .menu {
+    background-color: var(--menu-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 4px 12px var(--shadow-color) !important;
+}
+
+[data-theme="dark"] .ui.dropdown .menu .item {
+    color: var(--text-primary) !important;
+    border: none !important;
+}
+
+[data-theme="dark"] .ui.dropdown .menu .item:hover {
+    background-color: var(--menu-hover) !important;
+}
+
+[data-theme="dark"] .ui.dropdown .text {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .ui.button {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+    transition: all 0.2s ease !important;
+}
+
+[data-theme="dark"] .ui.button:hover {
+    background-color: var(--bg-tertiary) !important;
+}
+
+[data-theme="dark"] .ui.button.primary {
+    background-color: var(--button-primary) !important;
+    color: white !important;
+    border-color: var(--button-primary) !important;
+}
+
+[data-theme="dark"] .ui.button.primary:hover {
+    background-color: rgba(74, 158, 255, 0.8) !important;
+}
+
+[data-theme="dark"] .ui.button.green {
+    background-color: var(--success-color) !important;
+    color: white !important;
+}
+
+[data-theme="dark"] .ui.button.red {
+    background-color: var(--error-color) !important;
+    color: white !important;
+}
+
+[data-theme="dark"] .ui.button.orange {
+    background-color: var(--warning-color) !important;
+    color: white !important;
+}
+
+[data-theme="dark"] .ui.modal {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .ui.modal .header {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+[data-theme="dark"] .ui.modal .content {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Dark mode label styles - comprehensive coverage for all colors */
+[data-theme="dark"] .ui.label {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+/* Basic labels with dark-friendly colors */
+[data-theme="dark"] .ui.label.basic {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Color-specific label styles for dark mode */
+[data-theme="dark"] .ui.label.red,
+[data-theme="dark"] .ui.label.basic.red {
+    background-color: rgba(244, 67, 54, 0.15) !important;
+    color: #ff8a80 !important;
+    border: 1px solid rgba(244, 67, 54, 0.3) !important;
+}
+
+[data-theme="dark"] .ui.label.orange,
+[data-theme="dark"] .ui.label.basic.orange {
+    background-color: rgba(255, 152, 0, 0.15) !important;
+    color: #ffb74d !important;
+    border: 1px solid rgba(255, 152, 0, 0.3) !important;
+}
+
+[data-theme="dark"] .ui.label.yellow,
+[data-theme="dark"] .ui.label.basic.yellow {
+    background-color: rgba(255, 235, 59, 0.15) !important;
+    color: #fff176 !important;
+    border: 1px solid rgba(255, 235, 59, 0.3) !important;
+}
+
+[data-theme="dark"] .ui.label.olive,
+[data-theme="dark"] .ui.label.basic.olive {
+    background-color: rgba(139, 195, 74, 0.15) !important;
+    color: #aed581 !important;
+    border: 1px solid rgba(139, 195, 74, 0.3) !important;
+}
+
+[data-theme="dark"] .ui.label.green,
+[data-theme="dark"] .ui.label.basic.green {
+    background-color: rgba(76, 175, 80, 0.15) !important;
+    color: #81c784 !important;
+    border: 1px solid rgba(76, 175, 80, 0.3) !important;
+}
+
+[data-theme="dark"] .ui.label.teal,
+[data-theme="dark"] .ui.label.basic.teal {
+    background-color: rgba(0, 150, 136, 0.15) !important;
+    color: #4db6ac !important;
+    border: 1px solid rgba(0, 150, 136, 0.3) !important;
+}
+
+[data-theme="dark"] .ui.label.blue,
+[data-theme="dark"] .ui.label.basic.blue {
+    background-color: rgba(33, 150, 243, 0.15) !important;
+    color: #64b5f6 !important;
+    border: 1px solid rgba(33, 150, 243, 0.3) !important;
+}
+
+[data-theme="dark"] .ui.label.violet,
+[data-theme="dark"] .ui.label.basic.violet {
+    background-color: rgba(156, 39, 176, 0.15) !important;
+    color: #ba68c8 !important;
+    border: 1px solid rgba(156, 39, 176, 0.3) !important;
+}
+
+[data-theme="dark"] .ui.label.purple,
+[data-theme="dark"] .ui.label.basic.purple {
+    background-color: rgba(103, 58, 183, 0.15) !important;
+    color: #9575cd !important;
+    border: 1px solid rgba(103, 58, 183, 0.3) !important;
+}
+
+[data-theme="dark"] .ui.label.pink,
+[data-theme="dark"] .ui.label.basic.pink {
+    background-color: rgba(233, 30, 99, 0.15) !important;
+    color: #f06292 !important;
+    border: 1px solid rgba(233, 30, 99, 0.3) !important;
+}
+
+[data-theme="dark"] .ui.label.brown,
+[data-theme="dark"] .ui.label.basic.brown {
+    background-color: rgba(121, 85, 72, 0.15) !important;
+    color: #a1887f !important;
+    border: 1px solid rgba(121, 85, 72, 0.3) !important;
+}
+
+[data-theme="dark"] .ui.label.grey,
+[data-theme="dark"] .ui.label.basic.grey {
+    background-color: rgba(158, 158, 158, 0.15) !important;
+    color: #bdbdbd !important;
+    border: 1px solid rgba(158, 158, 158, 0.3) !important;
+}
+
+[data-theme="dark"] .ui.label.black,
+[data-theme="dark"] .ui.label.basic.black {
+    background-color: rgba(97, 97, 97, 0.15) !important;
+    color: #9e9e9e !important;
+    border: 1px solid rgba(97, 97, 97, 0.3) !important;
+}
+
+/* Theme toggle button styles */
+.theme-toggle-button {
+    background: none !important;
+    border: none !important;
+    padding: 8px !important;
+    margin: 0 8px !important;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.theme-toggle-button:hover {
+    background-color: var(--menu-hover) !important;
+    transform: scale(1.05);
+}
+
+.theme-toggle-button .icon {
+    font-size: 18px !important;
+    color: var(--text-secondary) !important;
+    margin: 0 !important;
+    transition: color 0.2s ease;
+}
+
+.theme-toggle-button:hover .icon {
+    color: var(--text-primary) !important;
+}
+
+/* Additional dark theme improvements */
+[data-theme="dark"] .ui.search .results {
+    background-color: var(--menu-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 4px 12px var(--shadow-color) !important;
+}
+
+[data-theme="dark"] .ui.search .result {
+    background-color: var(--menu-bg) !important;
+    color: var(--text-primary) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+[data-theme="dark"] .ui.search .result:hover {
+    background-color: var(--menu-hover) !important;
+}
+
+[data-theme="dark"] .ui.form .field > label {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .ui.checkbox label {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .ui.checkbox input:checked ~ .box:before,
+[data-theme="dark"] .ui.checkbox input:checked ~ label:before {
+    background-color: var(--button-primary) !important;
+    border-color: var(--button-primary) !important;
+}
+
+[data-theme="dark"] .ui.pagination .item {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+[data-theme="dark"] .ui.pagination .active.item {
+    background-color: var(--button-primary) !important;
+    color: white !important;
+}
+
+[data-theme="dark"] .ui.pagination .item:hover {
+    background-color: var(--menu-hover) !important;
+}
+
+/* Toast notifications dark theme */
+[data-theme="dark"] .Toastify__toast {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+[data-theme="dark"] .Toastify__toast--success {
+    background-color: var(--success-color) !important;
+}
+
+[data-theme="dark"] .Toastify__toast--error {
+    background-color: var(--error-color) !important;
+}
+
+[data-theme="dark"] .Toastify__toast--warning {
+    background-color: var(--warning-color) !important;
+}
+
+[data-theme="dark"] .Toastify__toast--info {
+    background-color: var(--info-color) !important;
+}
+
+/* Code editors and JSON formatters */
+[data-theme="dark"] .ui.form .field textarea,
+[data-theme="dark"] .ui.form .field input {
+    background-color: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--input-border) !important;
+}
+
+[data-theme="dark"] .ui.form .field textarea:focus,
+[data-theme="dark"] .ui.form .field input:focus {
+    border-color: var(--button-primary) !important;
+    background-color: var(--input-bg) !important;
+}
+
+/* Code blocks and pre elements */
+[data-theme="dark"] pre {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+[data-theme="dark"] code {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+/* JSON editor specific */
+[data-theme="dark"] .json-editor,
+[data-theme="dark"] .json-formatter {
+    background-color: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--input-border) !important;
+}
+
+/* Generic white backgrounds that might appear */
+[data-theme="dark"] .ui.form .field > .ui.input,
+[data-theme="dark"] .ui.form .field > .ui.dropdown {
+    background-color: var(--input-bg) !important;
+}
+
+[data-theme="dark"] .ui.form .field > .ui.input input {
+    background-color: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Tab content areas */
+[data-theme="dark"] .ui.tab.segment {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .ui.tabular.menu .item {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-secondary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+[data-theme="dark"] .ui.tabular.menu .active.item {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border-bottom-color: var(--card-bg) !important;
+}
+
+/* Message boxes and info panels */
+[data-theme="dark"] .ui.message {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+[data-theme="dark"] .ui.message.info {
+    background-color: rgba(59, 130, 246, 0.1) !important;
+    border-color: var(--info-color) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .ui.message.warning {
+    background-color: rgba(245, 158, 11, 0.1) !important;
+    border-color: var(--warning-color) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .ui.message.error {
+    background-color: rgba(239, 68, 68, 0.1) !important;
+    border-color: var(--error-color) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .ui.message.success {
+    background-color: rgba(34, 197, 94, 0.1) !important;
+    border-color: var(--success-color) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Additional form elements and containers */
+[data-theme="dark"] .ui.form .field {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .ui.form .field .ui.selection.dropdown {
+    background-color: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--input-border) !important;
+}
+
+[data-theme="dark"] .ui.form .field .ui.selection.dropdown .text {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .ui.form .field .ui.selection.dropdown .menu {
+    background-color: var(--menu-bg) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+[data-theme="dark"] .ui.form .field .ui.selection.dropdown .menu .item {
+    background-color: var(--menu-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .ui.form .field .ui.selection.dropdown .menu .item:hover {
+    background-color: var(--menu-hover) !important;
+}
+
+/* Content areas and panels */
+[data-theme="dark"] .ui.grid > .column {
+    background-color: transparent !important;
+}
+
+[data-theme="dark"] .ui.container > .ui.grid {
+    background-color: transparent !important;
+}
+
+/* Specific overrides for any remaining white backgrounds */
+[data-theme="dark"] * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) var(--bg-secondary);
+}
+
+[data-theme="dark"] *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+[data-theme="dark"] *::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+}
+
+[data-theme="dark"] *::-webkit-scrollbar-thumb {
+    background-color: var(--border-color);
+    border-radius: 4px;
+}
+
+[data-theme="dark"] *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--text-secondary);
+}
+
+/* Ensure all text inputs have dark styling */
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+    background-color: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--input-border) !important;
+}
+
+[data-theme="dark"] input:focus,
+[data-theme="dark"] textarea:focus,
+[data-theme="dark"] select:focus {
+    border-color: var(--button-primary) !important;
+    background-color: var(--input-bg) !important;
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+}
+
+/* Logo and header text styling for dark mode */
+[data-theme="dark"] .ui.menu .item div {
+    color: var(--text-primary) !important;
+}
+
+/* Homepage content text styling */
+[data-theme="dark"] .ui.header {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .ui.card .header {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .ui.card .description {
+    color: var(--text-secondary) !important;
+}
+
+/* Ensure all paragraph text is visible in dark mode */
+[data-theme="dark"] p {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] span {
+    color: inherit !important;
+}
+
+/* Links in dark mode */
+[data-theme="dark"] a {
+    color: var(--button-primary) !important;
+}
+
+[data-theme="dark"] a:hover {
+    color: var(--text-primary) !important;
+}
+
+/* Chart and tooltip styling for dark mode */
+[data-theme="dark"] .recharts-tooltip-wrapper {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 4px !important;
+    box-shadow: 0 2px 8px var(--shadow-color) !important;
+}
+
+[data-theme="dark"] .recharts-default-tooltip {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .recharts-tooltip-label {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .recharts-tooltip-item {
+    color: var(--text-primary) !important;
+}
+
+/* Dashboard specific styling */
+[data-theme="dark"] .dashboard-container .stat-value {
+    background: rgba(74, 158, 255, 0.15) !important;
+    color: var(--button-primary) !important;
+}
+
+/* Ensure chart backgrounds are properly themed */
+[data-theme="dark"] .recharts-surface {
+    background-color: transparent !important;
+}
+
+[data-theme="dark"] .recharts-cartesian-grid line {
+    stroke: var(--border-color) !important;
+    opacity: 0.3 !important;
+}
+
+[data-theme="dark"] .recharts-text {
+    fill: var(--text-secondary) !important;
+}
+
+/* Theme dropdown styling - Enhanced for better visibility with higher specificity */
+.ui.menu .theme-dropdown.ui.dropdown .menu,
+.theme-dropdown.ui.dropdown .menu {
+    min-width: 140px !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 4px 12px var(--shadow-color) !important;
+    background-color: var(--card-bg) !important;
+}
+
+[data-theme="dark"] .ui.menu .theme-dropdown.ui.dropdown .menu,
+[data-theme="dark"] .theme-dropdown.ui.dropdown .menu {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+[data-theme="dark"] .ui.menu .theme-dropdown.ui.dropdown .menu .item,
+[data-theme="dark"] .theme-dropdown.ui.dropdown .menu .item {
+    color: var(--text-primary) !important;
+    background-color: var(--card-bg) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    padding: 12px 16px !important;
+    transition: all 0.2s ease !important;
+}
+
+[data-theme="dark"] .ui.menu .theme-dropdown.ui.dropdown .menu .item:last-child,
+[data-theme="dark"] .theme-dropdown.ui.dropdown .menu .item:last-child {
+    border-bottom: none !important;
+}
+
+[data-theme="dark"] .ui.menu .theme-dropdown.ui.dropdown .menu .item:hover,
+[data-theme="dark"] .theme-dropdown.ui.dropdown .menu .item:hover {
+    background-color: var(--menu-hover) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .ui.menu .theme-dropdown.ui.dropdown .menu .item.active,
+[data-theme="dark"] .theme-dropdown.ui.dropdown .menu .item.active {
+    background-color: var(--button-primary) !important;
+    color: white !important;
+    font-weight: 600 !important;
+}
+
+[data-theme="dark"] .ui.menu .theme-dropdown.ui.dropdown .menu .item.active:hover,
+[data-theme="dark"] .theme-dropdown.ui.dropdown .menu .item.active:hover {
+    background-color: rgba(74, 158, 255, 0.8) !important;
+    color: white !important;
+}
+
+/* Light mode theme dropdown styling for better contrast */
+.ui.menu .theme-dropdown.ui.dropdown .menu .item,
+.theme-dropdown.ui.dropdown .menu .item {
+    color: var(--text-primary) !important;
+    background-color: var(--card-bg) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    padding: 12px 16px !important;
+    transition: all 0.2s ease !important;
+}
+
+.ui.menu .theme-dropdown.ui.dropdown .menu .item:last-child,
+.theme-dropdown.ui.dropdown .menu .item:last-child {
+    border-bottom: none !important;
+}
+
+.ui.menu .theme-dropdown.ui.dropdown .menu .item:hover,
+.theme-dropdown.ui.dropdown .menu .item:hover {
+    background-color: var(--menu-hover) !important;
+    color: var(--text-primary) !important;
+}
+
+.ui.menu .theme-dropdown.ui.dropdown .menu .item.active,
+.theme-dropdown.ui.dropdown .menu .item.active {
+    background-color: var(--button-primary) !important;
+    color: white !important;
+    font-weight: 600 !important;
+}
+
+.ui.menu .theme-dropdown.ui.dropdown .menu .item.active:hover,
+.theme-dropdown.ui.dropdown .menu .item.active:hover {
+    background-color: rgba(0, 123, 255, 0.8) !important;
+    color: white !important;
+}
+
+/* Ensure theme dropdown trigger is properly styled */
+[data-theme="dark"] .ui.dropdown > .dropdown.icon {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .ui.dropdown > .text {
+    color: var(--text-secondary) !important;
+}
+
+/* Additional fallback styling for theme dropdown in dark mode */
+[data-theme="dark"] .ui.dropdown.theme-dropdown .menu .item,
+[data-theme="dark"] .ui.menu .ui.dropdown.theme-dropdown .menu .item {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .ui.dropdown.theme-dropdown .menu .item:hover,
+[data-theme="dark"] .ui.menu .ui.dropdown.theme-dropdown .menu .item:hover {
+    background-color: var(--menu-hover) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .ui.dropdown.theme-dropdown .menu .item.active,
+[data-theme="dark"] .ui.menu .ui.dropdown.theme-dropdown .menu .item.active {
+    background-color: var(--button-primary) !important;
+    color: white !important;
+}
+
+/* Force override for Semantic UI dropdown menu in dark mode */
+[data-theme="dark"] .ui.dropdown .menu {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .ui.dropdown .menu .item {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+[data-theme="dark"] .ui.dropdown .menu .item:hover {
+    background-color: var(--menu-hover) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .ui.dropdown .menu .item.active {
+    background-color: var(--button-primary) !important;
+    color: white !important;
+}
+
+/* Better styling for all dropdown menus in dark mode */
+[data-theme="dark"] .ui.dropdown .menu .item {
+    color: var(--text-primary) !important;
+    background-color: var(--menu-bg) !important;
+}
+
+[data-theme="dark"] .ui.dropdown .menu .item:hover {
+    background-color: var(--menu-hover) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .ui.dropdown .menu .item.active {
+    background-color: var(--button-primary) !important;
+    color: white !important;
 }
 
 .small-icon .icon {
@@ -34,6 +1013,70 @@ code {
     }
 }
 
+/* Progressive header disclosure styles */
+.header-more-dropdown .dropdown.menu {
+    min-width: 180px !important;
+}
+
+.header-more-dropdown .dropdown.item {
+    padding: 8px 16px !important;
+}
+
+/* Icon-only header buttons on medium screens */
+@media screen and (min-width: 768px) and (max-width: 1399px) {
+    .ui.menu .item {
+        padding-left: 0.6em !important;
+        padding-right: 0.6em !important;
+        min-width: auto !important;
+    }
+
+    /* Ensure icons are properly centered in icon-only mode */
+    .ui.menu .item > .icon:only-child {
+        margin: 0 !important;
+    }
+
+    /* For items with only icons, reduce padding further */
+    .ui.menu .item[title] {
+        padding-left: 0.5em !important;
+        padding-right: 0.5em !important;
+    }
+}
+
+/* Prevent header overflow and ensure proper layout */
+.ui.menu {
+    overflow: visible !important;
+}
+
+.ui.menu .ui.container {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+}
+
+/* Ensure right menu stays on the right */
+.ui.menu .menu.right {
+    margin-left: auto !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+/* Fix center alignment issue - ensure proper left-right balance */
+.ui.menu .ui.container {
+    width: 100% !important;
+}
+
+/* Ensure navigation buttons stay left-aligned */
+.ui.menu .ui.container > .item:not(.right) {
+    margin-right: 0 !important;
+}
+
+/* Force proper layout on all screen sizes */
+@media screen and (min-width: 1400px) {
+    .ui.menu .ui.container {
+        justify-content: space-between !important;
+    }
+}
+
 @media screen and (max-width: 768px) {
   .ui.container {
     width: 100% !important;
@@ -42,7 +1085,7 @@ code {
     padding: 0 10px !important;
   }
 
-  .ui.card, 
+  .ui.card,
   .ui.cards,
   .ui.segment {
     margin-left: 0 !important;

@@ -10,7 +10,7 @@ import (
 // ModelRatios contains all supported models and their pricing ratios
 // Model list is derived from the keys of this map, eliminating redundancy
 // Based on Google AI pricing: https://ai.google.dev/pricing
-var ModelRatios = map[string]adaptor.ModelPrice{
+var ModelRatios = map[string]adaptor.ModelConfig{
 	// Gemini Pro Models
 	"gemini-pro":     {Ratio: 0.5 * ratio.MilliTokensUsd, CompletionRatio: 3},
 	"gemini-1.0-pro": {Ratio: 0.5 * ratio.MilliTokensUsd, CompletionRatio: 3},
