@@ -236,6 +236,52 @@ const Detail = (props) => {
         await loadQuotaData(modelDataChart, modelDataPieChart);
     };
 
+    const handlePresetDateRange = (preset) => {
+        const now = new Date();
+        let startDate;
+
+        switch (preset) {
+            case 'today':
+                startDate = new Date(now);
+                startDate.setHours(0, 0, 0, 0);
+                break;
+            case '7days':
+                startDate = new Date();
+                startDate.setDate(now.getDate() - 6);
+                startDate.setHours(0, 0, 0, 0);
+                break;
+            case '30days':
+                startDate = new Date();
+                startDate.setDate(now.getDate() - 29);
+                startDate.setHours(0, 0, 0, 0);
+                break;
+            default:
+                return;
+        }
+
+        const endDate = new Date(now);
+        endDate.setHours(23, 59, 59, 999);
+
+        const startTimestamp = timestamp2string(startDate.getTime() / 1000);
+        const endTimestamp = timestamp2string(endDate.getTime() / 1000);
+
+        // Update the inputs state
+        setInputs(prev => ({
+            ...prev,
+            start_timestamp: startTimestamp,
+            end_timestamp: endTimestamp
+        }));
+
+        // Update the form values
+        if (formRef.current) {
+            formRef.current.formApi.setValue('start_timestamp', startTimestamp);
+            formRef.current.formApi.setValue('end_timestamp', endTimestamp);
+        }
+
+        // Immediately trigger data refresh
+        loadQuotaData(modelDataChart, modelDataPieChart);
+    };
+
     const initChart = async () => {
         let lineChart = modelDataChart
         if (!modelDataChart) {
@@ -336,6 +382,36 @@ const Detail = (props) => {
                 <Layout.Content>
                     <Form ref={formRef} layout='horizontal' style={{marginTop: 10}}>
                         <>
+                            {/* Date range preset buttons */}
+                            <Form.Section>
+                                <div style={{ marginBottom: 16 }}>
+                                    <span style={{ marginRight: 16, fontWeight: 'bold' }}>快速选择时间:</span>
+                                    <Button
+                                        type="tertiary"
+                                        size="small"
+                                        onClick={() => handlePresetDateRange('today')}
+                                        style={{ marginRight: 8 }}
+                                    >
+                                        今天
+                                    </Button>
+                                    <Button
+                                        type="tertiary"
+                                        size="small"
+                                        onClick={() => handlePresetDateRange('7days')}
+                                        style={{ marginRight: 8 }}
+                                    >
+                                        最近7天
+                                    </Button>
+                                    <Button
+                                        type="tertiary"
+                                        size="small"
+                                        onClick={() => handlePresetDateRange('30days')}
+                                        style={{ marginRight: 8 }}
+                                    >
+                                        最近30天
+                                    </Button>
+                                </div>
+                            </Form.Section>
                             <Form.DatePicker field="start_timestamp" label='起始时间' style={{width: 272}}
                                              initValue={start_timestamp}
                                              value={start_timestamp} type='dateTime'

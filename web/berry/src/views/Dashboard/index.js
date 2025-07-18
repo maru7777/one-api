@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Grid, Typography, Card, CardContent, TextField, Button, Alert, Autocomplete } from '@mui/material';
+import { Grid, Typography, Card, CardContent, TextField, Button, ButtonGroup, Alert, Autocomplete } from '@mui/material';
 import { gridSpacing } from 'store/constant';
 import StatisticalLineChartCard from './component/StatisticalLineChartCard';
 import StatisticalBarChart from './component/StatisticalBarChart';
@@ -106,10 +106,10 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-    if (selectedUserId) {
-      userDashboard(selectedUserId);
+    if (selectedUserId && fromDate && toDate) {
+      userDashboard(selectedUserId, fromDate, toDate);
     }
-  }, [selectedUserId]);
+  }, [selectedUserId, fromDate, toDate]);
 
 
 
@@ -123,6 +123,35 @@ const Dashboard = () => {
 
   const handleRefresh = () => {
     userDashboard(selectedUserId, fromDate, toDate);
+  };
+
+  const handlePresetDateRange = (preset) => {
+    const today = new Date();
+    let startDate;
+
+    switch (preset) {
+      case 'today':
+        startDate = new Date(today);
+        break;
+      case '7days':
+        startDate = new Date();
+        startDate.setDate(today.getDate() - 6);
+        break;
+      case '30days':
+        startDate = new Date();
+        startDate.setDate(today.getDate() - 29);
+        break;
+      default:
+        return;
+    }
+
+    const fromDateStr = startDate.toISOString().split('T')[0];
+    const toDateStr = today.toISOString().split('T')[0];
+
+    // Set dates and immediately trigger data fetch
+    setFromDate(fromDateStr);
+    setToDate(toDateStr);
+    userDashboard(selectedUserId, fromDateStr, toDateStr);
   };
 
   const getMaxDate = () => {
@@ -194,6 +223,26 @@ const Dashboard = () => {
                 </Grid>
               </Grid>
             )}
+
+            {/* Date range preset buttons */}
+            <Grid container spacing={2} sx={{ mb: 2 }}>
+              <Grid item xs={12}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Quick Date Selection
+                </Typography>
+                <ButtonGroup variant="outlined" size="small">
+                  <Button onClick={() => handlePresetDateRange('today')}>
+                    Today
+                  </Button>
+                  <Button onClick={() => handlePresetDateRange('7days')}>
+                    Last 7 Days
+                  </Button>
+                  <Button onClick={() => handlePresetDateRange('30days')}>
+                    Last 30 Days
+                  </Button>
+                </ButtonGroup>
+              </Grid>
+            </Grid>
 
             {/* Date range selector */}
             <Grid container spacing={2} alignItems="end">

@@ -1,4 +1,4 @@
-import React, {useEffect, useState, useCallback} from 'react';
+import React, {useEffect, useState, useCallback, useRef} from 'react';
 import {useTranslation} from 'react-i18next';
 import {Card, Grid, Dropdown, Form, Button, Message, Statistic, Icon} from 'semantic-ui-react';
 import {
@@ -98,6 +98,7 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const isInitialized = useRef(false);
 
   // Move useEffect hooks after function definitions
 
@@ -132,34 +133,7 @@ const Dashboard = () => {
     return dates;
   }, []);
 
-  const handlePresetDateRange = (preset) => {
-    const today = new Date();
-    let startDate;
 
-    switch (preset) {
-      case 'today':
-        startDate = new Date(today);
-        break;
-      case '7days':
-        startDate = new Date();
-        startDate.setDate(today.getDate() - 6);
-        break;
-      case '30days':
-        startDate = new Date();
-        startDate.setDate(today.getDate() - 29);
-        break;
-      default:
-        return;
-    }
-
-    const fromDateStr = startDate.toISOString().split('T')[0];
-    const toDateStr = today.toISOString().split('T')[0];
-
-    setFromDate(fromDateStr);
-    setToDate(toDateStr);
-    setIsRefreshing(true);
-    fetchDashboardData(selectedUserId, fromDateStr, toDateStr);
-  };
 
   const getMaxDate = () => {
     const today = new Date();
@@ -317,10 +291,42 @@ const Dashboard = () => {
     }
   }, [selectedUserId, fromDate, toDate, isRootUser, calculateSummary]);
 
+  const handlePresetDateRange = useCallback((preset) => {
+    const today = new Date();
+    let startDate;
 
+    switch (preset) {
+      case 'today':
+        startDate = new Date(today);
+        break;
+      case '7days':
+        startDate = new Date();
+        startDate.setDate(today.getDate() - 6);
+        break;
+      case '30days':
+        startDate = new Date();
+        startDate.setDate(today.getDate() - 29);
+        break;
+      default:
+        return;
+    }
+
+    const fromDateStr = startDate.toISOString().split('T')[0];
+    const toDateStr = today.toISOString().split('T')[0];
+
+    // Use functional updates to ensure we get the latest state
+    setFromDate(() => fromDateStr);
+    setToDate(() => toDateStr);
+
+    // Immediately trigger data fetch with the new dates
+    setIsRefreshing(true);
+    fetchDashboardData(selectedUserId, fromDateStr, toDateStr);
+  }, [selectedUserId, fetchDashboardData]);
 
   // Initialize component and set up data fetching
   useEffect(() => {
+    if (isInitialized.current) return; // Prevent re-initialization
+
     const rootUser = isRoot();
     setIsRootUser(rootUser);
 
@@ -329,28 +335,27 @@ const Dashboard = () => {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(today.getDate() - 6);
 
-    setToDate(today.toISOString().split('T')[0]);
-    setFromDate(sevenDaysAgo.toISOString().split('T')[0]);
+    const defaultFromDate = sevenDaysAgo.toISOString().split('T')[0];
+    const defaultToDate = today.toISOString().split('T')[0];
+
+    setFromDate(defaultFromDate);
+    setToDate(defaultToDate);
 
     if (rootUser) {
       fetchUsers();
-    } else {
-      fetchDashboardData();
     }
-  }, [fetchDashboardData, fetchUsers]);
+
+    isInitialized.current = true;
+  }, []);
 
   useEffect(() => {
-    if (selectedUserId) {
-      fetchDashboardData(selectedUserId);
-    }
-  }, [selectedUserId, fetchDashboardData]);
-
-  // Refresh data when date range changes
-  useEffect(() => {
-    if (fromDate && toDate) {
+    if (selectedUserId && fromDate && toDate) {
+      setIsRefreshing(true);
       fetchDashboardData(selectedUserId, fromDate, toDate);
     }
-  }, [fromDate, toDate, selectedUserId, fetchDashboardData]);
+  }, [selectedUserId, fromDate, toDate, fetchDashboardData]);
+
+
 
   // 处理数据以供折线图使用，补充缺失的日期
   const processTimeSeriesData = () => {
