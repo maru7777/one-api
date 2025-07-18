@@ -100,6 +100,7 @@
     "edit": {
       "title_edit": "更新渠道信息",
       "title_create": "创建新的渠道",
+      "loading": "正在加载渠道信息...",
       "type": "类型",
       "name": "名称",
       "name_placeholder": "请输入名称",
@@ -223,6 +224,7 @@
     "edit": {
       "title_edit": "更新令牌信息",
       "title_create": "创建新的令牌",
+      "loading": "正在加载令牌信息...",
       "name": "名称",
       "name_placeholder": "请输入名称",
       "models": "模型范围",
@@ -310,6 +312,7 @@
     "edit": {
       "title_edit": "更新兑换码信息",
       "title_create": "创建新的兑换码",
+      "loading": "正在加载兑换码信息...",
       "name": "名称",
       "name_placeholder": "请输入名称",
       "quota": "额度",
@@ -371,6 +374,7 @@
     "title": "用户管理",
     "edit": {
       "title": "更新用户信息",
+      "loading": "正在加载用户信息...",
       "username": "用户名",
       "username_placeholder": "请输入新的用户名",
       "password": "密码",

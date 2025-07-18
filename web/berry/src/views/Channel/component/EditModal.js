@@ -141,7 +141,7 @@ const validationSchema = Yup.object().shape({
 
 const EditModal = ({ open, channelId, onCancel, onOk }) => {
   const theme = useTheme();
-  // const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [initialInput, setInitialInput] = useState(defaultConfig.input);
   const [inputLabel, setInputLabel] = useState(defaultConfig.inputLabel); //
   const [inputPrompt, setInputPrompt] = useState(defaultConfig.prompt);
@@ -356,10 +356,12 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
   }
 
   const loadChannel = async () => {
-    // Add cache busting parameter to ensure fresh data
-    const cacheBuster = Date.now();
-    let res = await API.get(`/api/channel/${channelId}?_cb=${cacheBuster}`);
-    const { success, message, data } = res.data;
+    setLoading(true);
+    try {
+      // Add cache busting parameter to ensure fresh data
+      const cacheBuster = Date.now();
+      let res = await API.get(`/api/channel/${channelId}?_cb=${cacheBuster}`);
+      const { success, message, data } = res.data;
     if (success) {
       if (data.models === '') {
         data.models = [];
@@ -413,6 +415,11 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
     } else {
       showError(message);
     }
+    } catch (error) {
+      showError(error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -458,8 +465,34 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
       </DialogTitle>
       <Divider />
       <DialogContent>
-        <Formik initialValues={initialInput} enableReinitialize validationSchema={validationSchema} onSubmit={submit}>
-          {({ errors, handleBlur, handleChange, handleSubmit, isSubmitting, touched, values, setFieldValue }) => (
+        {loading ? (
+          <Box
+            sx={{
+              minHeight: '400px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'background.paper',
+              borderRadius: '8px',
+              margin: '1rem 0'
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '1rem',
+                color: 'text.secondary'
+              }}
+            >
+              <div className="ui active inline loader"></div>
+              <Typography>正在加载渠道信息...</Typography>
+            </Box>
+          </Box>
+        ) : (
+          <Formik initialValues={initialInput} enableReinitialize validationSchema={validationSchema} onSubmit={submit}>
+            {({ errors, handleBlur, handleChange, handleSubmit, isSubmitting, touched, values, setFieldValue }) => (
             <form noValidate onSubmit={handleSubmit}>
               <FormControl fullWidth error={Boolean(touched.type && errors.type)} sx={{ ...theme.typography.otherInput }}>
                 <InputLabel htmlFor="channel-type-label">{inputLabel.type}</InputLabel>
@@ -986,6 +1019,7 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
             </form>
           )}
         </Formik>
+        )}
       </DialogContent>
     </Dialog>
   );

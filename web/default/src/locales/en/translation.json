@@ -100,6 +100,7 @@
     "edit": {
       "title_edit": "Update Channel Information",
       "title_create": "Create New Channel",
+      "loading": "Loading channel information...",
       "type": "Type",
       "name": "Name",
       "name_placeholder": "Please enter name",
@@ -223,6 +224,7 @@
     "edit": {
       "title_edit": "Update Token Information",
       "title_create": "Create New Token",
+      "loading": "Loading token information...",
       "name": "Name",
       "name_placeholder": "Please enter name",
       "models": "Model Scope",
@@ -310,6 +312,7 @@
     "edit": {
       "title_edit": "Update Redemption Code",
       "title_create": "Create New Redemption Code",
+      "loading": "Loading redemption information...",
       "name": "Name",
       "name_placeholder": "Please enter name",
       "quota": "Quota",
@@ -371,6 +374,7 @@
     "title": "User Management",
     "edit": {
       "title": "Update User Information",
+      "loading": "Loading user information...",
       "username": "Username",
       "username_placeholder": "Please enter new username",
       "password": "Password",

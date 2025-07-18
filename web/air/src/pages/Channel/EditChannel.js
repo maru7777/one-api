@@ -523,10 +523,32 @@ const EditChannel = (props) => {
                 onCancel={() => handleCancel()}
                 width={isMobile() ? '100%' : 600}
             >
-                <Spin spinning={loading}>
-                    <div style={{ marginTop: 10 }}>
-                        <Typography.Text strong>类型：</Typography.Text>
+                {loading ? (
+                    <div style={{
+                        minHeight: '400px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: 'var(--semi-color-bg-2)',
+                        borderRadius: '8px',
+                        margin: '1rem 0'
+                    }}>
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '1rem',
+                            color: 'var(--semi-color-text-1)'
+                        }}>
+                            <Spin size="large" />
+                            <span>正在加载渠道信息...</span>
+                        </div>
                     </div>
+                ) : (
+                    <>
+                        <div style={{ marginTop: 10 }}>
+                            <Typography.Text strong>类型：</Typography.Text>
+                        </div>
                     <Select
                       name='type'
                       required
@@ -989,8 +1011,8 @@ const EditChannel = (props) => {
                             </div>
                         </>
                     )}
-
-                </Spin>
+                    </>
+                )}
             </SideSheet>
         </>
     );

@@ -220,8 +220,30 @@ const EditToken = (props) => {
         onCancel={() => handleCancel()}
         width={isMobile() ? '100%' : 600}
       >
-        <Spin spinning={loading}>
-          <Input
+        {loading ? (
+          <div style={{
+            minHeight: '400px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'var(--semi-color-bg-2)',
+            borderRadius: '8px',
+            margin: '1rem 0'
+          }}>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '1rem',
+              color: 'var(--semi-color-text-1)'
+            }}>
+              <Spin size="large" />
+              <span>正在加载令牌信息...</span>
+            </div>
+          </div>
+        ) : (
+          <>
+            <Input
             style={{ marginTop: 20 }}
             label="名称"
             name="name"
@@ -342,7 +364,8 @@ const EditToken = (props) => {
             optionList={models}
             disabled={!model_limits_enabled}
           /> */}
-        </Spin>
+          </>
+        )}
       </SideSheet>
     </>
   );

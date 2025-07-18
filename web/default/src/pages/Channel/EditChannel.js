@@ -526,7 +526,29 @@ const EditChannel = () => {
               />
             )}
           </Card.Header>
-          <Form loading={loading} autoComplete='new-password'>
+          {loading ? (
+            <div style={{
+              minHeight: '400px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'var(--card-bg)',
+              borderRadius: '8px',
+              margin: '1rem 0'
+            }}>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '1rem',
+                color: 'var(--text-secondary)'
+              }}>
+                <div className="ui active inline loader"></div>
+                <span>{t('channel.edit.loading')}</span>
+              </div>
+            </div>
+          ) : (
+            <Form autoComplete='new-password'>
             <Form.Field>
               <Form.Select
                 label={t('channel.edit.type')}
@@ -1155,6 +1177,7 @@ const EditChannel = () => {
               {t('channel.edit.buttons.submit')}
             </Button>
           </Form>
+          )}
         </Card.Content>
       </Card>
     </div>
