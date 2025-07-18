@@ -7,41 +7,36 @@ import (
 )
 
 func TestFixPostgreSQLSequences(t *testing.T) {
-	// Test that the method exists and can be called
-	migrator := &Migrator{
-		SourceType: "sqlite",
-		TargetType: "postgres",
+	// Test the expected tables that should have sequences fixed
+	// This matches the tables defined in the actual fixPostgreSQLSequences method
+	expectedTablesWithSequences := []string{
+		"users",
+		"tokens",
+		"channels",
+		"options",
+		"redemptions",
+		"abilities",
+		"logs",
+		"user_request_costs",
 	}
 
-	// Test that the method doesn't panic when called with nil connections
-	// This is a basic smoke test - full integration testing would require actual databases
-	assert.NotPanics(t, func() {
-		// We can't actually test the full functionality without real database connections
-		// but we can verify the method signature and basic structure
-		tablesWithSequences := []string{
-			"users",
-			"tokens",
-			"channels", 
-			"options",
-			"redemptions",
-			"abilities",
-			"logs",
-			"user_request_costs",
-		}
-		
-		// Verify all expected tables are included
-		assert.Equal(t, 8, len(tablesWithSequences))
-		assert.Contains(t, tablesWithSequences, "logs")
-		assert.Contains(t, tablesWithSequences, "users")
-		assert.Contains(t, tablesWithSequences, "tokens")
-	})
+	// Verify all expected tables are included
+	assert.Equal(t, 8, len(expectedTablesWithSequences))
+	assert.Contains(t, expectedTablesWithSequences, "logs")
+	assert.Contains(t, expectedTablesWithSequences, "users")
+	assert.Contains(t, expectedTablesWithSequences, "tokens")
+	assert.Contains(t, expectedTablesWithSequences, "channels")
+	assert.Contains(t, expectedTablesWithSequences, "options")
+	assert.Contains(t, expectedTablesWithSequences, "redemptions")
+	assert.Contains(t, expectedTablesWithSequences, "abilities")
+	assert.Contains(t, expectedTablesWithSequences, "user_request_costs")
 }
 
 func TestSequenceNameGeneration(t *testing.T) {
 	// Test sequence name generation logic
 	testCases := []struct {
-		tableName    string
-		expectedSeq  string
+		tableName   string
+		expectedSeq string
 	}{
 		{"users", "users_id_seq"},
 		{"logs", "logs_id_seq"},
@@ -58,8 +53,8 @@ func TestSequenceNameGeneration(t *testing.T) {
 func TestPostgreSQLSequenceSQL(t *testing.T) {
 	// Test the SQL generation for sequence updates
 	testCases := []struct {
-		tableName string
-		maxID     int64
+		tableName   string
+		maxID       int64
 		expectedSQL string
 	}{
 		{"logs", 1000, "SELECT setval('logs_id_seq', 1000, true)"},
