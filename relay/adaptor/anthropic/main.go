@@ -9,6 +9,7 @@ import (
 	"math"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
@@ -43,17 +44,13 @@ func stopReasonClaude2OpenAI(reason *string) string {
 
 // isModelSupportThinking is used to check if the model supports extended thinking
 func isModelSupportThinking(model string) bool {
-	// Claude 3.7 Sonnet
-	if strings.Contains(model, "claude-3-7-sonnet") {
-		return true
+	if strings.Contains(model, "claude-3-5") ||
+		strings.Contains(model, "claude-2") ||
+		strings.Contains(model, "claude-instant-1") {
+		return false
 	}
 
-	// Claude 4 models (Opus 4 and Sonnet 4)
-	if strings.Contains(model, "claude-opus-4") || strings.Contains(model, "claude-sonnet-4") {
-		return true
-	}
-
-	return false
+	return true
 }
 
 func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Request, error) {
@@ -81,6 +78,9 @@ func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Re
 		Tools:       claudeTools,
 		Thinking:    textRequest.Thinking,
 	}
+
+	// Track if we need to use fallback mode (will be set if any signature restoration fails)
+	var useFallbackMode bool
 
 	if isModelSupportThinking(textRequest.Model) &&
 		c.Request.URL.Query().Has("thinking") && claudeRequest.Thinking == nil {
@@ -157,13 +157,61 @@ func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Re
 						reasoningContent = *message.Thinking
 					}
 
-					// If we have reasoning content, add it as a thinking block first
+					// If we have reasoning content, handle it appropriately
 					if reasoningContent != "" {
+						var signatureRestored bool
 						thinkingContent := Content{
 							Type:     "thinking",
 							Thinking: &reasoningContent,
 						}
-						claudeMessage.Content = append(claudeMessage.Content, thinkingContent)
+
+						// Try to restore signature from cache if available
+						if tokenID, exists := c.Get("token_id"); exists {
+							if tokenIDInt, ok := tokenID.(int); ok {
+								tokenIDStr := getTokenIDFromRequest(tokenIDInt)
+								conversationID := generateConversationID(textRequest.Messages)
+
+								// Store conversation ID in context for later use
+								c.Set("conversation_id", conversationID)
+
+								// Try to restore signature for this thinking block
+								messageIndex := len(claudeRequest.Messages) // Current message index
+								cacheKey := generateSignatureKey(tokenIDStr, conversationID, messageIndex, 0)
+
+								if signature := GetSignatureCache().Get(cacheKey); signature != nil {
+									thinkingContent.Signature = signature
+									signatureRestored = true
+								}
+							}
+						}
+
+						// If signature was not restored, use fallback approach
+						if !signatureRestored {
+							// Set fallback mode flag
+							useFallbackMode = true
+
+							// Convert thinking content to <think> format and prepend to text content
+							thinkingPrefix := fmt.Sprintf("<think>%s</think>\n\n", reasoningContent)
+
+							// Find the first text content and prepend thinking
+							for i := range claudeMessage.Content {
+								if claudeMessage.Content[i].Type == "text" {
+									claudeMessage.Content[i].Text = thinkingPrefix + claudeMessage.Content[i].Text
+									break
+								}
+							}
+
+							// If no text content found, create one with thinking prefix and original text
+							if len(claudeMessage.Content) == 0 {
+								claudeMessage.Content = append(claudeMessage.Content, Content{
+									Type: "text",
+									Text: thinkingPrefix + stringContent,
+								})
+							}
+						} else {
+							// Signature was restored, use proper thinking block
+							claudeMessage.Content = append([]Content{thinkingContent}, claudeMessage.Content...)
+						}
 					}
 				}
 
@@ -197,25 +245,20 @@ func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Re
 		}
 		var contents []Content
 
-		// For assistant messages with thinking enabled, check if we need to add thinking block first
+		// Store reasoning content for later processing
+		var reasoningContent string
+		var needsThinkingProcessing bool
 		if message.Role == "assistant" && claudeRequest.Thinking != nil {
 			// Check if this message has reasoning content that should be converted to thinking block
-			var reasoningContent string
 			if message.Reasoning != nil {
 				reasoningContent = *message.Reasoning
+				needsThinkingProcessing = true
 			} else if message.ReasoningContent != nil {
 				reasoningContent = *message.ReasoningContent
+				needsThinkingProcessing = true
 			} else if message.Thinking != nil {
 				reasoningContent = *message.Thinking
-			}
-
-			// If we have reasoning content, add it as a thinking block first
-			if reasoningContent != "" {
-				thinkingContent := Content{
-					Type:     "thinking",
-					Thinking: &reasoningContent,
-				}
-				contents = append(contents, thinkingContent)
+				needsThinkingProcessing = true
 			}
 		}
 
@@ -254,6 +297,77 @@ func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Re
 				Input: inputParam,
 			})
 		}
+
+		// Process thinking content after content parsing
+		if needsThinkingProcessing && reasoningContent != "" {
+			var signatureRestored bool
+			thinkingContent := Content{
+				Type:     "thinking",
+				Thinking: &reasoningContent,
+			}
+
+			// Try to restore signature from cache if available
+			if tokenID, exists := c.Get("token_id"); exists {
+				if tokenIDInt, ok := tokenID.(int); ok {
+					tokenIDStr := getTokenIDFromRequest(tokenIDInt)
+					conversationID := generateConversationID(textRequest.Messages)
+
+					// Store conversation ID in context for later use
+					c.Set("conversation_id", conversationID)
+
+					// Try to restore signature for this thinking block
+					messageIndex := len(claudeRequest.Messages) // Current message index
+					cacheKey := generateSignatureKey(tokenIDStr, conversationID, messageIndex, 0)
+
+					if signature := GetSignatureCache().Get(cacheKey); signature != nil {
+						thinkingContent.Signature = signature
+						signatureRestored = true
+					}
+				}
+			}
+
+			// If signature was not restored, use fallback approach
+			if !signatureRestored {
+				// Set fallback mode flag
+				useFallbackMode = true
+
+				// Convert thinking content to <think> format and prepend to text content
+				thinkingPrefix := fmt.Sprintf("<think>%s</think>\n\n", reasoningContent)
+
+				// Get the original response text from the message
+				originalText := ""
+				if message.IsStringContent() {
+					originalText = message.StringContent()
+				} else {
+					// Try to get text from Content directly
+					if str, ok := message.Content.(string); ok {
+						originalText = str
+					}
+				}
+
+				// Find the first text content and prepend thinking
+				foundTextContent := false
+				for i := range contents {
+					if contents[i].Type == "text" {
+						contents[i].Text = thinkingPrefix + contents[i].Text
+						foundTextContent = true
+						break
+					}
+				}
+
+				// If no text content found, create one with thinking prefix and original text
+				if !foundTextContent {
+					contents = append(contents, Content{
+						Type: "text",
+						Text: thinkingPrefix + originalText,
+					})
+				}
+			} else {
+				// Signature was restored, use proper thinking block
+				contents = append([]Content{thinkingContent}, contents...)
+			}
+		}
+
 		claudeMessage.Content = contents
 
 		// Claude requires at least one content block per message
@@ -263,6 +377,12 @@ func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Re
 
 		claudeRequest.Messages = append(claudeRequest.Messages, claudeMessage)
 	}
+
+	// If fallback mode was used, disable thinking to avoid Claude validation errors
+	if useFallbackMode && claudeRequest.Thinking != nil {
+		claudeRequest.Thinking = nil
+	}
+
 	return &claudeRequest, nil
 }
 
@@ -271,6 +391,7 @@ func StreamResponseClaude2OpenAI(c *gin.Context, claudeResponse *StreamResponse)
 	var response *Response
 	var responseText string
 	var reasoningText string
+	var signatureText string
 	var stopReason string
 	tools := make([]model.Tool, 0)
 
@@ -282,6 +403,9 @@ func StreamResponseClaude2OpenAI(c *gin.Context, claudeResponse *StreamResponse)
 			responseText = claudeResponse.ContentBlock.Text
 			if claudeResponse.ContentBlock.Thinking != nil {
 				reasoningText = *claudeResponse.ContentBlock.Thinking
+			}
+			if claudeResponse.ContentBlock.Signature != nil {
+				signatureText = *claudeResponse.ContentBlock.Signature
 			}
 
 			if claudeResponse.ContentBlock.Type == "tool_use" {
@@ -303,6 +427,9 @@ func StreamResponseClaude2OpenAI(c *gin.Context, claudeResponse *StreamResponse)
 			responseText = claudeResponse.Delta.Text
 			if claudeResponse.Delta.Thinking != nil {
 				reasoningText = *claudeResponse.Delta.Thinking
+			}
+			if claudeResponse.Delta.Type == "signature_delta" && claudeResponse.Delta.Signature != nil {
+				signatureText = *claudeResponse.Delta.Signature
 			}
 
 			if claudeResponse.Delta.Type == "input_json_delta" {
@@ -344,6 +471,10 @@ func StreamResponseClaude2OpenAI(c *gin.Context, claudeResponse *StreamResponse)
 		if claudeResponse.Delta != nil && claudeResponse.Delta.Thinking != nil {
 			reasoningText = *claudeResponse.Delta.Thinking
 		}
+	case "signature_delta":
+		if claudeResponse.Delta != nil && claudeResponse.Delta.Signature != nil {
+			signatureText = *claudeResponse.Delta.Signature
+		}
 	case "ping",
 		"message_stop",
 		"content_block_stop":
@@ -351,9 +482,29 @@ func StreamResponseClaude2OpenAI(c *gin.Context, claudeResponse *StreamResponse)
 		logger.SysErrorf("unknown stream response type %q", claudeResponse.Type)
 	}
 
+	// Cache signature if present (for thinking blocks)
+	if signatureText != "" && (reasoningText != "" || claudeResponse.Type == "signature_delta") {
+		// Get token ID from context
+		if tokenID, exists := c.Get("token_id"); exists {
+			if tokenIDInt, ok := tokenID.(int); ok {
+				// We need the original request to generate conversation ID
+				// For now, we'll cache with a temporary key and update it later
+				// This will be properly handled in the request conversion phase
+				tokenIDStr := getTokenIDFromRequest(tokenIDInt)
+				tempKey := fmt.Sprintf("temp_sig:%s:%d", tokenIDStr, time.Now().UnixNano())
+				GetSignatureCache().Store(tempKey, signatureText)
+
+				// Store the temp key in context for later use
+				c.Set("temp_signature_key", tempKey)
+			}
+		}
+	}
+
 	var choice openai.ChatCompletionsStreamResponseChoice
 	choice.Delta.Content = responseText
-	choice.Delta.SetReasoningContent(c.Query("reasoning_format"), reasoningText)
+	if reasoningText != "" {
+		choice.Delta.SetReasoningContent(c.Query("reasoning_format"), reasoningText)
+	}
 	if len(tools) > 0 {
 		choice.Delta.Content = nil // compatible with other OpenAI derivative applications, like LobeOpenAICompatibleFactory ...
 		choice.Delta.ToolCalls = tools
@@ -374,13 +525,34 @@ func ResponseClaude2OpenAI(c *gin.Context, claudeResponse *Response) *openai.Tex
 	var reasoningText string
 
 	tools := make([]model.Tool, 0)
-	for _, v := range claudeResponse.Content {
+	for i, v := range claudeResponse.Content {
 		switch v.Type {
-		case "thinking":
+		case "thinking", "redacted_thinking":
 			if v.Thinking != nil {
 				reasoningText += *v.Thinking
 			} else {
 				logger.Errorf(context.Background(), "thinking is nil in response")
+			}
+			// Cache signature if present
+			if v.Signature != nil {
+				// Cache the signature for future use
+				if tokenID, exists := c.Get("token_id"); exists {
+					if tokenIDInt, ok := tokenID.(int); ok {
+						// Get conversation ID from request context or generate it
+						var conversationID string
+						if convID, exists := c.Get("conversation_id"); exists {
+							conversationID = convID.(string)
+						} else {
+							// We'll need the original request messages to generate conversation ID
+							// For now, use a temporary approach
+							conversationID = fmt.Sprintf("temp_conv_%d", time.Now().UnixNano())
+						}
+
+						tokenIDStr := getTokenIDFromRequest(tokenIDInt)
+						cacheKey := generateSignatureKey(tokenIDStr, conversationID, 0, i) // messageIndex=0 for response
+						GetSignatureCache().Store(cacheKey, *v.Signature)
+					}
+				}
 			}
 		case "text":
 			responseText += v.Text
@@ -412,7 +584,9 @@ func ResponseClaude2OpenAI(c *gin.Context, claudeResponse *Response) *openai.Tex
 		},
 		FinishReason: stopReasonClaude2OpenAI(claudeResponse.StopReason),
 	}
-	choice.Message.SetReasoningContent(c.Query("reasoning_format"), reasoningText)
+	if reasoningText != "" {
+		choice.Message.SetReasoningContent(c.Query("reasoning_format"), reasoningText)
+	}
 	fullTextResponse := openai.TextResponse{
 		Id:      fmt.Sprintf("chatcmpl-%s", claudeResponse.Id),
 		Model:   claudeResponse.Model,

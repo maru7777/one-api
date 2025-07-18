@@ -31,6 +31,11 @@ import (
 func RelayTextHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 	ctx := c.Request.Context()
 	meta := metalib.GetByContext(c)
+
+	// BUG: should not override meta.BaseURL and meta.ChannelId outside of metalib.GetByContext
+	// meta.BaseURL = c.GetString(ctxkey.BaseURL)
+	// meta.ChannelId = c.GetInt(ctxkey.ChannelId)
+
 	// get & validate textRequest
 	textRequest, err := getAndValidateTextRequest(c, meta.Mode)
 	if err != nil {
@@ -55,8 +60,9 @@ func RelayTextHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 	var channelCompletionRatio map[string]float64
 	if channelModel, ok := c.Get(ctxkey.ChannelModel); ok {
 		if channel, ok := channelModel.(*model.Channel); ok {
-			channelModelRatio = channel.GetModelRatio()
-			channelCompletionRatio = channel.GetCompletionRatio()
+			// Get from unified ModelConfigs only (after migration)
+			channelModelRatio = channel.GetModelRatioFromConfigs()
+			channelCompletionRatio = channel.GetCompletionRatioFromConfigs()
 		}
 	}
 

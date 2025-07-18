@@ -8,7 +8,7 @@ import (
 // ModelRatios contains all supported models and their pricing ratios
 // Model list is derived from the keys of this map, eliminating redundancy
 // Coze models are typically free or very low cost for basic usage
-var ModelRatios = map[string]adaptor.ModelPrice{
+var ModelRatios = map[string]adaptor.ModelConfig{
 	// Coze models - estimated pricing as Coze doesn't publish detailed pricing
 	"coze-chat": {Ratio: 0.1 * ratio.MilliTokensUsd, CompletionRatio: 1},
 }

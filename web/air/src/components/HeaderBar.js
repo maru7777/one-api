@@ -37,7 +37,7 @@ const HeaderBar = () => {
   const [dark, setDark] = useState(false);
   const systemName = getSystemName();
   const logo = getLogo();
-  var themeMode = localStorage.getItem('theme-mode');
+  var themeMode = localStorage.getItem('theme-mode') || 'system';
   const currentDate = new Date();
   // enable fireworks on new year(1.1 and 2.9-2.24)
   const isNewYear = (currentDate.getMonth() === 0 && currentDate.getDate() === 1) || (currentDate.getMonth() === 1 && currentDate.getDate() >= 9 && currentDate.getDate() <= 24);
@@ -62,12 +62,41 @@ const HeaderBar = () => {
     }, 3000);
   };
 
-  useEffect(() => {
-    if (themeMode === 'dark') {
-      switchMode(true);
+  // Function to get system preference
+  const getSystemPreference = () => {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
+    return false;
+  };
+
+  useEffect(() => {
+    let shouldUseDark = false;
+
+    if (themeMode === 'dark') {
+      shouldUseDark = true;
+    } else if (themeMode === 'system') {
+      shouldUseDark = getSystemPreference();
+    }
+
+    switchMode(shouldUseDark);
+
     if (isNewYear) {
       console.log('Happy New Year!');
+    }
+
+    // Listen for system theme changes when in system mode
+    if (themeMode === 'system' && typeof window !== 'undefined' && window.matchMedia) {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+      const handleChange = (e) => {
+        if (localStorage.getItem('theme-mode') === 'system') {
+          switchMode(e.matches);
+        }
+      };
+
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
     }
   }, []);
 
@@ -75,12 +104,34 @@ const HeaderBar = () => {
     const body = document.body;
     if (!model) {
       body.removeAttribute('theme-mode');
-      localStorage.setItem('theme-mode', 'light');
     } else {
       body.setAttribute('theme-mode', 'dark');
-      localStorage.setItem('theme-mode', 'dark');
     }
     setDark(model);
+  };
+
+  const toggleTheme = () => {
+    const currentTheme = localStorage.getItem('theme-mode') || 'system';
+    let newTheme;
+
+    if (currentTheme === 'light') {
+      newTheme = 'dark';
+    } else if (currentTheme === 'dark') {
+      newTheme = 'system';
+    } else {
+      newTheme = 'light';
+    }
+
+    localStorage.setItem('theme-mode', newTheme);
+
+    let shouldUseDark = false;
+    if (newTheme === 'dark') {
+      shouldUseDark = true;
+    } else if (newTheme === 'system') {
+      shouldUseDark = getSystemPreference();
+    }
+
+    switchMode(shouldUseDark);
   };
   return (
     <>
@@ -125,7 +176,7 @@ const HeaderBar = () => {
                   </Dropdown>
                 }
                 <Nav.Item itemKey={'about'} icon={<IconHelpCircle />} />
-                <Switch checkedText="🌞" size={'large'} checked={dark} uncheckedText="🌙" onChange={switchMode} />
+                <Switch checkedText="🌞" size={'large'} checked={dark} uncheckedText="🌙" onChange={toggleTheme} />
                 {userState.user ?
                   <>
                     <Dropdown

@@ -51,10 +51,10 @@ func (a *Adaptor) GetChannelName() string {
 
 // GetDefaultModelPricing returns the pricing information for OpenRouter models
 // Based on OpenRouter pricing: https://openrouter.ai/models
-func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelConfig {
 	const MilliTokensUsd = 0.000001
 
-	return map[string]adaptor.ModelPrice{
+	return map[string]adaptor.ModelConfig{
 		// OpenRouter Models - Based on https://openrouter.ai/models
 		"01-ai/yi-large":                                  {Ratio: 1.5 * MilliTokensUsd, CompletionRatio: 1},
 		"aetherwiing/mn-starcannon-12b":                   {Ratio: 0.6 * MilliTokensUsd, CompletionRatio: 1},

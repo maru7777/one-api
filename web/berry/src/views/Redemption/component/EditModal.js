@@ -14,7 +14,9 @@ import {
   InputLabel,
   OutlinedInput,
   InputAdornment,
-  FormHelperText
+  FormHelperText,
+  Box,
+  Typography
 } from '@mui/material';
 
 import { renderQuotaWithPrompt, showSuccess, showError, downloadTextAsFile } from 'utils/common';
@@ -40,6 +42,7 @@ const originInputs = {
 
 const EditModal = ({ open, redemptiondId, onCancel, onOk }) => {
   const theme = useTheme();
+  const [loading, setLoading] = useState(false);
   const [inputs, setInputs] = useState(originInputs);
 
   const submit = async (values, { setErrors, setStatus, setSubmitting }) => {
@@ -75,13 +78,20 @@ const EditModal = ({ open, redemptiondId, onCancel, onOk }) => {
   };
 
   const loadRedemptiond = async () => {
-    let res = await API.get(`/api/redemption/${redemptiondId}`);
-    const { success, message, data } = res.data;
+    setLoading(true);
+    try {
+      let res = await API.get(`/api/redemption/${redemptiondId}`);
+      const { success, message, data } = res.data;
     if (success) {
       data.is_edit = true;
       setInputs(data);
     } else {
       showError(message);
+    }
+    } catch (error) {
+      showError(error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -100,8 +110,34 @@ const EditModal = ({ open, redemptiondId, onCancel, onOk }) => {
       </DialogTitle>
       <Divider />
       <DialogContent>
-        <Formik initialValues={inputs} enableReinitialize validationSchema={validationSchema} onSubmit={submit}>
-          {({ errors, handleBlur, handleChange, handleSubmit, touched, values, isSubmitting }) => (
+        {loading ? (
+          <Box
+            sx={{
+              minHeight: '400px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'background.paper',
+              borderRadius: '8px',
+              margin: '1rem 0'
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '1rem',
+                color: 'text.secondary'
+              }}
+            >
+              <div className="ui active inline loader"></div>
+              <Typography>正在加载兑换码信息...</Typography>
+            </Box>
+          </Box>
+        ) : (
+          <Formik initialValues={inputs} enableReinitialize validationSchema={validationSchema} onSubmit={submit}>
+            {({ errors, handleBlur, handleChange, handleSubmit, touched, values, isSubmitting }) => (
             <form noValidate onSubmit={handleSubmit}>
               <FormControl fullWidth error={Boolean(touched.name && errors.name)} sx={{ ...theme.typography.otherInput }}>
                 <InputLabel htmlFor="channel-name-label">名称</InputLabel>
@@ -175,6 +211,7 @@ const EditModal = ({ open, redemptiondId, onCancel, onOk }) => {
             </form>
           )}
         </Formik>
+        )}
       </DialogContent>
     </Dialog>
   );

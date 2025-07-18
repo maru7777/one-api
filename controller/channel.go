@@ -2,6 +2,7 @@ package controller
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/helper"
+	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/relay"
 	"github.com/songquanpeng/one-api/relay/adaptor"
@@ -222,8 +224,21 @@ func GetChannelPricing(c *gin.Context) {
 		return
 	}
 
-	modelRatio := channel.GetModelRatio()
-	completionRatio := channel.GetCompletionRatio()
+	// Get from unified ModelConfigs only (after migration)
+	modelRatio := channel.GetModelRatioFromConfigs()
+	completionRatio := channel.GetCompletionRatioFromConfigs()
+
+	// Also get the unified ModelConfigs
+	modelConfigs := channel.GetModelPriceConfigs()
+
+	// Debug logging to help identify data issues
+	if modelConfigs != nil && len(modelConfigs) > 0 {
+		var modelNames []string
+		for modelName := range modelConfigs {
+			modelNames = append(modelNames, modelName)
+		}
+		logger.SysLog(fmt.Sprintf("Channel %d (type %d) returning model configs for models: %v", channel.Id, channel.Type, modelNames))
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -231,6 +246,7 @@ func GetChannelPricing(c *gin.Context) {
 		"data": gin.H{
 			"model_ratio":      modelRatio,
 			"completion_ratio": completionRatio,
+			"model_configs":    modelConfigs,
 		},
 	})
 	return
@@ -247,8 +263,9 @@ func UpdateChannelPricing(c *gin.Context) {
 	}
 
 	var request struct {
-		ModelRatio      map[string]float64 `json:"model_ratio"`
-		CompletionRatio map[string]float64 `json:"completion_ratio"`
+		ModelRatio      map[string]float64                `json:"model_ratio"`
+		CompletionRatio map[string]float64                `json:"completion_ratio"`
+		ModelConfigs    map[string]model.ModelConfigLocal `json:"model_configs"`
 	}
 
 	err = c.ShouldBindJSON(&request)
@@ -269,22 +286,65 @@ func UpdateChannelPricing(c *gin.Context) {
 		return
 	}
 
-	err = channel.SetModelRatio(request.ModelRatio)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "Failed to set model ratio: " + err.Error(),
-		})
-		return
-	}
+	// Handle both old format (separate model_ratio and completion_ratio) and new format (unified model_configs)
+	if request.ModelConfigs != nil && len(request.ModelConfigs) > 0 {
+		// New unified format - preferred approach
+		err = channel.SetModelPriceConfigs(request.ModelConfigs)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "Failed to set model configs: " + err.Error(),
+			})
+			return
+		}
+	} else if (request.ModelRatio != nil && len(request.ModelRatio) > 0) || (request.CompletionRatio != nil && len(request.CompletionRatio) > 0) {
+		// Old format - convert to unified format automatically
+		modelConfigs := make(map[string]model.ModelConfigLocal)
 
-	err = channel.SetCompletionRatio(request.CompletionRatio)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "Failed to set completion ratio: " + err.Error(),
-		})
-		return
+		// Collect all model names from both ratios
+		allModelNames := make(map[string]bool)
+		if request.ModelRatio != nil {
+			for modelName := range request.ModelRatio {
+				allModelNames[modelName] = true
+			}
+		}
+		if request.CompletionRatio != nil {
+			for modelName := range request.CompletionRatio {
+				allModelNames[modelName] = true
+			}
+		}
+
+		// Create ModelPriceLocal entries for each model
+		for modelName := range allModelNames {
+			config := model.ModelConfigLocal{}
+
+			if request.ModelRatio != nil {
+				if ratio, exists := request.ModelRatio[modelName]; exists {
+					config.Ratio = ratio
+				}
+			}
+
+			if request.CompletionRatio != nil {
+				if completionRatio, exists := request.CompletionRatio[modelName]; exists {
+					config.CompletionRatio = completionRatio
+				}
+			}
+
+			// Only add if we have some pricing data
+			if config.Ratio != 0 || config.CompletionRatio != 0 {
+				modelConfigs[modelName] = config
+			}
+		}
+
+		// Save to unified ModelConfigs only
+		err = channel.SetModelPriceConfigs(modelConfigs)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "Failed to set model configs: " + err.Error(),
+			})
+			return
+		}
 	}
 
 	err = channel.Update()
@@ -313,7 +373,7 @@ func GetChannelDefaultPricing(c *gin.Context) {
 		return
 	}
 
-	var defaultPricing map[string]adaptor.ModelPrice
+	var defaultPricing map[string]adaptor.ModelConfig
 
 	// For Custom channels and OpenAI-compatible channels, use global pricing from all adapters
 	// This gives users access to pricing for all supported models
@@ -345,6 +405,16 @@ func GetChannelDefaultPricing(c *gin.Context) {
 		completionRatios[model] = price.CompletionRatio
 	}
 
+	// Create unified model configs format
+	modelConfigs := make(map[string]model.ModelConfigLocal)
+	for modelName, price := range defaultPricing {
+		modelConfigs[modelName] = model.ModelConfigLocal{
+			Ratio:           price.Ratio,
+			CompletionRatio: price.CompletionRatio,
+			MaxTokens:       price.MaxTokens,
+		}
+	}
+
 	// Convert to JSON
 	modelRatioJSON, err := json.Marshal(modelRatios)
 	if err != nil {
@@ -364,12 +434,22 @@ func GetChannelDefaultPricing(c *gin.Context) {
 		return
 	}
 
+	modelConfigsJSON, err := json.Marshal(modelConfigs)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Failed to serialize model configs: " + err.Error(),
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
 		"data": gin.H{
 			"model_ratio":      string(modelRatioJSON),
 			"completion_ratio": string(completionRatioJSON),
+			"model_configs":    string(modelConfigsJSON),
 		},
 	})
 }

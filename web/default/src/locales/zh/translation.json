@@ -11,9 +11,17 @@
     "setting": "设置",
     "about": "关于",
     "chat": "聊天",
+    "more": "更多",
+    "language": "语言",
     "login": "登录",
     "logout": "注销",
-    "register": "注册"
+    "register": "注册",
+    "toggleTheme": "切换主题",
+    "theme": {
+      "light": "浅色",
+      "dark": "深色",
+      "system": "跟随系统"
+    }
   },
   "topup": {
     "title": "充值中心",
@@ -92,6 +100,7 @@
     "edit": {
       "title_edit": "更新渠道信息",
       "title_create": "创建新的渠道",
+      "loading": "正在加载渠道信息...",
       "type": "类型",
       "name": "名称",
       "name_placeholder": "请输入名称",
@@ -102,6 +111,8 @@
       "models_placeholder": "请选择该渠道所支持的模型",
       "model_mapping": "模型重定向",
       "model_mapping_placeholder": "此项可选，用于修改请求体中的模型名称，为一个 JSON 字符串，键为请求中模型名称，值为要替换的模型名称",
+      "model_configs": "模型配置",
+      "model_configs_placeholder": "此项可选，统一的模型配置包括定价和属性。JSON格式，键为模型名称，值包含ratio、completion_ratio和max_tokens字段",
       "system_prompt": "系统提示词",
       "system_prompt_placeholder": "此项可选，用于强制设置给定的系统提示词，请配合自定义模型 & 模型重定向使用，首先创建一个唯一的自定义模型名称并在上面填入，之后将该自定义模型重定向映射到该渠道一个原生支持的模型",
       "proxy_url": "代理",
@@ -141,6 +152,7 @@
         "name_required": "请填写渠道名称和渠道密钥！",
         "models_required": "请至少选择一个模型！",
         "model_mapping_invalid": "模型映射必须是合法的 JSON 格式！",
+        "model_configs_invalid": "模型配置必须是合法的 JSON 格式！",
         "model_ratio_invalid": "模型定价必须是合法的 JSON 格式！",
         "completion_ratio_invalid": "输出定价必须是合法的 JSON 格式！",
         "update_success": "渠道更新成功！",
@@ -212,6 +224,7 @@
     "edit": {
       "title_edit": "更新令牌信息",
       "title_create": "创建新的令牌",
+      "loading": "正在加载令牌信息...",
       "name": "名称",
       "name_placeholder": "请输入名称",
       "models": "模型范围",
@@ -299,6 +312,7 @@
     "edit": {
       "title_edit": "更新兑换码信息",
       "title_create": "创建新的兑换码",
+      "loading": "正在加载兑换码信息...",
       "name": "名称",
       "name_placeholder": "请输入名称",
       "quota": "额度",
@@ -360,6 +374,7 @@
     "title": "用户管理",
     "edit": {
       "title": "更新用户信息",
+      "loading": "正在加载用户信息...",
       "username": "用户名",
       "username_placeholder": "请输入新的用户名",
       "password": "密码",

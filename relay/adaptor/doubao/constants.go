@@ -8,7 +8,7 @@ import (
 // ModelRatios contains all supported models and their pricing ratios
 // Model list is derived from the keys of this map, eliminating redundancy
 // Based on Doubao pricing: https://www.volcengine.com/docs/82379/1099320
-var ModelRatios = map[string]adaptor.ModelPrice{
+var ModelRatios = map[string]adaptor.ModelConfig{
 	// Doubao Pro Models
 	"Doubao-pro-128k": {Ratio: 0.005 * ratio.MilliTokensRmb, CompletionRatio: 1},
 	"Doubao-pro-32k":  {Ratio: 0.002 * ratio.MilliTokensRmb, CompletionRatio: 1},

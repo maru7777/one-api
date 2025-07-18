@@ -1,3 +1,4 @@
+import React from 'react';
 import {enqueueSnackbar} from 'notistack';
 import {snackbarConstants} from 'constants/SnackbarConstants';
 import {API} from './api';
@@ -119,6 +120,13 @@ export function isAdmin() {
     return user.role >= 10;
 }
 
+export function isRoot() {
+    let user = localStorage.getItem('user');
+    if (!user) return false;
+    user = JSON.parse(user);
+    return user.role >= 100;
+}
+
 export function timestamp2string(timestamp) {
     let date = new Date(timestamp * 1000);
     let year = date.getFullYear().toString();
@@ -180,6 +188,42 @@ export function renderNumber(num) {
     } else {
         return num;
     }
+}
+
+/**
+ * Renders a number with tooltip showing exact value when abbreviated.
+ * WARNING: Returns JSX element for abbreviated numbers, plain value otherwise.
+ * Only use in React components, not for plain text contexts.
+ * @param {number} num - The number to render
+ * @returns {JSX.Element|string|number} JSX span with tooltip for large numbers, plain value otherwise
+ */
+export function renderNumberWithTooltip(num) {
+    const abbreviated = renderNumber(num);
+    const exact = num.toLocaleString();
+
+    // If the number was abbreviated, return JSX with tooltip
+    if (num >= 10000) {
+        return (
+            <span title={exact} style={{ cursor: 'help', textDecoration: 'underline dotted' }}>
+                {abbreviated}
+            </span>
+        );
+    }
+
+    // If not abbreviated, just return the number
+    return abbreviated;
+}
+
+export function renderNumberForChart(num) {
+    const abbreviated = renderNumber(num);
+    const exact = num.toLocaleString();
+
+    // For charts, return the abbreviated version but include exact in a data attribute or similar
+    if (num >= 10000) {
+        return `${abbreviated} (${exact})`;
+    }
+
+    return abbreviated;
 }
 
 export function renderQuotaWithPrompt(quota, digits) {

@@ -165,13 +165,13 @@ func (a *Adaptor) DoRequest(c *gin.Context, meta *meta.Meta, requestBody io.Read
 
 // Pricing methods - VertexAI adapter manages its own model pricing
 // VertexAI uses the same Gemini models but with Google Cloud pricing
-func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelConfig {
 	const MilliTokensUsd = 0.000001
 
 	// Direct map definition - much easier to maintain and edit
 	// Pricing from https://cloud.google.com/vertex-ai/generative-ai/pricing
 	// VertexAI shares models with Gemini but may have different pricing tiers
-	return map[string]adaptor.ModelPrice{
+	return map[string]adaptor.ModelConfig{
 		// Gemini Pro Models (VertexAI)
 		"gemini-pro":     {Ratio: 0.5 * MilliTokensUsd, CompletionRatio: 3},
 		"gemini-1.0-pro": {Ratio: 0.5 * MilliTokensUsd, CompletionRatio: 3},

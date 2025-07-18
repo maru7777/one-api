@@ -15,15 +15,17 @@ import (
 	"github.com/songquanpeng/one-api/common/conv"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/common/render"
+	"github.com/songquanpeng/one-api/relay/adaptor/openai_compatible"
 	"github.com/songquanpeng/one-api/relay/billing/ratio"
 	"github.com/songquanpeng/one-api/relay/model"
 	"github.com/songquanpeng/one-api/relay/relaymode"
 )
 
+// Use shared constants from openai_compatible package
 const (
-	dataPrefix       = "data: "
-	done             = "[DONE]"
-	dataPrefixLength = len(dataPrefix)
+	dataPrefix       = openai_compatible.DataPrefix
+	done             = openai_compatible.Done
+	dataPrefixLength = openai_compatible.DataPrefixLength
 )
 
 // StreamHandler processes streaming responses from OpenAI API
@@ -48,7 +50,7 @@ func StreamHandler(c *gin.Context, resp *http.Response, relayMode int) (*model.E
 
 	// Process each line from the stream
 	for scanner.Scan() {
-		data := NormalizeDataLine(scanner.Text())
+		data := openai_compatible.NormalizeDataLine(scanner.Text())
 
 		// logger.Debugf(c.Request.Context(), "stream response: %s", data)
 
@@ -441,7 +443,7 @@ func ResponseAPIStreamHandler(c *gin.Context, resp *http.Response, relayMode int
 
 	// Process each line from the stream
 	for scanner.Scan() {
-		data := NormalizeDataLine(scanner.Text())
+		data := openai_compatible.NormalizeDataLine(scanner.Text())
 
 		logger.Debugf(c.Request.Context(), "receive stream event: %s", data)
 
@@ -679,7 +681,7 @@ func ResponseAPIDirectStreamHandler(c *gin.Context, resp *http.Response, relayMo
 
 	// Process each line from the stream
 	for scanner.Scan() {
-		data := NormalizeDataLine(scanner.Text())
+		data := openai_compatible.NormalizeDataLine(scanner.Text())
 
 		logger.Debugf(c.Request.Context(), "receive stream event: %s", data)
 

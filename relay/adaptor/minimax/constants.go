@@ -8,7 +8,7 @@ import (
 // ModelRatios contains all supported models and their pricing ratios
 // Model list is derived from the keys of this map, eliminating redundancy
 // Based on Minimax pricing: https://api.minimax.chat/document/price
-var ModelRatios = map[string]adaptor.ModelPrice{
+var ModelRatios = map[string]adaptor.ModelConfig{
 	// Minimax Models - Based on https://api.minimax.chat/document/price
 	"abab6.5-chat":    {Ratio: 0.03 * ratio.MilliTokensRmb, CompletionRatio: 1},
 	"abab6.5s-chat":   {Ratio: 0.01 * ratio.MilliTokensRmb, CompletionRatio: 1},

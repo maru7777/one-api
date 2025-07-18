@@ -251,12 +251,12 @@ func (a *Adaptor) GetChannelName() string {
 }
 
 // Pricing methods - Replicate adapter manages its own model pricing
-func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelConfig {
 	const MilliTokensUsd = 0.000001
 
 	// Direct map definition - much easier to maintain and edit
 	// Pricing from https://replicate.com/pricing
-	return map[string]adaptor.ModelPrice{
+	return map[string]adaptor.ModelConfig{
 		// Image Generation Models - FLUX
 		"black-forest-labs/flux-kontext-pro":   {Ratio: 0.055, CompletionRatio: 1}, // $0.055 per image
 		"black-forest-labs/flux-1.1-pro":       {Ratio: 0.04, CompletionRatio: 1},  // $0.04 per image

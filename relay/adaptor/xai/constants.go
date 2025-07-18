@@ -8,7 +8,7 @@ import (
 // ModelRatios contains all supported models and their pricing ratios
 // Model list is derived from the keys of this map, eliminating redundancy
 // Based on X.AI pricing: https://console.x.ai/
-var ModelRatios = map[string]adaptor.ModelPrice{
+var ModelRatios = map[string]adaptor.ModelConfig{
 	// Grok Models - Based on https://console.x.ai/
 	"grok-2":               {Ratio: 5.0 * ratio.MilliTokensUsd, CompletionRatio: 1},
 	"grok-2-latest":        {Ratio: 5.0 * ratio.MilliTokensUsd, CompletionRatio: 1},

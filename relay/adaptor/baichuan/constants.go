@@ -7,7 +7,7 @@ import (
 
 // ModelRatios contains all supported models and their pricing ratios
 // Model list is derived from the keys of this map, eliminating redundancy
-var ModelRatios = map[string]adaptor.ModelPrice{
+var ModelRatios = map[string]adaptor.ModelConfig{
 	// Baichuan Models - Based on https://platform.baichuan-ai.com/price
 	"Baichuan2-Turbo":         {Ratio: 0.008 * ratio.MilliTokensRmb, CompletionRatio: 1},
 	"Baichuan2-Turbo-192k":    {Ratio: 0.016 * ratio.MilliTokensRmb, CompletionRatio: 1},

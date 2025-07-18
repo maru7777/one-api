@@ -231,6 +231,13 @@ func (user *User) Update(updatePassword bool) error {
 	return err
 }
 
+// ClearTotpSecret clears the TOTP secret for the user
+func (user *User) ClearTotpSecret() error {
+	return DB.Model(user).Select("totp_secret").Updates(map[string]interface{}{
+		"totp_secret": "",
+	}).Error
+}
+
 func (user *User) Delete() error {
 	if user.Id == 0 {
 		return errors.New("id is empty!")

@@ -198,6 +198,7 @@ var UserContentRequestTimeout = env.Int("USER_CONTENT_REQUEST_TIMEOUT", 30)
 // EnforceIncludeUsage is used to determine whether to include usage in the response
 var EnforceIncludeUsage = env.Bool("ENFORCE_INCLUDE_USAGE", false)
 var TestPrompt = env.String("TEST_PROMPT", "2 + 2 = ?")
+var TestMaxTokens = env.Int("TEST_MAX_TOKENS", 1024)
 
 // OpenrouterProviderSort is used to determine the order of the providers in the openrouter
 var OpenrouterProviderSort = env.String("OPENROUTER_PROVIDER_SORT", "")

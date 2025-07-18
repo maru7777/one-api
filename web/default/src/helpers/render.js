@@ -1,6 +1,6 @@
+import React from 'react';
 import { Label, Message } from 'semantic-ui-react';
 import { getChannelOption } from './helper';
-import React from 'react';
 
 export function renderText(text, limit) {
   if (text.length > limit) {
@@ -47,6 +47,49 @@ export function renderNumber(num) {
   } else {
     return num;
   }
+}
+
+/**
+ * Renders a number with tooltip showing exact value when abbreviated.
+ * WARNING: Returns JSX element for abbreviated numbers, plain value otherwise.
+ * Only use in React components, not for plain text contexts.
+ * @param {number} num - The number to render
+ * @returns {JSX.Element|string|number} JSX span with tooltip for large numbers, plain value otherwise
+ */
+export function renderNumberWithTooltip(num) {
+  const abbreviated = renderNumber(num);
+  const exact = num.toLocaleString();
+
+  // If the number was abbreviated, return JSX with tooltip
+  if (num >= 10000) {
+    return (
+      <span title={exact} style={{ cursor: 'help', textDecoration: 'underline dotted' }}>
+        {abbreviated}
+      </span>
+    );
+  }
+
+  // If not abbreviated, just return the number
+  return abbreviated;
+}
+
+/**
+ * Renders a number for chart tooltips, showing both abbreviated and exact values.
+ * Always returns a string, safe for use in any context.
+ * @param {number} num - The number to render
+ * @returns {string} Abbreviated number with exact value in parentheses for large numbers
+ */
+export function renderNumberForChart(num) {
+  const abbreviated = renderNumber(num);
+  const exact = num.toLocaleString();
+
+  // For charts, return the abbreviated version but include exact in a data attribute or similar
+  // The chart tooltip can then show both values
+  if (num >= 10000) {
+    return `${abbreviated} (${exact})`;
+  }
+
+  return abbreviated;
 }
 
 export function renderQuota(quota, t, precision = 2) {

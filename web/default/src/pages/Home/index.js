@@ -86,7 +86,7 @@ const Home = () => {
                   >
                     <Card.Content>
                       <Card.Header>
-                        <Header as='h3' style={{ color: '#444' }}>
+                        <Header as='h3' style={{ color: 'var(--text-primary)' }}>
                           {t('home.system_status.info.title')}
                         </Header>
                       </Card.Header>
@@ -135,7 +135,7 @@ const Home = () => {
                           <a
                             href='https://github.com/Laisky/one-api'
                             target='_blank'
-                            style={{ color: '#2185d0' }}
+                            style={{ color: 'var(--button-primary)' }}
                           >
                             {t('home.system_status.info.source_link')}
                           </a>
@@ -166,7 +166,7 @@ const Home = () => {
                   >
                     <Card.Content>
                       <Card.Header>
-                        <Header as='h3' style={{ color: '#444' }}>
+                        <Header as='h3' style={{ color: 'var(--text-primary)' }}>
                           {t('home.system_status.config.title')}
                         </Header>
                       </Card.Header>

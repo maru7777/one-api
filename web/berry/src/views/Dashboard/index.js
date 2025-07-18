@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Grid, Typography } from '@mui/material';
+import { Grid, Typography, FormControl, InputLabel, Select, MenuItem, Card, CardContent, TextField, Button, Alert } from '@mui/material';
 import { gridSpacing } from 'store/constant';
 import StatisticalLineChartCard from './component/StatisticalLineChartCard';
 import StatisticalBarChart from './component/StatisticalBarChart';
 import { generateChartOptions, getLastSevenDays } from 'utils/chart';
 import { API } from 'utils/api';
-import { showError, calculateQuota, renderNumber } from 'utils/common';
+import { showError, calculateQuota, renderNumber, isRoot } from 'utils/common';
 import UserCard from 'ui-component/cards/UserCard';
 
 const Dashboard = () => {
@@ -15,9 +15,47 @@ const Dashboard = () => {
   const [quotaChart, setQuotaChart] = useState(null);
   const [tokenChart, setTokenChart] = useState(null);
   const [users, setUsers] = useState([]);
+  const [dashboardUsers, setDashboardUsers] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [isRootUser, setIsRootUser] = useState(false);
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [dateError, setDateError] = useState('');
 
-  const userDashboard = async () => {
-    const res = await API.get('/api/user/dashboard');
+  const fetchDashboardUsers = async () => {
+    try {
+      const res = await API.get('/api/user/dashboard/users');
+      const { success, message, data } = res.data;
+      if (success) {
+        setDashboardUsers(data || []);
+        // Set default selection to "All Users" for root users
+        setSelectedUserId('all');
+      } else {
+        showError(message);
+      }
+    } catch (error) {
+      console.error('Failed to fetch dashboard users:', error);
+    }
+  };
+
+  const userDashboard = async (userId = selectedUserId, customFromDate = fromDate, customToDate = toDate) => {
+    let url = '/api/user/dashboard';
+    const params = new URLSearchParams();
+
+    if (isRootUser && userId) {
+      params.append('user_id', userId);
+    }
+
+    if (customFromDate && customToDate) {
+      params.append('from_date', customFromDate);
+      params.append('to_date', customToDate);
+    }
+
+    if (params.toString()) {
+      url += `?${params.toString()}`;
+    }
+
+    const res = await API.get(url);
     const { success, message, data } = res.data;
     if (success) {
       if (data) {
@@ -27,8 +65,10 @@ const Dashboard = () => {
         setTokenChart(getLineCardOption(lineData, 'PromptTokens'));
         setStatisticalData(getBarDataGroup(data));
       }
+      setDateError('');
     } else {
       showError(message);
+      setDateError(message || 'Failed to fetch dashboard data');
     }
     setLoading(false);
   };
@@ -44,18 +84,171 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    userDashboard();
+    const rootUser = isRoot();
+    setIsRootUser(rootUser);
+
+    // Initialize default date range (last 7 days)
+    const today = new Date();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(today.getDate() - 6);
+
+    setToDate(today.toISOString().split('T')[0]);
+    setFromDate(sevenDaysAgo.toISOString().split('T')[0]);
+
+    if (rootUser) {
+      fetchDashboardUsers();
+    } else {
+      userDashboard();
+    }
     loadUser();
   }, []);
 
+  useEffect(() => {
+    if (selectedUserId) {
+      userDashboard(selectedUserId);
+    }
+  }, [selectedUserId]);
+
+  const handleUserChange = (event) => {
+    setSelectedUserId(event.target.value);
+  };
+
+  const handleDateChange = (field, value) => {
+    if (field === 'from') {
+      setFromDate(value);
+    } else {
+      setToDate(value);
+    }
+  };
+
+  const handleRefresh = () => {
+    userDashboard(selectedUserId, fromDate, toDate);
+  };
+
+  const getMaxDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+
+  const getMinDate = () => {
+    if (isRootUser) {
+      // Root users can go back 1 year
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+      return oneYearAgo.toISOString().split('T')[0];
+    } else {
+      // Regular users can only go back 7 days from today
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      return sevenDaysAgo.toISOString().split('T')[0];
+    }
+  };
+
   return (
     <Grid container spacing={gridSpacing}>
+      {/* Controls for root users and date range */}
+      <Grid item xs={12}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Dashboard Controls
+            </Typography>
+
+            {/* User selector for root users */}
+            {isRootUser && (
+              <Grid container spacing={2} sx={{ mb: 2 }}>
+                <Grid item xs={12}>
+                  <FormControl fullWidth>
+                    <InputLabel>Select User</InputLabel>
+                    <Select
+                      value={selectedUserId}
+                      onChange={handleUserChange}
+                      label="Select User"
+                    >
+                      {dashboardUsers.map(user => (
+                        <MenuItem
+                          key={user.id}
+                          value={user.id === 0 ? 'all' : user.id.toString()}
+                        >
+                          {user.display_name || user.username}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </Grid>
+            )}
+
+            {/* Date range selector */}
+            <Grid container spacing={2} alignItems="end">
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  label="From Date"
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => handleDateChange('from', e.target.value)}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  inputProps={{
+                    min: getMinDate(),
+                    max: getMaxDate(),
+                  }}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  label="To Date"
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => handleDateChange('to', e.target.value)}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  inputProps={{
+                    min: getMinDate(),
+                    max: getMaxDate(),
+                  }}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <Button
+                  variant="contained"
+                  onClick={handleRefresh}
+                  fullWidth
+                  sx={{ height: '56px' }}
+                >
+                  Refresh
+                </Button>
+              </Grid>
+            </Grid>
+
+            {dateError && (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                {dateError}
+              </Alert>
+            )}
+
+            <Alert severity="info" sx={{ mt: 2 }}>
+              <Typography variant="body2">
+                {isRootUser
+                  ? 'As root user, you can select up to 1 year of data.'
+                  : 'You can select up to 7 days of data.'
+                }
+              </Typography>
+            </Alert>
+          </CardContent>
+        </Card>
+      </Grid>
+
       <Grid item xs={12}>
         <Grid container spacing={gridSpacing}>
           <Grid item lg={4} xs={12}>
             <StatisticalLineChartCard
               isLoading={isLoading}
-              title="今日请求量"
+              title="总请求量"
               chartData={requestChart?.chartData}
               todayValue={requestChart?.todayValue}
             />
@@ -63,7 +256,7 @@ const Dashboard = () => {
           <Grid item lg={4} xs={12}>
             <StatisticalLineChartCard
               isLoading={isLoading}
-              title="今日消费"
+              title="总消费"
               chartData={quotaChart?.chartData}
               todayValue={quotaChart?.todayValue}
             />
@@ -71,7 +264,7 @@ const Dashboard = () => {
           <Grid item lg={4} xs={12}>
             <StatisticalLineChartCard
               isLoading={isLoading}
-              title="今日 token"
+              title="总 Token"
               chartData={tokenChart?.chartData}
               todayValue={tokenChart?.todayValue}
             />
@@ -152,6 +345,15 @@ function getBarDataGroup(data) {
   const result = [];
   const map = new Map();
 
+  // Calculate total request count for each model to sort by usage
+  const modelRequestCounts = {};
+  data.forEach(item => {
+    if (!modelRequestCounts[item.ModelName]) {
+      modelRequestCounts[item.ModelName] = 0;
+    }
+    modelRequestCounts[item.ModelName] += item.RequestCount;
+  });
+
   for (const item of data) {
     if (!map.has(item.ModelName)) {
       const newData = { name: item.ModelName, data: new Array(7) };
@@ -171,6 +373,9 @@ function getBarDataGroup(data) {
       }
     }
   }
+
+  // Sort result by total request count (descending order)
+  result.sort((a, b) => modelRequestCounts[b.name] - modelRequestCounts[a.name]);
 
   return { data: result, xaxis: lastSevenDays };
 }

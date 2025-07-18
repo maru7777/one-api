@@ -51,7 +51,7 @@ func (a *Adaptor) GetChannelName() string {
 
 // GetDefaultModelPricing returns the pricing information for Baichuan models
 // Based on Baichuan pricing: https://platform.baichuan-ai.com/price
-func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelConfig {
 	return ModelRatios
 }
 

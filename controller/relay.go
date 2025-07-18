@@ -96,6 +96,23 @@ func Relay(c *gin.Context) {
 		retryTimes = retryTimes * 2 // Increase retry attempts for 429 errors
 		logger.Infof(ctx, "429 error detected, increasing retry attempts to %d to exhaust alternative channels", retryTimes)
 	}
+
+	// For 413 errors, increase retry attempts to exhaust all available channels
+	// to avoid returning 413 to users when other channels might be available
+	if bizErr.StatusCode == http.StatusRequestEntityTooLarge {
+		// Get the total number of channels for this model/group
+		// and try to retry all channels
+		channels, err := dbmodel.GetChannelsFromCache(group, originalModel)
+		if err != nil {
+			retryTimes = 1
+			logger.Debugf(ctx, "413 error detected, Get channels from cache error: %v", err)
+			logger.Warnf(ctx, "413 error detected, Failed to get total number of channels for a model/group from cache. increasing retry attempts to %d", retryTimes)
+		} else {
+			retryTimes = len(channels) - 1
+			logger.Infof(ctx, "413 error detected, increasing retry attempts to %d to exhaust alternative channels", retryTimes)
+		}
+	}
+
 	// Track failed channels to avoid retrying them, especially for 429 errors
 	failedChannels := make(map[int]bool)
 	failedChannels[lastFailedChannelId] = true
@@ -110,30 +127,36 @@ func Relay(c *gin.Context) {
 	// since the highest priority channel is rate limited
 	shouldTryLowerPriorityFirst := bizErr.StatusCode == http.StatusTooManyRequests
 
+	// For 413 errors, we should try Larger MaxTokens channels
+	shouldTryLargerMaxTokensFirst := bizErr.StatusCode == http.StatusRequestEntityTooLarge
+
 	for i := retryTimes; i > 0; i-- {
 		var channel *dbmodel.Channel
 		var err error
 
 		// Try to find an available channel, preferring lower priority channels for 429 errors
 		if config.DebugEnabled {
-			logger.Infof(ctx, "Debug: Attempting retry %d, excluding channels: %v, shouldTryLowerPriorityFirst: %v",
-				retryTimes-i+1, getChannelIds(failedChannels), shouldTryLowerPriorityFirst)
+			logger.Infof(ctx, "Debug: Attempting retry %d, excluding channels: %v, shouldTryLowerPriorityFirst: %v, shouldTryLargerMaxTokensFirst: %v",
+				retryTimes-i+1, getChannelIds(failedChannels), shouldTryLowerPriorityFirst, shouldTryLargerMaxTokensFirst)
 		}
 
-		if shouldTryLowerPriorityFirst {
+		if shouldTryLargerMaxTokensFirst {
+			// For 413 errors, try larger max_tokens channels
+			channel, err = dbmodel.CacheGetRandomSatisfiedChannelExcluding(group, originalModel, false, failedChannels, true)
+		} else if shouldTryLowerPriorityFirst {
 			// For 429 errors, first try lower priority channels while excluding failed ones
-			channel, err = dbmodel.CacheGetRandomSatisfiedChannelExcluding(group, originalModel, true, failedChannels)
+			channel, err = dbmodel.CacheGetRandomSatisfiedChannelExcluding(group, originalModel, true, failedChannels, false)
 			if err != nil {
 				// If no lower priority channels available, try highest priority channels (excluding failed ones)
 				logger.Infof(ctx, "No lower priority channels available, trying highest priority channels, excluding: %v", getChannelIds(failedChannels))
-				channel, err = dbmodel.CacheGetRandomSatisfiedChannelExcluding(group, originalModel, false, failedChannels)
+				channel, err = dbmodel.CacheGetRandomSatisfiedChannelExcluding(group, originalModel, false, failedChannels, false)
 			}
 		} else {
 			// For non-429 errors, try highest priority first, then lower priority (excluding failed ones)
-			channel, err = dbmodel.CacheGetRandomSatisfiedChannelExcluding(group, originalModel, false, failedChannels)
+			channel, err = dbmodel.CacheGetRandomSatisfiedChannelExcluding(group, originalModel, false, failedChannels, false)
 			if err != nil {
 				logger.Infof(ctx, "No highest priority channels available, trying lower priority channels, excluding: %v", getChannelIds(failedChannels))
-				channel, err = dbmodel.CacheGetRandomSatisfiedChannelExcluding(group, originalModel, true, failedChannels)
+				channel, err = dbmodel.CacheGetRandomSatisfiedChannelExcluding(group, originalModel, true, failedChannels, false)
 			}
 		}
 
