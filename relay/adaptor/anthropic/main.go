@@ -53,6 +53,153 @@ func isModelSupportThinking(model string) bool {
 	return true
 }
 
+// ConvertClaudeRequest converts a Claude Messages API request to anthropic.Request format
+func ConvertClaudeRequest(c *gin.Context, claudeRequest model.ClaudeRequest) (*Request, error) {
+	// Convert tools
+	claudeTools := make([]Tool, 0, len(claudeRequest.Tools))
+	for _, tool := range claudeRequest.Tools {
+		// Convert InputSchema from any to InputSchema struct
+		var inputSchema InputSchema
+		if tool.InputSchema != nil {
+			if schemaMap, ok := tool.InputSchema.(map[string]any); ok {
+				if schemaType, exists := schemaMap["type"]; exists {
+					if typeStr, ok := schemaType.(string); ok {
+						inputSchema.Type = typeStr
+					}
+				}
+				if properties, exists := schemaMap["properties"]; exists {
+					inputSchema.Properties = properties
+				}
+				if required, exists := schemaMap["required"]; exists {
+					inputSchema.Required = required
+				}
+			}
+		}
+
+		claudeTools = append(claudeTools, Tool{
+			Name:        tool.Name,
+			Description: tool.Description,
+			InputSchema: inputSchema,
+		})
+	}
+
+	// Convert messages
+	claudeMessages := make([]Message, 0, len(claudeRequest.Messages))
+	for _, msg := range claudeRequest.Messages {
+		claudeMessage := Message{
+			Role: msg.Role,
+		}
+
+		// Convert content based on type
+		switch content := msg.Content.(type) {
+		case string:
+			// Simple string content
+			claudeMessage.Content = []Content{
+				{
+					Type: "text",
+					Text: content,
+				},
+			}
+		case []any:
+			// Structured content blocks
+			for _, block := range content {
+				if blockMap, ok := block.(map[string]any); ok {
+					contentBlock := Content{}
+					if blockType, exists := blockMap["type"]; exists {
+						if typeStr, ok := blockType.(string); ok {
+							contentBlock.Type = typeStr
+						}
+					}
+					if text, exists := blockMap["text"]; exists {
+						if textStr, ok := text.(string); ok {
+							contentBlock.Text = textStr
+						}
+					}
+					// Handle image content
+					if source, exists := blockMap["source"]; exists {
+						if sourceMap, ok := source.(map[string]any); ok {
+							contentBlock.Source = &ImageSource{}
+							if sourceType, exists := sourceMap["type"]; exists {
+								if typeStr, ok := sourceType.(string); ok {
+									contentBlock.Source.Type = typeStr
+								}
+							}
+							if mediaType, exists := sourceMap["media_type"]; exists {
+								if mediaTypeStr, ok := mediaType.(string); ok {
+									contentBlock.Source.MediaType = mediaTypeStr
+								}
+							}
+							if data, exists := sourceMap["data"]; exists {
+								if dataStr, ok := data.(string); ok {
+									contentBlock.Source.Data = dataStr
+								}
+							}
+						}
+					}
+					claudeMessage.Content = append(claudeMessage.Content, contentBlock)
+				}
+			}
+		default:
+			// Try to marshal and unmarshal as Content slice
+			contentBytes, err := json.Marshal(content)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to marshal message content")
+			}
+			var contentBlocks []Content
+			if err := json.Unmarshal(contentBytes, &contentBlocks); err != nil {
+				return nil, errors.Wrap(err, "failed to unmarshal message content")
+			}
+			claudeMessage.Content = contentBlocks
+		}
+
+		claudeMessages = append(claudeMessages, claudeMessage)
+	}
+
+	// Convert system prompt
+	var systemPrompt string
+	if claudeRequest.System != nil {
+		switch system := claudeRequest.System.(type) {
+		case string:
+			systemPrompt = system
+		case []any:
+			// For structured system content, extract text parts
+			var systemParts []string
+			for _, block := range system {
+				if blockMap, ok := block.(map[string]any); ok {
+					if text, exists := blockMap["text"]; exists {
+						if textStr, ok := text.(string); ok {
+							systemParts = append(systemParts, textStr)
+						}
+					}
+				}
+			}
+			systemPrompt = strings.Join(systemParts, "\n")
+		}
+	}
+
+	// Build the request
+	request := &Request{
+		Model:         claudeRequest.Model,
+		MaxTokens:     claudeRequest.MaxTokens,
+		Messages:      claudeMessages,
+		System:        systemPrompt,
+		Temperature:   claudeRequest.Temperature,
+		TopP:          claudeRequest.TopP,
+		Stream:        claudeRequest.Stream != nil && *claudeRequest.Stream,
+		StopSequences: claudeRequest.StopSequences,
+		Tools:         claudeTools,
+		ToolChoice:    claudeRequest.ToolChoice,
+		Thinking:      claudeRequest.Thinking,
+	}
+
+	// Handle TopK (convert from *int to int)
+	if claudeRequest.TopK != nil {
+		request.TopK = *claudeRequest.TopK
+	}
+
+	return request, nil
+}
+
 func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Request, error) {
 	claudeTools := make([]Tool, 0, len(textRequest.Tools))
 

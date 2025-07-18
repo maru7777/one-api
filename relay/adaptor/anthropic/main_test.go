@@ -918,3 +918,54 @@ func TestConvertRequest_BugScenario_FullWorkflow(t *testing.T) {
 		}
 	}
 }
+
+func TestConvertClaudeRequest_DirectPassthrough(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	// Create a proper test context with a request
+	req := httptest.NewRequest("POST", "/v1/messages", nil)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+
+	// Create an Anthropic adaptor instance
+	adaptor := &Adaptor{}
+
+	// Test Claude Messages request
+	claudeRequest := &model.ClaudeRequest{
+		Model:     "claude-3.5-sonnet",
+		MaxTokens: 1000,
+		Messages: []model.ClaudeMessage{
+			{
+				Role:    "user",
+				Content: "Hello, how are you?",
+			},
+		},
+		Temperature: func() *float64 { f := 0.7; return &f }(),
+		Stream:      func() *bool { b := false; return &b }(),
+	}
+
+	// Call ConvertClaudeRequest
+	result, err := adaptor.ConvertClaudeRequest(c, claudeRequest)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+
+	// Verify that the direct pass-through flag is set
+	directPassthrough, exists := c.Get("claude_direct_passthrough")
+	assert.True(t, exists, "claude_direct_passthrough flag should be set")
+	assert.True(t, directPassthrough.(bool), "claude_direct_passthrough should be true")
+
+	// Verify that claude_messages_native flag is set
+	nativeFlag, exists := c.Get("claude_messages_native")
+	assert.True(t, exists, "claude_messages_native flag should be set")
+	assert.True(t, nativeFlag.(bool), "claude_messages_native should be true")
+
+	// Verify that claude_model is set
+	model, exists := c.Get("claude_model")
+	assert.True(t, exists, "claude_model should be set")
+	assert.Equal(t, "claude-3.5-sonnet", model.(string), "claude_model should match request model")
+
+	// The result should be the original request (though it won't be used for marshaling)
+	// Since the interface returns any, we just verify it's not nil and the flags are set correctly
+	assert.NotNil(t, result, "result should not be nil")
+}

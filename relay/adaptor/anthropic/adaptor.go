@@ -12,6 +12,7 @@ import (
 	"github.com/songquanpeng/one-api/relay/adaptor"
 	"github.com/songquanpeng/one-api/relay/meta"
 	"github.com/songquanpeng/one-api/relay/model"
+	"github.com/songquanpeng/one-api/relay/relaymode"
 )
 
 type Adaptor struct {
@@ -24,7 +25,13 @@ func (a *Adaptor) Init(meta *meta.Meta) {
 // https://docs.anthropic.com/claude/reference/messages_post
 // anthopic migrate to Message API
 func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
-	return fmt.Sprintf("%s/v1/messages", meta.BaseURL), nil
+	// Handle different relay modes for Anthropic
+	switch meta.Mode {
+	case relaymode.ClaudeMessages:
+		return fmt.Sprintf("%s/v1/messages", meta.BaseURL), nil
+	default:
+		return fmt.Sprintf("%s/v1/messages", meta.BaseURL), nil
+	}
 }
 
 func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Request, meta *meta.Meta) error {
@@ -70,6 +77,33 @@ func (a *Adaptor) ConvertImageRequest(_ *gin.Context, request *model.ImageReques
 	if request == nil {
 		return nil, errors.New("request is nil")
 	}
+	return request, nil
+}
+
+// ConvertClaudeRequest implements direct pass-through for Claude Messages API requests.
+// Instead of converting the request format, this method:
+// 1. Parses the request for billing/token counting purposes
+// 2. Sets flags to use the original request body directly for upstream calls
+// 3. Ensures maximum compatibility with Anthropic's API by avoiding conversion artifacts
+func (a *Adaptor) ConvertClaudeRequest(c *gin.Context, request *model.ClaudeRequest) (any, error) {
+	if request == nil {
+		return nil, errors.New("request is nil")
+	}
+
+	c.Set("claude_model", request.Model)
+	// Mark this as a native Claude Messages request (no conversion needed)
+	c.Set("claude_messages_native", true)
+	// Set flag to use direct pass-through instead of conversion
+	c.Set("claude_direct_passthrough", true)
+
+	// Still parse the request for billing purposes, but we won't use the converted result
+	// The original request body will be forwarded directly for better compatibility
+	_, err := ConvertClaudeRequest(c, *request)
+	if err != nil {
+		return nil, err
+	}
+
+	// Return the original request - this won't be marshaled since we use direct pass-through
 	return request, nil
 }
 
