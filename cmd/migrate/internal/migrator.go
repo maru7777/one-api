@@ -78,7 +78,14 @@ func (m *Migrator) Migrate(ctx context.Context) error {
 		return fmt.Errorf("data migration failed: %w", err)
 	}
 
-	// Step 6: Validate migration results
+	// Step 6: Fix PostgreSQL sequences (if target is PostgreSQL)
+	if !m.DryRun && m.targetConn.Type == "postgres" {
+		if err := m.fixPostgreSQLSequences(); err != nil {
+			return fmt.Errorf("PostgreSQL sequence fix failed: %w", err)
+		}
+	}
+
+	// Step 7: Validate migration results
 	if !m.DryRun {
 		if err := m.validateResults(stats); err != nil {
 			return fmt.Errorf("migration validation failed: %w", err)
@@ -337,4 +344,71 @@ type TablePlan struct {
 	Name        string `json:"name"`
 	RecordCount int64  `json:"record_count"`
 	Exists      bool   `json:"exists"`
+}
+
+// fixPostgreSQLSequences updates PostgreSQL sequences to match the maximum ID values
+// This is necessary after migrating data from other databases to ensure new records
+// get correct auto-increment IDs
+func (m *Migrator) fixPostgreSQLSequences() error {
+	logger.SysLog("Fixing PostgreSQL sequences after data migration...")
+
+	// Define tables that have auto-increment ID columns
+	tablesWithSequences := []string{
+		"users",
+		"tokens",
+		"channels",
+		"options",
+		"redemptions",
+		"abilities",
+		"logs",
+		"user_request_costs",
+	}
+
+	for _, tableName := range tablesWithSequences {
+		if err := m.fixTableSequence(tableName); err != nil {
+			logger.SysWarn(fmt.Sprintf("Failed to fix sequence for table %s: %v", tableName, err))
+			// Continue with other tables instead of failing completely
+			continue
+		}
+		logger.SysLog(fmt.Sprintf("Fixed sequence for table: %s", tableName))
+	}
+
+	logger.SysLog("PostgreSQL sequence fixing completed")
+	return nil
+}
+
+// fixTableSequence fixes the sequence for a specific table
+func (m *Migrator) fixTableSequence(tableName string) error {
+	// First check if the table exists and has records
+	var count int64
+	if err := m.targetConn.DB.Table(tableName).Count(&count).Error; err != nil {
+		return fmt.Errorf("failed to count records in table %s: %w", tableName, err)
+	}
+
+	if count == 0 {
+		logger.SysLog(fmt.Sprintf("Table %s is empty, skipping sequence fix", tableName))
+		return nil
+	}
+
+	// Get the maximum ID value from the table
+	var maxID int64
+	if err := m.targetConn.DB.Table(tableName).Select("COALESCE(MAX(id), 0)").Scan(&maxID).Error; err != nil {
+		return fmt.Errorf("failed to get max ID from table %s: %w", tableName, err)
+	}
+
+	if maxID == 0 {
+		logger.SysLog(fmt.Sprintf("Table %s has no valid IDs, skipping sequence fix", tableName))
+		return nil
+	}
+
+	// Update the sequence to start from maxID + 1
+	sequenceName := tableName + "_id_seq"
+	sql := fmt.Sprintf("SELECT setval('%s', %d, true)", sequenceName, maxID)
+
+	if err := m.targetConn.DB.Exec(sql).Error; err != nil {
+		return fmt.Errorf("failed to update sequence %s: %w", sequenceName, err)
+	}
+
+	logger.SysLog(fmt.Sprintf("Updated sequence %s to start from %d", sequenceName, maxID+1))
+	return nil
 }

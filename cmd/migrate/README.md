@@ -128,7 +128,8 @@ The migration tool follows these steps:
 2. **Pre-migration Validation**: Check compatibility, data integrity, and potential issues
 3. **Schema Migration**: Create tables in target database using GORM auto-migration
 4. **Data Migration**: Transfer data in batches with progress tracking
-5. **Post-migration Validation**: Verify data integrity and record counts
+5. **PostgreSQL Sequence Fix**: Update PostgreSQL sequences to match maximum ID values (PostgreSQL targets only)
+6. **Post-migration Validation**: Verify data integrity and record counts
 
 ## Tables Migrated
 
@@ -142,6 +143,17 @@ The tool migrates all One API tables in the correct order to respect foreign key
 6. `abilities` - Channel abilities and permissions
 7. `logs` - Usage and system logs
 8. `user_request_costs` - Request cost tracking
+
+## PostgreSQL Sequence Management
+
+When migrating **to PostgreSQL** from other databases, the tool automatically handles sequence management:
+
+- **Problem**: PostgreSQL uses sequences for auto-increment columns, but migrated data retains original ID values while sequences start from 1
+- **Solution**: The tool automatically updates all PostgreSQL sequences to start from the maximum migrated ID value + 1
+- **Tables Handled**: All tables with auto-increment ID columns (users, tokens, channels, options, redemptions, abilities, logs, user_request_costs)
+- **Logging**: Detailed logs show which sequences were updated and their new starting values
+
+This ensures that new records created after migration will have correct, non-conflicting ID values.
 
 ## Best Practices
 
