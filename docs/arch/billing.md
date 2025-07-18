@@ -276,43 +276,43 @@ Each channel adapter implements its own comprehensive pricing logic. As of the l
 classDiagram
     class Adaptor {
         <<interface>>
-        +GetDefaultModelPricing() map[string]ModelPrice
+        +GetDefaultModelPricing() map[string]ModelConfig
         +GetModelRatio(modelName string) float64
         +GetCompletionRatio(modelName string) float64
     }
 
     class DefaultPricingMethods {
-        +GetDefaultModelPricing() map[string]ModelPrice
+        +GetDefaultModelPricing() map[string]ModelConfig
         +GetModelRatio(modelName string) float64
         +GetCompletionRatio(modelName string) float64
     }
 
     class OpenAIAdaptor {
-        +GetDefaultModelPricing() map[string]ModelPrice
+        +GetDefaultModelPricing() map[string]ModelConfig
         +GetModelRatio(modelName string) float64
         +GetCompletionRatio(modelName string) float64
     }
 
     class AnthropicAdaptor {
-        +GetDefaultModelPricing() map[string]ModelPrice
+        +GetDefaultModelPricing() map[string]ModelConfig
         +GetModelRatio(modelName string) float64
         +GetCompletionRatio(modelName string) float64
     }
 
     class AliAdaptor {
-        +GetDefaultModelPricing() map[string]ModelPrice
+        +GetDefaultModelPricing() map[string]ModelConfig
         +GetModelRatio(modelName string) float64
         +GetCompletionRatio(modelName string) float64
     }
 
     class GeminiAdaptor {
-        +GetDefaultModelPricing() map[string]ModelPrice
+        +GetDefaultModelPricing() map[string]ModelConfig
         +GetModelRatio(modelName string) float64
         +GetCompletionRatio(modelName string) float64
     }
 
     class ReplicateAdaptor {
-        +GetDefaultModelPricing() map[string]ModelPrice
+        +GetDefaultModelPricing() map[string]ModelConfig
         +GetModelRatio(modelName string) float64
         +GetCompletionRatio(modelName string) float64
     }
@@ -467,7 +467,7 @@ const (
 ### Model Pricing Structure
 
 ```go
-type ModelPrice struct {
+type ModelConfig struct {
     Ratio           float64 `json:"ratio"`
     CompletionRatio float64 `json:"completion_ratio,omitempty"`
 }
@@ -483,7 +483,7 @@ The global pricing manager automatically merges pricing from selected adapters o
 
 ```go
 type GlobalPricingManager struct {
-    globalModelPricing    map[string]adaptor.ModelPrice
+    globalModelPricing    map[string]adaptor.ModelConfig
     contributingAdapters  []int // API types to include
     getAdaptorFunc        func(apiType int) adaptor.Adaptor
 }
@@ -854,10 +854,10 @@ graph TD
 
 ```go
 // Each adapter implements comprehensive pricing
-func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelConfig {
     const MilliTokensUsd = 0.000001
 
-    return map[string]adaptor.ModelPrice{
+    return map[string]adaptor.ModelConfig{
         "model-name": {
             Ratio:           0.001 * MilliTokensUsd,  // Input pricing
             CompletionRatio: 3.0,                     // Output multiplier
@@ -922,9 +922,9 @@ type Adaptor struct {
     // No DefaultPricingMethods embedding
 }
 
-func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelConfig {
     // Comprehensive pricing implementation
-    return map[string]adaptor.ModelPrice{
+    return map[string]adaptor.ModelConfig{
         // ... detailed pricing for all supported models
     }
 }
@@ -1023,7 +1023,7 @@ graph TD
 2. **Smart Fallback**: Global pricing system merges from selected adapters automatically
 3. **Maintainability**: Each adapter manages its own pricing independently
 4. **Flexibility**: Four-layer system handles any pricing scenario
-5. **Type safety**: Structured pricing with `ModelPrice` interface
+5. **Type safety**: Structured pricing with `ModelConfig` interface
 6. **Custom Channel Support**: Automatic pricing for custom channels with common models
 7. **Configurable Fallback**: Easily configurable global pricing adapters
 8. **Conflict Resolution**: Transparent handling of pricing conflicts between adapters

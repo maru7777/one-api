@@ -145,6 +145,12 @@ func (m Message) ParseContent() []MessageContent {
 		return contentList
 	}
 
+	// Handle []MessageContent directly
+	messageContentList, ok := m.Content.([]MessageContent)
+	if ok {
+		return messageContentList
+	}
+
 	anyList, ok := m.Content.([]any)
 	if ok {
 		for _, contentItem := range anyList {

@@ -385,7 +385,8 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 						var channelModelRatio map[string]float64
 						if channelModel, ok := c.Get(ctxkey.ChannelModel); ok {
 							if channel, ok := channelModel.(*dbmodel.Channel); ok {
-								channelModelRatio = channel.GetModelRatio()
+								// Get from unified ModelConfigs only (after migration)
+								channelModelRatio = channel.GetModelRatioFromConfigs()
 							}
 						}
 
@@ -415,7 +416,7 @@ func (a *Adaptor) GetChannelName() string {
 }
 
 // Pricing methods - OpenAI adapter manages its own model pricing
-func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelConfig {
 	return ModelRatios
 }
 

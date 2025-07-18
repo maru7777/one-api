@@ -233,19 +233,42 @@ func SearchLogsByDayAndModel(userId, start, end int) (LogStatistics []*LogStatis
 		groupSelect = "strftime('%Y-%m-%d', datetime(created_at, 'unixepoch')) as day"
 	}
 
-	err = LOG_DB.Raw(`
-		SELECT `+groupSelect+`,
-		model_name, count(1) as request_count,
-		sum(quota) as quota,
-		sum(prompt_tokens) as prompt_tokens,
-		sum(completion_tokens) as completion_tokens
-		FROM logs
-		WHERE type=2
-		AND user_id= ?
-		AND created_at BETWEEN ? AND ?
-		GROUP BY day, model_name
-		ORDER BY day, model_name
-	`, userId, start, end).Scan(&LogStatistics).Error
+	// If userId is 0, query all users (site-wide statistics)
+	var query string
+	var args []interface{}
+
+	if userId == 0 {
+		query = `
+			SELECT ` + groupSelect + `,
+			model_name, count(1) as request_count,
+			sum(quota) as quota,
+			sum(prompt_tokens) as prompt_tokens,
+			sum(completion_tokens) as completion_tokens
+			FROM logs
+			WHERE type=2
+			AND created_at BETWEEN ? AND ?
+			GROUP BY day, model_name
+			ORDER BY day, model_name
+		`
+		args = []interface{}{start, end}
+	} else {
+		query = `
+			SELECT ` + groupSelect + `,
+			model_name, count(1) as request_count,
+			sum(quota) as quota,
+			sum(prompt_tokens) as prompt_tokens,
+			sum(completion_tokens) as completion_tokens
+			FROM logs
+			WHERE type=2
+			AND user_id= ?
+			AND created_at BETWEEN ? AND ?
+			GROUP BY day, model_name
+			ORDER BY day, model_name
+		`
+		args = []interface{}{userId, start, end}
+	}
+
+	err = LOG_DB.Raw(query, args...).Scan(&LogStatistics).Error
 
 	return LogStatistics, err
 }

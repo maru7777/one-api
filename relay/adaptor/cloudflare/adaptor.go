@@ -101,13 +101,13 @@ func (a *Adaptor) GetChannelName() string {
 }
 
 // Pricing methods - Cloudflare adapter manages its own model pricing
-func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelConfig {
 	const MilliTokensUsd = 0.000001
 
 	// Direct map definition - much easier to maintain and edit
 	// Pricing from https://developers.cloudflare.com/workers-ai/platform/pricing/
 	// Cloudflare Workers AI has very competitive pricing
-	return map[string]adaptor.ModelPrice{
+	return map[string]adaptor.ModelConfig{
 		// Meta Llama Models
 		"@cf/meta/llama-3.1-8b-instruct":         {Ratio: 0.125 * MilliTokensUsd, CompletionRatio: 1}, // $0.125 per 1M tokens
 		"@cf/meta/llama-2-7b-chat-fp16":          {Ratio: 0.125 * MilliTokensUsd, CompletionRatio: 1}, // $0.125 per 1M tokens

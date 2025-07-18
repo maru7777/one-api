@@ -105,7 +105,7 @@ func (a *Adaptor) GetChannelName() string {
 }
 
 // Pricing methods - Gemini adapter manages its own model pricing
-func (a *Adaptor) GetDefaultModelPricing() map[string]channelhelper.ModelPrice {
+func (a *Adaptor) GetDefaultModelPricing() map[string]channelhelper.ModelConfig {
 	const MilliTokensUsd = 0.000001
 
 	// Direct map definition - much easier to maintain and edit

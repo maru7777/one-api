@@ -17,7 +17,7 @@ import (
 // ModelRatios contains all supported models and their pricing ratios
 // Model list is derived from the keys of this map, eliminating redundancy
 // Based on VertexAI Claude pricing: https://cloud.google.com/vertex-ai/generative-ai/pricing
-var ModelRatios = map[string]adaptor.ModelPrice{
+var ModelRatios = map[string]adaptor.ModelConfig{
 	// Claude Models on VertexAI
 	"claude-3-haiku@20240307":       {Ratio: 0.25 * ratio.MilliTokensUsd, CompletionRatio: 5.0}, // $0.25/$1.25 per 1M tokens
 	"claude-3-opus@20240229":        {Ratio: 15.0 * ratio.MilliTokensUsd, CompletionRatio: 5.0}, // $15/$75 per 1M tokens

@@ -92,12 +92,12 @@ func (a *Adaptor) DoRequest(c *gin.Context, meta *meta.Meta, requestBody io.Read
 }
 
 // Pricing methods - AWS adapter manages its own model pricing
-func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelConfig {
 	const MilliTokensUsd = 0.000001
 
 	// Direct map definition - much easier to maintain and edit
 	// Pricing from https://aws.amazon.com/bedrock/pricing/
-	return map[string]adaptor.ModelPrice{
+	return map[string]adaptor.ModelConfig{
 		// Claude Models on AWS Bedrock
 		"claude-instant-1.2":         {Ratio: 0.8 * MilliTokensUsd, CompletionRatio: 3.125}, // $0.8/$2.5 per 1K tokens
 		"claude-2.0":                 {Ratio: 8 * MilliTokensUsd, CompletionRatio: 3.125},   // $8/$25 per 1K tokens

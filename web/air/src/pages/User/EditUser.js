@@ -132,10 +132,32 @@ const EditUser = (props) => {
         onCancel={() => handleCancel()}
         width={isMobile() ? '100%' : 600}
       >
-        <Spin spinning={loading}>
-          <div style={{ marginTop: 20 }}>
-            <Typography.Text>用户名</Typography.Text>
+        {loading ? (
+          <div style={{
+            minHeight: '400px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'var(--semi-color-bg-2)',
+            borderRadius: '8px',
+            margin: '1rem 0'
+          }}>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '1rem',
+              color: 'var(--semi-color-text-1)'
+            }}>
+              <Spin size="large" />
+              <span>正在加载用户信息...</span>
+            </div>
           </div>
+        ) : (
+          <>
+            <div style={{ marginTop: 20 }}>
+              <Typography.Text>用户名</Typography.Text>
+            </div>
           <Input
             label="用户名"
             name="username"
@@ -268,7 +290,8 @@ const EditUser = (props) => {
               )}
             </>
           )}
-        </Spin>
+          </>
+        )}
       </SideSheet>
     </>
   );

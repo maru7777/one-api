@@ -42,7 +42,7 @@ func buildTestRequest(model string) *relaymodel.GeneralOpenAIRequest {
 		model = "gpt-4o-mini"
 	}
 	testRequest := &relaymodel.GeneralOpenAIRequest{
-		MaxTokens: 1024,
+		MaxTokens: config.TestMaxTokens,
 		Model:     model,
 	}
 	testMessage := relaymodel.Message{

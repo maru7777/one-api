@@ -12,10 +12,25 @@ import (
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/model"
 )
+
+func setupTestDB(t *testing.T) *gorm.DB {
+	// Create in-memory SQLite database for testing
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+
+	// Auto-migrate the tables
+	err = db.AutoMigrate(&model.User{}, &model.Channel{}, &model.Token{}, &model.Option{}, &model.Redemption{}, &model.Ability{}, &model.Log{}, &model.UserRequestCost{})
+	require.NoError(t, err)
+
+	return db
+}
 
 func setupTestRouter() *gin.Engine {
 	gin.SetMode(gin.TestMode)
@@ -26,6 +41,51 @@ func setupTestRouter() *gin.Engine {
 	router.Use(sessions.Sessions("test-session", store))
 
 	return router
+}
+
+func setupTestEnvironment(t *testing.T) (*gorm.DB, func()) {
+	// Setup test database
+	testDB := setupTestDB(t)
+
+	// Store original DB and replace with test DB
+	originalDB := model.DB
+	originalLogDB := model.LOG_DB
+	model.DB = testDB
+	model.LOG_DB = testDB // Use same DB for logging in tests
+
+	// Set SQLite flag for proper query handling
+	originalUsingSQLite := common.UsingSQLite
+	common.UsingSQLite = true
+
+	// Disable Redis for testing to use memory-based rate limiting
+	originalRedisEnabled := common.RedisEnabled
+	common.RedisEnabled = false
+
+	// Create a test user for TOTP tests
+	testUser := &model.User{
+		Id:          1,
+		Username:    "testuser",
+		Password:    "hashedpassword",
+		Role:        model.RoleCommonUser,
+		Status:      model.UserStatusEnabled,
+		DisplayName: "Test User",
+		Email:       "test@example.com",
+		AccessToken: "test-access-token-1",
+		AffCode:     "TEST1",
+		TotpSecret:  "",
+	}
+	err := testDB.Create(testUser).Error
+	require.NoError(t, err)
+
+	// Return cleanup function
+	cleanup := func() {
+		model.DB = originalDB
+		model.LOG_DB = originalLogDB
+		common.UsingSQLite = originalUsingSQLite
+		common.RedisEnabled = originalRedisEnabled
+	}
+
+	return testDB, cleanup
 }
 
 func TestTotpBasicFunctionality(t *testing.T) {
@@ -53,6 +113,9 @@ func TestTotpBasicFunctionality(t *testing.T) {
 }
 
 func TestSetupTotp(t *testing.T) {
+	_, cleanup := setupTestEnvironment(t)
+	defer cleanup()
+
 	router := setupTestRouter()
 	router.GET("/totp/setup", func(c *gin.Context) {
 		// Mock user ID in context
@@ -64,33 +127,84 @@ func TestSetupTotp(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	// Note: This test will fail because we don't have a real database
-	// In a real test environment, you would mock the database
 	assert.Equal(t, http.StatusOK, w.Code)
+
+	// Parse response to verify TOTP setup data
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.True(t, response["success"].(bool))
+
+	data := response["data"].(map[string]interface{})
+	assert.NotEmpty(t, data["secret"])
+	assert.NotEmpty(t, data["qr_code"])
 }
 
 func TestTotpSetupRequest(t *testing.T) {
+	_, cleanup := setupTestEnvironment(t)
+	defer cleanup()
+
 	router := setupTestRouter()
+
+	// First, set up TOTP to get a secret in session
+	router.GET("/totp/setup", func(c *gin.Context) {
+		c.Set("id", 1)
+		SetupTotp(c)
+	})
+
 	router.POST("/totp/confirm", func(c *gin.Context) {
-		// Mock user ID in context
 		c.Set("id", 1)
 		ConfirmTotp(c)
 	})
 
-	// Test with valid request
+	// Step 1: Call setup to get secret and store it in session
+	setupReq, _ := http.NewRequest("GET", "/totp/setup", nil)
+	setupW := httptest.NewRecorder()
+	router.ServeHTTP(setupW, setupReq)
+
+	assert.Equal(t, http.StatusOK, setupW.Code)
+
+	// Parse setup response to get the secret
+	var setupResponse map[string]interface{}
+	err := json.Unmarshal(setupW.Body.Bytes(), &setupResponse)
+	assert.NoError(t, err)
+	assert.True(t, setupResponse["success"].(bool))
+
+	data := setupResponse["data"].(map[string]interface{})
+	secret := data["secret"].(string)
+
+	// Step 2: Generate a valid TOTP code using the secret from setup
+	totp, err := gcrypto.NewTOTP(gcrypto.OTPArgs{
+		Base32Secret: secret,
+	})
+	require.NoError(t, err)
+	validCode := totp.Key()
+
+	// Step 3: Confirm TOTP with the valid code
+	// We need to use the same session, so we'll extract cookies from setup response
 	reqBody := TotpSetupRequest{
-		TotpCode: "123456",
+		TotpCode: validCode,
 	}
 	jsonBody, _ := json.Marshal(reqBody)
 
-	req, _ := http.NewRequest("POST", "/totp/confirm", bytes.NewBuffer(jsonBody))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+	confirmReq, _ := http.NewRequest("POST", "/totp/confirm", bytes.NewBuffer(jsonBody))
+	confirmReq.Header.Set("Content-Type", "application/json")
 
-	// Note: This test will fail because we don't have a real database
-	// In a real test environment, you would mock the database
-	assert.Equal(t, http.StatusOK, w.Code)
+	// Copy cookies from setup request to maintain session
+	for _, cookie := range setupW.Result().Cookies() {
+		confirmReq.AddCookie(cookie)
+	}
+
+	confirmW := httptest.NewRecorder()
+	router.ServeHTTP(confirmW, confirmReq)
+
+	assert.Equal(t, http.StatusOK, confirmW.Code)
+
+	// Parse response to verify success
+	var confirmResponse map[string]interface{}
+	err = json.Unmarshal(confirmW.Body.Bytes(), &confirmResponse)
+	assert.NoError(t, err)
+	assert.True(t, confirmResponse["success"].(bool))
 }
 
 func TestLoginRequest(t *testing.T) {
@@ -152,6 +266,9 @@ func TestTotpCodeGeneration(t *testing.T) {
 }
 
 func TestTotpReplayProtection(t *testing.T) {
+	_, cleanup := setupTestEnvironment(t)
+	defer cleanup()
+
 	// Test TOTP replay protection
 	secret := "JBSWY3DPEHPK3PXP"
 	userId := 123
@@ -174,6 +291,9 @@ func TestTotpReplayProtection(t *testing.T) {
 }
 
 func TestTotpSecurityFunctions(t *testing.T) {
+	_, cleanup := setupTestEnvironment(t)
+	defer cleanup()
+
 	userId := 456
 	code := "123456"
 
@@ -195,33 +315,74 @@ func TestTotpSecurityFunctions(t *testing.T) {
 }
 
 func TestAdminDisableUserTotp(t *testing.T) {
+	testDB, cleanup := setupTestEnvironment(t)
+	defer cleanup()
+
+	// Create an admin user
+	adminUser := &model.User{
+		Id:          2,
+		Username:    "admin",
+		Password:    "hashedpassword",
+		Role:        model.RoleAdminUser,
+		Status:      model.UserStatusEnabled,
+		DisplayName: "Admin User",
+		Email:       "admin@example.com",
+		AccessToken: "test-access-token-2",
+		AffCode:     "ADMIN",
+	}
+	err := testDB.Create(adminUser).Error
+	require.NoError(t, err)
+
+	// Create a target user with TOTP enabled
+	targetUser := &model.User{
+		Id:          3,
+		Username:    "target",
+		Password:    "hashedpassword",
+		Role:        model.RoleCommonUser,
+		Status:      model.UserStatusEnabled,
+		DisplayName: "Target User",
+		Email:       "target@example.com",
+		AccessToken: "test-access-token-3",
+		AffCode:     "TARG3",
+		TotpSecret:  "JBSWY3DPEHPK3PXP",
+	}
+	err = testDB.Create(targetUser).Error
+	require.NoError(t, err)
+
 	router := setupTestRouter()
 	router.POST("/admin/totp/disable/:id", func(c *gin.Context) {
 		// Mock admin user context
-		c.Set("id", 1)                     // Admin user ID
+		c.Set("id", 2)                     // Admin user ID
 		c.Set("role", model.RoleAdminUser) // Admin role
 		AdminDisableUserTotp(c)
 	})
 
-	// Test with invalid user ID
-	req, _ := http.NewRequest("POST", "/admin/totp/disable/invalid", nil)
+	// Test with valid user ID
+	req, _ := http.NewRequest("POST", "/admin/totp/disable/3", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
 
+	// Parse response to verify success
 	var response map[string]interface{}
-	err := json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.True(t, response["success"].(bool))
+
+	// Verify that TOTP secret was cleared from database
+	var updatedUser model.User
+	err = testDB.First(&updatedUser, 3).Error
+	assert.NoError(t, err)
+	assert.Empty(t, updatedUser.TotpSecret)
+
+	// Test with invalid user ID
+	req, _ = http.NewRequest("POST", "/admin/totp/disable/invalid", nil)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	err = json.Unmarshal(w.Body.Bytes(), &response)
 	assert.NoError(t, err)
 	assert.False(t, response["success"].(bool))
 	assert.Equal(t, "Invalid user ID", response["message"])
-
-	// Test with missing user ID
-	req, _ = http.NewRequest("POST", "/admin/totp/disable/", nil)
-	w = httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusNotFound, w.Code) // Route not found
-
-	// Note: Testing with real database operations would require
-	// proper database setup and mocking, which is beyond the scope
-	// of this basic functionality test
 }

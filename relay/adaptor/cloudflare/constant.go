@@ -8,7 +8,7 @@ import (
 // ModelRatios contains all supported models and their pricing ratios
 // Model list is derived from the keys of this map, eliminating redundancy
 // Based on Cloudflare Workers AI pricing - most models are free or very low cost
-var ModelRatios = map[string]adaptor.ModelPrice{
+var ModelRatios = map[string]adaptor.ModelConfig{
 	// Meta Llama Models
 	"@cf/meta/llama-3.1-8b-instruct":         {Ratio: 0.1 * ratio.MilliTokensUsd, CompletionRatio: 1},
 	"@cf/meta/llama-2-7b-chat-fp16":          {Ratio: 0.1 * ratio.MilliTokensUsd, CompletionRatio: 1},

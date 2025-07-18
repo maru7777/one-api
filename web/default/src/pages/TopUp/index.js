@@ -108,7 +108,7 @@ const TopUp = () => {
                   }}
                 >
                   <Card.Header>
-                    <Header as='h3' style={{ color: '#2185d0', margin: '1em' }}>
+                    <Header as='h3' style={{ color: 'var(--button-primary)', margin: '1em' }}>
                       <i className='credit card icon'></i>
                       {t('topup.get_code.title')}
                     </Header>
@@ -130,7 +130,7 @@ const TopUp = () => {
                     >
                       <div style={{ textAlign: 'center', paddingTop: '1em' }}>
                         <Statistic>
-                          <Statistic.Value style={{ color: '#2185d0' }}>
+                          <Statistic.Value style={{ color: 'var(--button-primary)' }}>
                             {renderQuota(userQuota, t)}
                           </Statistic.Value>
                           <Statistic.Label>
@@ -173,7 +173,7 @@ const TopUp = () => {
                   }}
                 >
                   <Card.Header>
-                    <Header as='h3' style={{ color: '#21ba45', margin: '1em' }}>
+                    <Header as='h3' style={{ color: 'var(--success-color)', margin: '1em' }}>
                       <i className='ticket alternate icon'></i>
                       {t('topup.redeem_code.title')}
                     </Header>

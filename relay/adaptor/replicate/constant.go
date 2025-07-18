@@ -8,7 +8,7 @@ import (
 // ModelRatios contains all supported models and their pricing ratios
 // Model list is derived from the keys of this map, eliminating redundancy
 // Based on Replicate pricing: https://replicate.com/pricing
-var ModelRatios = map[string]adaptor.ModelPrice{
+var ModelRatios = map[string]adaptor.ModelConfig{
 	// -------------------------------------
 	// Image Generation Models
 	// -------------------------------------

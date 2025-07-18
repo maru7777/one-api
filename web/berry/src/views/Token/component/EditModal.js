@@ -20,7 +20,9 @@ import {
   Checkbox,
   TextField,
   Switch,
-  FormHelperText
+  FormHelperText,
+  Box,
+  Typography
 } from '@mui/material';
 
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -56,6 +58,7 @@ const originInputs = {
 
 const EditModal = ({ open, tokenId, onCancel, onOk }) => {
   const theme = useTheme();
+  const [loading, setLoading] = useState(false);
   const [inputs, setInputs] = useState(originInputs);
   const [modelOptions, setModelOptions] = useState([]);
 
@@ -87,8 +90,10 @@ const EditModal = ({ open, tokenId, onCancel, onOk }) => {
   };
 
   const loadToken = async () => {
-    let res = await API.get(`/api/token/${tokenId}`);
-    const { success, message, data } = res.data;
+    setLoading(true);
+    try {
+      let res = await API.get(`/api/token/${tokenId}`);
+      const { success, message, data } = res.data;
     if (success) {
       data.is_edit = true;
       if (data.models === '') {
@@ -99,6 +104,11 @@ const EditModal = ({ open, tokenId, onCancel, onOk }) => {
       setInputs(data);
     } else {
       showError(message);
+    }
+    } catch (error) {
+      showError(error.message);
+    } finally {
+      setLoading(false);
     }
   };
   const loadAvailableModels = async () => {
@@ -135,9 +145,36 @@ const EditModal = ({ open, tokenId, onCancel, onOk }) => {
       </DialogTitle>
       <Divider />
       <DialogContent>
-        <Alert severity="info">注意，令牌的额度仅用于限制令牌本身的最大额度使用量，实际的使用受到账户的剩余额度限制。</Alert>
-        <Formik initialValues={inputs} enableReinitialize validationSchema={validationSchema} onSubmit={submit}>
-          {({ errors, handleBlur, handleChange, handleSubmit, touched, values, setFieldError, setFieldValue, isSubmitting }) => (
+        {loading ? (
+          <Box
+            sx={{
+              minHeight: '400px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'background.paper',
+              borderRadius: '8px',
+              margin: '1rem 0'
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '1rem',
+                color: 'text.secondary'
+              }}
+            >
+              <div className="ui active inline loader"></div>
+              <Typography>正在加载令牌信息...</Typography>
+            </Box>
+          </Box>
+        ) : (
+          <>
+            <Alert severity="info">注意，令牌的额度仅用于限制令牌本身的最大额度使用量，实际的使用受到账户的剩余额度限制。</Alert>
+            <Formik initialValues={inputs} enableReinitialize validationSchema={validationSchema} onSubmit={submit}>
+              {({ errors, handleBlur, handleChange, handleSubmit, touched, values, setFieldError, setFieldValue, isSubmitting }) => (
             <form noValidate onSubmit={handleSubmit}>
               <FormControl fullWidth error={Boolean(touched.name && errors.name)} sx={{ ...theme.typography.otherInput }}>
                 <InputLabel htmlFor="channel-name-label">名称</InputLabel>
@@ -304,6 +341,8 @@ const EditModal = ({ open, tokenId, onCancel, onOk }) => {
             </form>
           )}
         </Formik>
+        </>
+        )}
       </DialogContent>
     </Dialog>
   );

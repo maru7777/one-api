@@ -8,7 +8,7 @@ import (
 // ModelRatios contains all supported models and their pricing ratios
 // Model list is derived from the keys of this map, eliminating redundancy
 // Based on Xunfei pricing: https://www.xfyun.cn/doc/spark/Web.html#_1-%E6%8E%A5%E5%8F%A3%E8%AF%B4%E6%98%8E
-var ModelRatios = map[string]adaptor.ModelPrice{
+var ModelRatios = map[string]adaptor.ModelConfig{
 	// Spark Lite Models
 	"Spark-Lite": {Ratio: 0.3 * ratio.MilliTokensRmb, CompletionRatio: 1},
 

@@ -8,7 +8,7 @@ import (
 // ModelRatios contains all supported models and their pricing ratios
 // Model list is derived from the keys of this map, eliminating redundancy
 // Ollama is typically free for local usage, but we set minimal pricing for consistency
-var ModelRatios = map[string]adaptor.ModelPrice{
+var ModelRatios = map[string]adaptor.ModelConfig{
 	// Ollama Models - typically free for local usage
 	"codellama:7b-instruct": {Ratio: 0.01 * ratio.MilliTokensUsd, CompletionRatio: 1},
 	"llama2:7b":             {Ratio: 0.01 * ratio.MilliTokensUsd, CompletionRatio: 1},

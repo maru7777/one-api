@@ -333,15 +333,109 @@ func GetUser(c *gin.Context) {
 
 func GetUserDashboard(c *gin.Context) {
 	id := c.GetInt(ctxkey.Id)
+	role := c.GetInt(ctxkey.Role)
 	now := time.Now()
-	startOfDay := now.Truncate(24*time.Hour).AddDate(0, 0, -6).Unix()
-	endOfDay := now.Truncate(24 * time.Hour).Add(24*time.Hour - time.Second).Unix()
 
-	dashboards, err := model.SearchLogsByDayAndModel(id, int(startOfDay), int(endOfDay))
+	// Parse date range parameters
+	fromDateStr := c.Query("from_date")
+	toDateStr := c.Query("to_date")
+
+	var startOfDay, endOfDay int64
+
+	if fromDateStr != "" && toDateStr != "" {
+		// Parse custom date range
+		fromDate, err := time.Parse("2006-01-02", fromDateStr)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "Invalid from_date format, expected YYYY-MM-DD",
+				"data":    nil,
+			})
+			return
+		}
+
+		toDate, err := time.Parse("2006-01-02", toDateStr)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "Invalid to_date format, expected YYYY-MM-DD",
+				"data":    nil,
+			})
+			return
+		}
+
+		// Validate date range limits based on user role
+		daysDiff := int(toDate.Sub(fromDate).Hours() / 24)
+		maxDays := 7 // Default for regular users
+		if role == model.RoleRootUser {
+			maxDays = 365 // Root users can query up to 1 year
+		}
+
+		if daysDiff > maxDays {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": fmt.Sprintf("Date range too large. Maximum allowed: %d days", maxDays),
+				"data":    nil,
+			})
+			return
+		}
+
+		if daysDiff < 0 {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "from_date must be before to_date",
+				"data":    nil,
+			})
+			return
+		}
+
+		startOfDay = fromDate.Truncate(24 * time.Hour).Unix()
+		endOfDay = toDate.Truncate(24 * time.Hour).Add(24*time.Hour - time.Second).Unix()
+	} else {
+		// Default to last 7 days
+		startOfDay = now.Truncate(24*time.Hour).AddDate(0, 0, -6).Unix()
+		endOfDay = now.Truncate(24 * time.Hour).Add(24*time.Hour - time.Second).Unix()
+	}
+
+	// Check if user wants to view specific user's data (root users only)
+	targetUserId := id // Default to current user
+	userIdParam := c.Query("user_id")
+
+	if userIdParam != "" {
+		// Only root users can view other users' data or site-wide data
+		if role != model.RoleRootUser {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "No permission to view other users' dashboard data",
+				"data":    nil,
+			})
+			return
+		}
+
+		if userIdParam == "all" {
+			targetUserId = 0 // 0 means site-wide statistics
+		} else {
+			var err error
+			targetUserId, err = strconv.Atoi(userIdParam)
+			if err != nil {
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": "Invalid user_id parameter",
+					"data":    nil,
+				})
+				return
+			}
+		}
+	} else if role == model.RoleRootUser {
+		// For root users, default to site-wide statistics
+		targetUserId = 0
+	}
+
+	dashboards, err := model.SearchLogsByDayAndModel(targetUserId, int(startOfDay), int(endOfDay))
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "Failed to get user dashboard data: " + err.Error(),
+			"message": "Failed to get dashboard data: " + err.Error(),
 			"data":    nil,
 		})
 		return
@@ -350,6 +444,62 @@ func GetUserDashboard(c *gin.Context) {
 		"success": true,
 		"message": "",
 		"data":    dashboards,
+	})
+	return
+}
+
+func GetDashboardUsers(c *gin.Context) {
+	role := c.GetInt(ctxkey.Role)
+
+	// Only root users can access this endpoint
+	if role != model.RoleRootUser {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "No permission to access user list",
+			"data":    nil,
+		})
+		return
+	}
+
+	// Get all users with basic info (id, username, display_name)
+	users, err := model.GetAllUsers(0, 1000, "") // Get up to 1000 users
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Failed to get user list: " + err.Error(),
+			"data":    nil,
+		})
+		return
+	}
+
+	// Create simplified user list for dropdown
+	type UserOption struct {
+		Id          int    `json:"id"`
+		Username    string `json:"username"`
+		DisplayName string `json:"display_name"`
+	}
+
+	var userOptions []UserOption
+	// Add "All Users" option first
+	userOptions = append(userOptions, UserOption{
+		Id:          0,
+		Username:    "all",
+		DisplayName: "All Users (Site-wide)",
+	})
+
+	// Add individual users
+	for _, user := range users {
+		userOptions = append(userOptions, UserOption{
+			Id:          user.Id,
+			Username:    user.Username,
+			DisplayName: user.DisplayName,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    userOptions,
 	})
 	return
 }
@@ -1077,8 +1227,7 @@ func DisableTotp(c *gin.Context) {
 	}
 
 	// Clear the TOTP secret
-	user.TotpSecret = ""
-	err = user.Update(false)
+	err = user.ClearTotpSecret()
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -1202,8 +1351,7 @@ func AdminDisableUserTotp(c *gin.Context) {
 	}
 
 	// Clear the TOTP secret
-	user.TotpSecret = ""
-	err = user.Update(false)
+	err = user.ClearTotpSecret()
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,

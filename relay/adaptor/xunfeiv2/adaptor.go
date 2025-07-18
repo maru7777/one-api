@@ -51,10 +51,10 @@ func (a *Adaptor) GetChannelName() string {
 
 // GetDefaultModelPricing returns the pricing information for XunfeiV2 models
 // Based on Xunfei pricing: https://www.xfyun.cn/doc/spark/Web.html#_1-%E6%8E%A5%E5%8F%A3%E8%AF%B4%E6%98%8E
-func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelPrice {
+func (a *Adaptor) GetDefaultModelPricing() map[string]adaptor.ModelConfig {
 	const MilliTokensRmb = 3.5 // 0.000007 * 500000 = 3.5 quota per milli-token
 
-	return map[string]adaptor.ModelPrice{
+	return map[string]adaptor.ModelConfig{
 		// XunfeiV2 Models - Based on https://www.xfyun.cn/doc/spark/Web.html#_1-%E6%8E%A5%E5%8F%A3%E8%AF%B4%E6%98%8E
 		"spark-lite":      {Ratio: 0.0 * MilliTokensRmb, CompletionRatio: 1},   // Free tier
 		"spark-pro":       {Ratio: 0.003 * MilliTokensRmb, CompletionRatio: 1}, // ¥0.003 / 1k tokens
