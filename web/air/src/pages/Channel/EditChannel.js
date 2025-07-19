@@ -3,7 +3,8 @@ import {useNavigate, useParams} from 'react-router-dom';
 import {API, isMobile, showError, showInfo, showSuccess, verifyJSON} from '../../helpers';
 import {CHANNEL_OPTIONS} from '../../constants';
 import Title from "@douyinfe/semi-ui/lib/es/typography/title";
-import {SideSheet, Space, Spin, Button, Input, Typography, Select, TextArea, Checkbox, Banner} from "@douyinfe/semi-ui";
+import {SideSheet, Space, Spin, Button, Input, Typography, Select, TextArea, Checkbox, Banner, Tooltip} from "@douyinfe/semi-ui";
+import {IconHelpCircle} from "@douyinfe/semi-icons";
 import ChannelDebugPanel from '../../components/ChannelDebugPanel';
 
 const MODEL_MAPPING_EXAMPLE = {
@@ -96,6 +97,28 @@ function type2secretPrompt(type) {
     }
 }
 
+// Helper component for labels with tooltips
+const LabelWithTooltip = ({ label, helpText, children, ...props }) => (
+    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+        <Typography.Text strong {...props}>
+            {label}
+        </Typography.Text>
+        {helpText && (
+            <Tooltip content={helpText} position="top">
+                <IconHelpCircle
+                    style={{
+                        marginLeft: '6px',
+                        color: '#999',
+                        cursor: 'help',
+                        fontSize: '14px'
+                    }}
+                />
+            </Tooltip>
+        )}
+        {children}
+    </div>
+);
+
 const EditChannel = (props) => {
     const navigate = useNavigate();
     const channelId = props.editingChannel.id;
@@ -119,6 +142,7 @@ const EditChannel = (props) => {
         model_ratio: '',
         completion_ratio: '',
         model_configs: '',
+        ratelimit: 0,
         inference_profile_arn_map: ''
     };
     const [batch, setBatch] = useState(false);
@@ -726,7 +750,10 @@ const EditChannel = (props) => {
                         />
                     </div>
                     <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography.Text strong>模型重定向：</Typography.Text>
+                        <LabelWithTooltip
+                            label="模型重定向"
+                            helpText="将传入的模型请求重定向到不同的模型。例如，将'gpt-4-0314'映射到'gpt-4'以处理已弃用的模型名称。JSON格式：{\"请求模型\": \"实际模型\"}"
+                        />
                         <div>
                             <Button
                                 theme="borderless"
@@ -776,7 +803,10 @@ const EditChannel = (props) => {
                         )}
                     </div>
                     <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography.Text strong>模型配置：</Typography.Text>
+                        <LabelWithTooltip
+                            label="模型配置"
+                            helpText="为每个模型配置定价和限制。'ratio'设置输入token成本，'completion_ratio'设置输出token成本倍数，'max_tokens'设置请求限制。覆盖默认定价。"
+                        />
                         <div>
                             <Button
                                 theme="borderless"
@@ -850,7 +880,10 @@ const EditChannel = (props) => {
                         填入模板
                     </Typography.Text>
                     <div style={{ marginTop: 10 }}>
-                        <Typography.Text strong>系统提示词：</Typography.Text>
+                        <LabelWithTooltip
+                            label="系统提示词"
+                            helpText="为通过此渠道的所有请求强制设置特定的系统提示词。适用于创建专门的AI助手或强制执行特定的行为模式。"
+                        />
                     </div>
                     <TextArea
                       placeholder={`此项可选，用于强制设置给定的系统提示词，请配合自定义模型 & 模型重定向使用，首先创建一个唯一的自定义模型名称并在上面填入，之后将该自定义模型重定向映射到该渠道一个原生支持的模型`}
@@ -986,6 +1019,24 @@ const EditChannel = (props) => {
                     }
 
                     {/* Channel-specific pricing fields - now handled through model_configs */}
+
+                    {/* Rate Limit Field */}
+                    <div style={{ marginTop: 20 }}>
+                        <LabelWithTooltip
+                            label="渠道限速"
+                            helpText="控制每个令牌在每个渠道3分钟内的最大请求次数。设置为0表示不限制。这有助于防止滥用和管理API使用量。"
+                        />
+                    </div>
+                    <Input
+                        name='ratelimit'
+                        placeholder='为每个Token 的每个Channel限速 (3分钟), 默认0为不限速'
+                        onChange={value => {
+                            handleInputChange('ratelimit', parseInt(value) || 0)
+                        }}
+                        value={inputs.ratelimit}
+                        type="number"
+                        min={0}
+                    />
 
                     {/* AWS-specific inference profile ARN mapping */}
                     {inputs.type === 33 && (

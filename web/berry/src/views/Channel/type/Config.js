@@ -11,6 +11,7 @@ const defaultConfig = {
     config: {},
     model_ratio: '',
     completion_ratio: '',
+    ratelimit: 0,
     inference_profile_arn_map: ''
   },
   inputLabel: {
@@ -26,6 +27,7 @@ const defaultConfig = {
     config: null,
     model_ratio: '模型定价',
     completion_ratio: '输出定价',
+    ratelimit: '渠道限速',
     inference_profile_arn_map: '推理配置文件ARN映射'
   },
   prompt: {
@@ -42,6 +44,7 @@ const defaultConfig = {
     config: null,
     model_ratio: '可选，渠道专用模型定价，JSON 格式。留空则使用默认定价。',
     completion_ratio: '可选，渠道专用输出 token 定价倍率，JSON 格式。',
+    ratelimit: '为每个Token 的每个Channel限速 (3分钟), 默认0为不限速',
     inference_profile_arn_map: '可选，AWS Bedrock 推理配置文件 ARN 映射，JSON 格式。将模型名称映射到推理配置文件 ARN。'
   },
   modelGroup: 'openai'

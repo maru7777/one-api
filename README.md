@@ -1,5 +1,11 @@
 # One API
 
+One API is an open-source API gateway that provides a unified interface for various AI models, allowing users to manage and utilize multiple AI services through a single platform. It supports token management, quota management, and usage statistics, making it easier for developers to integrate and manage different AI models in their applications.
+
+With one-api, you can aggregate various AI APIs and request in ChatCompletion, Response, or Claude Messages API formats as needed.
+
+![](https://s3.laisky.com/uploads/2025/07/oneapi.drawio.png)
+
 The original author of one-api has not been active for a long time, resulting in a backlog of PRs that cannot be updated. Therefore, I forked the code and merged some PRs that I consider important. I also welcome everyone to submit PRs, and I will respond and handle them actively and quickly.
 
 Fully compatible with the upstream version, can be used directly by replacing the container image, docker images:
@@ -46,6 +52,7 @@ Also welcome to register and use my deployed one-api gateway, which supports var
     - [Support GCP Vertex gloabl region and gemini-2.5-pro-preview-06-05](#support-gcp-vertex-gloabl-region-and-gemini-25-pro-preview-06-05)
     - [Support OpenAI Response API](#support-openai-response-api)
     - [Support AWS BedRock Inference Profile](#support-aws-bedrock-inference-profile)
+    - [Support /v1/messages Claude Messages API](#support-v1messages-claude-messages-api)
   - [Bug fix](#bug-fix)
 
 ## Turtorial
@@ -292,6 +299,10 @@ support `gpt-4o-search-preview` & `gpt-4o-mini-search-preview`
 ### Support AWS BedRock Inference Profile
 
 ![](https://s3.laisky.com/uploads/2025/07/aws-inference-profile.png)
+
+### Support /v1/messages Claude Messages API
+
+![](https://s3.laisky.com/uploads/2025/07/claude_messages.png)
 
 ## Bug fix
 
