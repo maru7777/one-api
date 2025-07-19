@@ -111,17 +111,30 @@ func RelayClaudeMessagesHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 	// Set context flag to indicate Claude Messages native mode
 	c.Set(ctxkey.ClaudeMessagesNative, true)
 
-	// do response - use Claude native handlers for proper format
+	// do response - let the adapter handle the response conversion
 	var usage *relaymodel.Usage
 	var respErr *relaymodel.ErrorWithStatusCode
 
-	// Check if this is a streaming request
-	if meta.IsStream {
-		respErr, usage = anthropic.ClaudeNativeStreamHandler(c, resp)
-	} else {
-		// For non-streaming, we need the prompt tokens count for usage calculation
-		promptTokens := getClaudeMessagesPromptTokens(ctx, claudeRequest)
-		respErr, usage = anthropic.ClaudeNativeHandler(c, resp, promptTokens, meta.ActualModelName)
+	// Call the adapter's DoResponse method to handle response conversion
+	usage, respErr = adaptorInstance.DoResponse(c, resp, meta)
+
+	// If the adapter didn't handle the conversion (e.g., for native Anthropic),
+	// fall back to Claude native handlers
+	if respErr == nil && usage == nil {
+		// Check if there's a converted response from the adapter
+		if convertedResp, exists := c.Get(ctxkey.ConvertedResponse); exists {
+			// Use the converted response
+			resp = convertedResp.(*http.Response)
+		}
+
+		// Use Claude native handlers for proper format
+		if meta.IsStream {
+			respErr, usage = anthropic.ClaudeNativeStreamHandler(c, resp)
+		} else {
+			// For non-streaming, we need the prompt tokens count for usage calculation
+			promptTokens := getClaudeMessagesPromptTokens(ctx, claudeRequest)
+			respErr, usage = anthropic.ClaudeNativeHandler(c, resp, promptTokens, meta.ActualModelName)
+		}
 	}
 
 	if respErr != nil {
