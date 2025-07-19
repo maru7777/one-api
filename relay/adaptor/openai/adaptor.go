@@ -82,6 +82,13 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	case channeltype.GeminiOpenAICompatible:
 		return geminiOpenaiCompatible.GetRequestURL(meta)
 	default:
+		// Handle Claude Messages requests - convert to OpenAI Chat Completions endpoint
+		if meta.RequestURLPath == "/v1/messages" {
+			// Claude Messages requests should use OpenAI's chat completions endpoint
+			chatCompletionsPath := "/v1/chat/completions"
+			return GetFullRequestURL(meta.BaseURL, chatCompletionsPath, meta.ChannelType), nil
+		}
+
 		// Convert chat completions to responses API for OpenAI only
 		// Skip conversion for models that only support ChatCompletion API
 		if meta.Mode == relaymode.ChatCompletions &&
