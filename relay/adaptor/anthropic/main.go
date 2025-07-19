@@ -739,6 +739,69 @@ func ResponseClaude2OpenAI(c *gin.Context, claudeResponse *Response) *openai.Tex
 	return &fullTextResponse
 }
 
+// ClaudeNativeStreamHandler handles streaming responses in Claude native format without conversion to OpenAI format
+func ClaudeNativeStreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusCode, *model.Usage) {
+	scanner := bufio.NewScanner(resp.Body)
+	scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+		if atEOF && len(data) == 0 {
+			return 0, nil, nil
+		}
+		if i := strings.Index(string(data), "\n"); i >= 0 {
+			return i + 1, data[0:i], nil
+		}
+		if atEOF {
+			return len(data), data, nil
+		}
+		return 0, nil, nil
+	})
+	common.SetEventStreamHeaders(c)
+
+	var usage model.Usage
+
+	for scanner.Scan() {
+		data := scanner.Text()
+		if len(data) < 6 || !strings.HasPrefix(data, "data:") {
+			continue
+		}
+		data = strings.TrimPrefix(data, "data:")
+		data = strings.TrimSpace(data)
+
+		logger.Debugf(c.Request.Context(), "stream <- %q\n", data)
+
+		// For Claude native streaming, we pass through the events directly
+		c.Writer.Write([]byte("data: " + data + "\n\n"))
+		c.Writer.(http.Flusher).Flush()
+
+		// Parse the response to extract usage and model info
+		var claudeResponse StreamResponse
+		err := json.Unmarshal([]byte(data), &claudeResponse)
+		if err != nil {
+			logger.SysError("error unmarshalling stream response: " + err.Error())
+			continue
+		}
+
+		// Extract usage info from message_delta
+		if claudeResponse.Type == "message_delta" && claudeResponse.Usage != nil {
+			usage.PromptTokens += claudeResponse.Usage.InputTokens
+			usage.CompletionTokens += claudeResponse.Usage.OutputTokens
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		logger.SysError("error reading stream: " + err.Error())
+	}
+
+	// Send final data: [DONE] to close the stream
+	c.Writer.Write([]byte("data: [DONE]\n\n"))
+	c.Writer.(http.Flusher).Flush()
+
+	err := resp.Body.Close()
+	if err != nil {
+		return openai.ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), nil
+	}
+	return nil, &usage
+}
+
 func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusCode, *model.Usage) {
 	createdTime := helper.GetTimestamp()
 	scanner := bufio.NewScanner(resp.Body)
@@ -833,6 +896,54 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 	if err != nil {
 		return openai.ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), nil
 	}
+	return nil, &usage
+}
+
+// ClaudeNativeHandler handles responses in Claude native format without conversion to OpenAI format
+func ClaudeNativeHandler(c *gin.Context, resp *http.Response, promptTokens int, modelName string) (*model.ErrorWithStatusCode, *model.Usage) {
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return openai.ErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError), nil
+	}
+	err = resp.Body.Close()
+	if err != nil {
+		return openai.ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), nil
+	}
+
+	logger.Debugf(c.Request.Context(), "response <- %s\n", string(responseBody))
+
+	var claudeResponse Response
+	err = json.Unmarshal(responseBody, &claudeResponse)
+	if err != nil {
+		return openai.ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError), nil
+	}
+	if claudeResponse.Error.Type != "" {
+		return &model.ErrorWithStatusCode{
+			Error: model.Error{
+				Message: claudeResponse.Error.Message,
+				Type:    claudeResponse.Error.Type,
+				Param:   "",
+				Code:    claudeResponse.Error.Type,
+			},
+			StatusCode: resp.StatusCode,
+		}, nil
+	}
+
+	// Return response in Claude's native format
+	claudeResponse.Model = modelName
+	usage := model.Usage{
+		PromptTokens:     claudeResponse.Usage.InputTokens,
+		CompletionTokens: claudeResponse.Usage.OutputTokens,
+		TotalTokens:      claudeResponse.Usage.InputTokens + claudeResponse.Usage.OutputTokens,
+	}
+
+	jsonResponse, err := json.Marshal(claudeResponse)
+	if err != nil {
+		return openai.ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError), nil
+	}
+	c.Writer.Header().Set("Content-Type", "application/json")
+	c.Writer.WriteHeader(resp.StatusCode)
+	_, err = c.Writer.Write(jsonResponse)
 	return nil, &usage
 }
 

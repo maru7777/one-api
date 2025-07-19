@@ -19,6 +19,7 @@ import (
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/relay"
+	"github.com/songquanpeng/one-api/relay/adaptor/anthropic"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/relay/billing"
 	metalib "github.com/songquanpeng/one-api/relay/meta"
@@ -107,10 +108,24 @@ func RelayClaudeMessagesHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 		return RelayErrorHandler(resp)
 	}
 
-	// do response
-	usage, respErr := adaptorInstance.DoResponse(c, resp, meta)
+	// Set context flag to indicate Claude Messages native mode
+	c.Set(ctxkey.ClaudeMessagesNative, true)
+
+	// do response - use Claude native handlers for proper format
+	var usage *relaymodel.Usage
+	var respErr *relaymodel.ErrorWithStatusCode
+
+	// Check if this is a streaming request
+	if meta.IsStream {
+		respErr, usage = anthropic.ClaudeNativeStreamHandler(c, resp)
+	} else {
+		// For non-streaming, we need the prompt tokens count for usage calculation
+		promptTokens := getClaudeMessagesPromptTokens(ctx, claudeRequest)
+		respErr, usage = anthropic.ClaudeNativeHandler(c, resp, promptTokens, meta.ActualModelName)
+	}
+
 	if respErr != nil {
-		logger.Errorf(ctx, "DoResponse failed: %+v", *respErr)
+		logger.Errorf(ctx, "Claude native response handler failed: %+v", *respErr)
 		billing.ReturnPreConsumedQuota(ctx, preConsumedQuota, c.GetInt(ctxkey.TokenId))
 		return respErr
 	}
