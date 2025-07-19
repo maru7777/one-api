@@ -123,17 +123,50 @@ func RelayClaudeMessagesHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 	if respErr == nil && usage == nil {
 		// Check if there's a converted response from the adapter
 		if convertedResp, exists := c.Get(ctxkey.ConvertedResponse); exists {
-			// Use the converted response
+			// The adapter has already converted the response to Claude format
+			// We can use it directly without calling Claude native handlers
 			resp = convertedResp.(*http.Response)
-		}
 
-		// Use Claude native handlers for proper format
-		if meta.IsStream {
-			respErr, usage = anthropic.ClaudeNativeStreamHandler(c, resp)
+			// Copy the response directly to the client
+			for k, v := range resp.Header {
+				c.Header(k, v[0])
+			}
+			c.Status(resp.StatusCode)
+
+			// Copy the response body and extract usage information
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				respErr = openai.ErrorWrapper(err, "read_converted_response_failed", http.StatusInternalServerError)
+			} else {
+				c.Data(resp.StatusCode, resp.Header.Get("Content-Type"), body)
+
+				// Extract usage information from the Claude response body for billing
+				var claudeResp relaymodel.ClaudeResponse
+				if parseErr := json.Unmarshal(body, &claudeResp); parseErr == nil && claudeResp.Usage.InputTokens > 0 {
+					usage = &relaymodel.Usage{
+						PromptTokens:     claudeResp.Usage.InputTokens,
+						CompletionTokens: claudeResp.Usage.OutputTokens,
+						TotalTokens:      claudeResp.Usage.InputTokens + claudeResp.Usage.OutputTokens,
+					}
+				} else {
+					// Fallback: use estimated prompt tokens if parsing fails
+					promptTokens := getClaudeMessagesPromptTokens(ctx, claudeRequest)
+					usage = &relaymodel.Usage{
+						PromptTokens:     promptTokens,
+						CompletionTokens: 0, // Unknown completion tokens
+						TotalTokens:      promptTokens,
+					}
+				}
+			}
 		} else {
-			// For non-streaming, we need the prompt tokens count for usage calculation
-			promptTokens := getClaudeMessagesPromptTokens(ctx, claudeRequest)
-			respErr, usage = anthropic.ClaudeNativeHandler(c, resp, promptTokens, meta.ActualModelName)
+			// No converted response, use Claude native handlers for proper format
+			if meta.IsStream {
+				respErr, usage = anthropic.ClaudeNativeStreamHandler(c, resp)
+			} else {
+				// For non-streaming, we need the prompt tokens count for usage calculation
+				promptTokens := getClaudeMessagesPromptTokens(ctx, claudeRequest)
+				respErr, usage = anthropic.ClaudeNativeHandler(c, resp, promptTokens, meta.ActualModelName)
+			}
 		}
 	}
 
