@@ -808,7 +808,7 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
                   <LabelWithTooltip
                     htmlFor="channel-model_mapping-label"
                     label={inputLabel.model_mapping}
-                    helpText="将传入的模型请求重定向到不同的模型。例如，将'gpt-4-0314'映射到'gpt-4'以处理已弃用的模型名称。JSON格式：{\"请求模型\": \"实际模型\"}"
+                    helpText="将传入的模型请求重定向到不同的模型。例如，将'gpt-4-0314'映射到'gpt-4'以处理已弃用的模型名称。JSON格式：{&quot;请求模型&quot;: &quot;实际模型&quot;}"
                     sx={{
                       position: 'relative',
                       transform: 'none',

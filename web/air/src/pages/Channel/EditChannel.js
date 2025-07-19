@@ -752,7 +752,7 @@ const EditChannel = (props) => {
                     <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <LabelWithTooltip
                             label="模型重定向"
-                            helpText="将传入的模型请求重定向到不同的模型。例如，将'gpt-4-0314'映射到'gpt-4'以处理已弃用的模型名称。JSON格式：{\"请求模型\": \"实际模型\"}"
+                            helpText="将传入的模型请求重定向到不同的模型。例如，将'gpt-4-0314'映射到'gpt-4'以处理已弃用的模型名称。JSON格式：{&quot;请求模型&quot;: &quot;实际模型&quot;}"
                         />
                         <div>
                             <Button
