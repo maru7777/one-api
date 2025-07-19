@@ -34,4 +34,15 @@ const (
 	RateLimit                = "rate_limit"
 	ClaudeMessagesConversion = "claude_messages_conversion"
 	OriginalClaudeRequest    = "original_claude_request"
+
+	// Claude-specific context keys
+	ClaudeModel             = "claude_model"
+	ClaudeMessagesNative    = "claude_messages_native"
+	ClaudeDirectPassthrough = "claude_direct_passthrough"
+	ConversationId          = "conversation_id"
+	TempSignatureKey        = "temp_signature_key"
+
+	// Additional context keys
+	ConvertedResponse = "converted_response"
+	ResponseFormat    = "response_format"
 )

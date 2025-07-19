@@ -16,6 +16,7 @@ import (
 
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/image"
 	"github.com/songquanpeng/one-api/common/logger"
@@ -267,12 +268,6 @@ func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Re
 	if claudeRequest.MaxTokens == 0 {
 		claudeRequest.MaxTokens = config.DefaultMaxToken
 	}
-	// legacy model name mapping
-	if claudeRequest.Model == "claude-instant-1" {
-		claudeRequest.Model = "claude-instant-1.1"
-	} else if claudeRequest.Model == "claude-2" {
-		claudeRequest.Model = "claude-2.1"
-	}
 	for _, message := range textRequest.Messages {
 		if message.Role == "system" && claudeRequest.System == "" {
 			claudeRequest.System = message.StringContent()
@@ -313,13 +308,13 @@ func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Re
 						}
 
 						// Try to restore signature from cache if available
-						if tokenID, exists := c.Get("token_id"); exists {
+						if tokenID, exists := c.Get(ctxkey.TokenId); exists {
 							if tokenIDInt, ok := tokenID.(int); ok {
 								tokenIDStr := getTokenIDFromRequest(tokenIDInt)
 								conversationID := generateConversationID(textRequest.Messages)
 
 								// Store conversation ID in context for later use
-								c.Set("conversation_id", conversationID)
+								c.Set(ctxkey.ConversationId, conversationID)
 
 								// Try to restore signature for this thinking block
 								messageIndex := len(claudeRequest.Messages) // Current message index
@@ -454,13 +449,13 @@ func ConvertRequest(c *gin.Context, textRequest model.GeneralOpenAIRequest) (*Re
 			}
 
 			// Try to restore signature from cache if available
-			if tokenID, exists := c.Get("token_id"); exists {
+			if tokenID, exists := c.Get(ctxkey.TokenId); exists {
 				if tokenIDInt, ok := tokenID.(int); ok {
 					tokenIDStr := getTokenIDFromRequest(tokenIDInt)
 					conversationID := generateConversationID(textRequest.Messages)
 
 					// Store conversation ID in context for later use
-					c.Set("conversation_id", conversationID)
+					c.Set(ctxkey.ConversationId, conversationID)
 
 					// Try to restore signature for this thinking block
 					messageIndex := len(claudeRequest.Messages) // Current message index
@@ -632,7 +627,7 @@ func StreamResponseClaude2OpenAI(c *gin.Context, claudeResponse *StreamResponse)
 	// Cache signature if present (for thinking blocks)
 	if signatureText != "" && (reasoningText != "" || claudeResponse.Type == "signature_delta") {
 		// Get token ID from context
-		if tokenID, exists := c.Get("token_id"); exists {
+		if tokenID, exists := c.Get(ctxkey.TokenId); exists {
 			if tokenIDInt, ok := tokenID.(int); ok {
 				// We need the original request to generate conversation ID
 				// For now, we'll cache with a temporary key and update it later
@@ -642,7 +637,7 @@ func StreamResponseClaude2OpenAI(c *gin.Context, claudeResponse *StreamResponse)
 				GetSignatureCache().Store(tempKey, signatureText)
 
 				// Store the temp key in context for later use
-				c.Set("temp_signature_key", tempKey)
+				c.Set(ctxkey.TempSignatureKey, tempKey)
 			}
 		}
 	}
@@ -683,11 +678,11 @@ func ResponseClaude2OpenAI(c *gin.Context, claudeResponse *Response) *openai.Tex
 			// Cache signature if present
 			if v.Signature != nil {
 				// Cache the signature for future use
-				if tokenID, exists := c.Get("token_id"); exists {
+				if tokenID, exists := c.Get(ctxkey.TokenId); exists {
 					if tokenIDInt, ok := tokenID.(int); ok {
 						// Get conversation ID from request context or generate it
 						var conversationID string
-						if convID, exists := c.Get("conversation_id"); exists {
+						if convID, exists := c.Get(ctxkey.ConversationId); exists {
 							conversationID = convID.(string)
 						} else {
 							// We'll need the original request messages to generate conversation ID

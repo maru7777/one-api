@@ -46,6 +46,12 @@ func RelayClaudeMessagesHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 		logger.Debugf(c.Request.Context(), "get claude messages request: %s\n", string(reqBody.([]byte)))
 	}
 
+	// map model name
+	meta.OriginModelName = claudeRequest.Model
+	claudeRequest.Model = meta.ActualModelName
+	meta.ActualModelName = claudeRequest.Model
+	metalib.Set2Context(c, meta)
+
 	// get channel model ratio
 	channelModelRatio, channelCompletionRatio := getChannelRatios(c, meta.ChannelId)
 
@@ -77,24 +83,12 @@ func RelayClaudeMessagesHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 		return openai.ErrorWrapper(err, "convert_request_failed", http.StatusInternalServerError)
 	}
 
-	var requestBody io.Reader
-
-	// Check if adaptor supports direct pass-through
-	if useDirectPassthrough, exists := c.Get("claude_direct_passthrough"); exists && useDirectPassthrough.(bool) {
-		// Use original request body for direct pass-through (better compatibility)
-		if originalBody, ok := c.Get(ctxkey.KeyRequestBody); ok {
-			requestBody = bytes.NewReader(originalBody.([]byte))
-		} else {
-			return openai.ErrorWrapper(errors.New("original request body not found"), "missing_original_body", http.StatusInternalServerError)
-		}
-	} else {
-		// Use converted request (legacy behavior)
-		requestBytes, err := json.Marshal(convertedRequest)
-		if err != nil {
-			return openai.ErrorWrapper(err, "marshal_request_failed", http.StatusInternalServerError)
-		}
-		requestBody = bytes.NewReader(requestBytes)
+	// Use converted request to preserve model mapping
+	requestBytes, err := json.Marshal(convertedRequest)
+	if err != nil {
+		return openai.ErrorWrapper(err, "marshal_request_failed", http.StatusInternalServerError)
 	}
+	requestBody := bytes.NewReader(requestBytes)
 
 	// for debug
 	requestBodyBytes, _ := io.ReadAll(requestBody)

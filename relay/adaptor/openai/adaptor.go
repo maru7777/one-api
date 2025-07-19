@@ -559,7 +559,7 @@ func (a *Adaptor) DoResponse(c *gin.Context,
 
 		// Replace the original response with the converted Claude response
 		// We need to update the response in the context so the controller can use it
-		c.Set("converted_response", claudeResp)
+		c.Set(ctxkey.ConvertedResponse, claudeResp)
 
 		// For Claude Messages conversion, we don't return usage separately
 		// The usage is included in the Claude response body, so return nil usage

@@ -9,6 +9,7 @@ import (
 	"github.com/Laisky/errors/v2"
 	"github.com/gin-gonic/gin"
 
+	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/relay/adaptor"
 	"github.com/songquanpeng/one-api/relay/meta"
 	"github.com/songquanpeng/one-api/relay/model"
@@ -69,7 +70,7 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 		return nil, errors.New("request is nil")
 	}
 
-	c.Set("claude_model", request.Model)
+	c.Set(ctxkey.ClaudeModel, request.Model)
 	return ConvertRequest(c, *request)
 }
 
@@ -90,11 +91,11 @@ func (a *Adaptor) ConvertClaudeRequest(c *gin.Context, request *model.ClaudeRequ
 		return nil, errors.New("request is nil")
 	}
 
-	c.Set("claude_model", request.Model)
+	c.Set(ctxkey.ClaudeModel, request.Model)
 	// Mark this as a native Claude Messages request (no conversion needed)
-	c.Set("claude_messages_native", true)
+	c.Set(ctxkey.ClaudeMessagesNative, true)
 	// Set flag to use direct pass-through instead of conversion
-	c.Set("claude_direct_passthrough", true)
+	c.Set(ctxkey.ClaudeDirectPassthrough, true)
 
 	// Still parse the request for billing purposes, but we won't use the converted result
 	// The original request body will be forwarded directly for better compatibility
