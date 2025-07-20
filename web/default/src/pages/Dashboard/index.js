@@ -204,15 +204,36 @@ const Dashboard = () => {
 
     const totalTokens = dashboardData.reduce((sum, item) => sum + item.PromptTokens + item.CompletionTokens, 0);
 
-    // For trend calculation, we would need to compare with previous period data
-    // Since the API only returns data for the selected range, we'll disable trends for now
-    // In a real implementation, we'd need to fetch previous period data separately
-    const requestTrend = 0; // Placeholder - would need previous period data
-    const quotaTrend = 0;   // Placeholder - would need previous period data
-    const tokenTrend = 0;   // Placeholder - would need previous period data
+    // Calculate trends by comparing first half vs second half of the selected period
+    const calculateTrend = (data, field) => {
+      if (data.length < 2) return 0;
+
+      const midpoint = Math.floor(data.length / 2);
+      const firstHalf = data.slice(0, midpoint);
+      const secondHalf = data.slice(midpoint);
+
+      const firstHalfSum = firstHalf.reduce((sum, item) => sum + item[field], 0);
+      const secondHalfSum = secondHalf.reduce((sum, item) => sum + item[field], 0);
+
+      const firstHalfAvg = firstHalfSum / firstHalf.length;
+      const secondHalfAvg = secondHalfSum / secondHalf.length;
+
+      if (firstHalfAvg === 0) return secondHalfAvg > 0 ? 100 : 0;
+      return ((secondHalfAvg - firstHalfAvg) / firstHalfAvg) * 100;
+    };
+
+    const requestTrend = calculateTrend(dashboardData, 'RequestCount');
+    const quotaTrend = calculateTrend(dashboardData, 'Quota');
+    const tokenTrend = calculateTrend(dashboardData.map(item => ({
+      ...item,
+      TotalTokens: item.PromptTokens + item.CompletionTokens
+    })), 'TotalTokens');
 
     // Advanced metrics
-    const avgCostPerRequest = totalRequests > 0 ? totalQuota / totalRequests : 0;
+    // Convert quota to currency units first, then calculate average cost per request
+    const quotaPerUnit = parseFloat(localStorage.getItem('quota_per_unit') || '500000');
+    const totalQuotaInCurrency = totalQuota / quotaPerUnit;
+    const avgCostPerRequest = totalRequests > 0 ? totalQuotaInCurrency / totalRequests : 0;
     const avgTokensPerRequest = totalRequests > 0 ? totalTokens / totalRequests : 0;
 
     // Find top model by usage across the selected date range
@@ -490,12 +511,15 @@ const Dashboard = () => {
     });
 
     // Calculate derived metrics
+    const quotaPerUnit = parseFloat(localStorage.getItem('quota_per_unit') || '500000');
     Object.values(modelStats).forEach(model => {
       if (model.requests > 0) {
-        model.avgCostPerRequest = model.quota / model.requests;
+        // Convert quota to currency units first, then calculate average cost per request
+        const modelQuotaInCurrency = model.quota / quotaPerUnit;
+        model.avgCostPerRequest = modelQuotaInCurrency / model.requests;
         model.avgTokensPerRequest = model.tokens / model.requests;
         // Efficiency score: higher tokens per dollar is better
-        model.efficiency = model.quota > 0 ? model.tokens / model.quota : 0;
+        model.efficiency = modelQuotaInCurrency > 0 ? model.tokens / modelQuotaInCurrency : 0;
       }
     });
 
