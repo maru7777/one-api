@@ -191,7 +191,17 @@ const Dashboard = () => {
 
     // Calculate metrics for the selected date range instead of just "today"
     const totalRequests = dashboardData.reduce((sum, item) => sum + item.RequestCount, 0);
-    const totalQuota = dashboardData.reduce((sum, item) => sum + item.Quota, 0) / 1000000;
+
+    // Don't divide by quotaPerUnit here - renderQuota function will handle the conversion
+    const totalQuota = dashboardData.reduce((sum, item) => sum + item.Quota, 0);
+
+    // Debug logging
+    console.log('Dashboard Debug:', {
+      totalQuota,
+      dataLength: dashboardData.length,
+      sampleData: dashboardData.slice(0, 3)
+    });
+
     const totalTokens = dashboardData.reduce((sum, item) => sum + item.PromptTokens + item.CompletionTokens, 0);
 
     // For trend calculation, we would need to compare with previous period data
@@ -390,7 +400,7 @@ const Dashboard = () => {
     // 填充实际数据
     data.forEach((item) => {
       dailyData[item.Day].requests += item.RequestCount;
-      dailyData[item.Day].quota += item.Quota / 1000000;
+      dailyData[item.Day].quota += item.Quota; // Don't divide here - renderQuota will handle conversion
       dailyData[item.Day].tokens += item.PromptTokens + item.CompletionTokens;
     });
 
@@ -475,7 +485,7 @@ const Dashboard = () => {
       }
 
       modelStats[item.ModelName].requests += item.RequestCount;
-      modelStats[item.ModelName].quota += item.Quota / 1000000;
+      modelStats[item.ModelName].quota += item.Quota; // Don't divide here - renderQuota will handle conversion
       modelStats[item.ModelName].tokens += item.PromptTokens + item.CompletionTokens;
     });
 
@@ -509,7 +519,7 @@ const Dashboard = () => {
         };
       }
       dailyUsage[item.Day].requests += item.RequestCount;
-      dailyUsage[item.Day].quota += item.Quota / 1000000;
+      dailyUsage[item.Day].quota += item.Quota; // Don't divide here - renderQuota will handle conversion
       dailyUsage[item.Day].tokens += item.PromptTokens + item.CompletionTokens;
     });
 
