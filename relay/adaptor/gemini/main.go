@@ -749,10 +749,12 @@ func Handler(c *gin.Context, resp *http.Response, promptTokens int, modelName st
 	if err != nil {
 		return openai.ErrorWrapper(errors.Wrap(err, "read_response_body_failed"), "read_response_body_failed", http.StatusInternalServerError), nil
 	}
+
 	err = resp.Body.Close()
 	if err != nil {
 		return openai.ErrorWrapper(errors.Wrap(err, "close_response_body_failed"), "close_response_body_failed", http.StatusInternalServerError), nil
 	}
+
 	var geminiResponse ChatResponse
 	err = json.Unmarshal(responseBody, &geminiResponse)
 	if err != nil {
@@ -771,12 +773,28 @@ func Handler(c *gin.Context, resp *http.Response, promptTokens int, modelName st
 	}
 	fullTextResponse := responseGeminiChat2OpenAI(&geminiResponse)
 	fullTextResponse.Model = modelName
-	completionTokens := openai.CountTokenText(geminiResponse.GetResponseText(), modelName)
-	usage := model.Usage{
-		PromptTokens:     promptTokens,
-		CompletionTokens: completionTokens,
-		TotalTokens:      promptTokens + completionTokens,
+
+	// Prioritize usageMetadata from Gemini response
+	var usage model.Usage
+	if geminiResponse.UsageMetadata != nil &&
+		geminiResponse.UsageMetadata.TotalTokenCount > 0 {
+		// Use Gemini's provided token counts
+		usage = model.Usage{
+			PromptTokens: geminiResponse.UsageMetadata.PromptTokenCount,
+			CompletionTokens: geminiResponse.UsageMetadata.CandidatesTokenCount +
+				geminiResponse.UsageMetadata.ThoughtsTokenCount,
+			TotalTokens: geminiResponse.UsageMetadata.TotalTokenCount,
+		}
+	} else {
+		// Fall back to manual calculation if usageMetadata is unavailable or zero
+		completionTokens := openai.CountTokenText(geminiResponse.GetResponseText(), modelName)
+		usage = model.Usage{
+			PromptTokens:     promptTokens,
+			CompletionTokens: completionTokens,
+			TotalTokens:      promptTokens + completionTokens,
+		}
 	}
+
 	fullTextResponse.Usage = usage
 	jsonResponse, err := json.Marshal(fullTextResponse)
 	if err != nil {
