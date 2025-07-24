@@ -53,6 +53,13 @@ func (a *Adaptor) GetCompletionRatio(modelName string) float64 {
 func (a *Adaptor) Init(meta *meta.Meta) {}
 
 func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
+	// Handle Claude Messages requests - convert to OpenAI Chat Completions endpoint
+	if meta.RequestURLPath == "/v1/messages" {
+		// Claude Messages requests should use OpenAI's chat completions endpoint
+		chatCompletionsPath := "/v1/chat/completions"
+		return openai_compatible.GetFullRequestURL(meta.BaseURL, chatCompletionsPath, meta.ChannelType), nil
+	}
+
 	// Moonshot uses OpenAI-compatible API endpoints
 	return openai_compatible.GetFullRequestURL(meta.BaseURL, meta.RequestURLPath, meta.ChannelType), nil
 }
