@@ -230,6 +230,9 @@ func GetModelsDisplay(c *gin.Context) {
 		channelTypeName := channeltype.IdToName(channel.Type)
 		pricing := adaptor.GetDefaultModelPricing()
 
+		// Get model mapping for this channel to resolve mapped model pricing
+		modelMapping := channel.GetModelMapping()
+
 		// Create display key in format {channel_type}:{channel_name}
 		displayKey := fmt.Sprintf("%s:%s", channelTypeName, channel.Name)
 
@@ -239,19 +242,43 @@ func GetModelsDisplay(c *gin.Context) {
 			var inputPrice, outputPrice float64
 			var maxTokens int32
 
-			if modelConfig, exists := pricing[modelName]; exists {
-				// Convert from per-token to per-1M-tokens and from quota to USD
-				// The ratio is stored as quota per token, we need USD per 1M tokens
-				// ratio.QuotaPerUsd = 500000, so 1 USD = 500000 quota
-				// Price per 1M tokens = (ratio * 1000000) / 500000
-				inputPrice = (modelConfig.Ratio * 1000000) / 500000
+			// Resolve the actual model name for pricing lookup
+			// If the model is mapped, use the target model for pricing
+			actualModelName := modelName
+			if modelMapping != nil {
+				if mappedModel, exists := modelMapping[modelName]; exists && mappedModel != "" {
+					actualModelName = mappedModel
+				}
+			}
+
+			if modelConfig, exists := pricing[actualModelName]; exists {
+				// Convert pricing based on the format used by the adapter
+				// Some adapters use quota-based pricing (ratio.MilliTokensUsd = 0.5)
+				// Others use USD-based pricing (MilliTokensUsd = 0.000001)
+				// We detect the format by checking the magnitude of the ratio
+				if modelConfig.Ratio < 0.001 {
+					// USD-based pricing (like AWS): ratio is already in USD per token
+					// Just convert to USD per 1M tokens
+					inputPrice = modelConfig.Ratio * 1000000
+				} else {
+					// Quota-based pricing (like OpenAI): ratio is in quota per token
+					// Convert from quota to USD: ratio.QuotaPerUsd = 500000
+					inputPrice = (modelConfig.Ratio * 1000000) / 500000
+				}
 				outputPrice = inputPrice * modelConfig.CompletionRatio
 				maxTokens = modelConfig.MaxTokens
 			} else {
 				// Fallback to adapter methods if not in pricing map
-				inputRatio := adaptor.GetModelRatio(modelName)
-				completionRatio := adaptor.GetCompletionRatio(modelName)
-				inputPrice = (inputRatio * 1000000) / 500000
+				inputRatio := adaptor.GetModelRatio(actualModelName)
+				completionRatio := adaptor.GetCompletionRatio(actualModelName)
+				// Apply the same detection logic for fallback pricing
+				if inputRatio < 0.001 {
+					// USD-based pricing
+					inputPrice = inputRatio * 1000000
+				} else {
+					// Quota-based pricing
+					inputPrice = (inputRatio * 1000000) / 500000
+				}
 				outputPrice = inputPrice * completionRatio
 				maxTokens = 0 // Default to unlimited
 			}
