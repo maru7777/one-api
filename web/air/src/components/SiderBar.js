@@ -106,6 +106,12 @@ const SiderBar = () => {
       itemKey: 'setting',
       to: '/setting',
       icon: <IconSetting />
+    },
+    {
+      text: '模型',
+      itemKey: 'models',
+      to: '/models',
+      icon: <IconLayers />
     }
     // {
     //     text: '关于',
@@ -178,7 +184,8 @@ const SiderBar = () => {
                 setting: '/setting',
                 about: '/about',
                 chat: '/chat',
-                detail: '/detail'
+                detail: '/detail',
+                models: '/models'
               };
               return (
                 <Link

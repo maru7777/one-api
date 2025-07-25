@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { API } from 'utils/api';
 import { showError } from 'utils/common';
 import { marked } from 'marked';
-import { Box, Container, Typography } from '@mui/material';
+import { Box, Container, Typography, Button } from '@mui/material';
+import { Link } from 'react-router-dom';
 import MainCard from 'ui-component/cards/MainCard';
 
 const About = () => {
@@ -38,11 +39,20 @@ const About = () => {
           <Box>
             <Container sx={{ paddingTop: '40px' }}>
               <MainCard title="关于">
-                <Typography variant="body2">
+                <Typography variant="body2" sx={{ mb: 2 }}>
                   可在设置页面设置关于内容，支持 HTML & Markdown <br />
                   项目仓库地址：
                   <a href="https://github.com/Laisky/one-api">https://github.com/Laisky/one-api</a>
                 </Typography>
+                <Button
+                  component={Link}
+                  to="/panel/models"
+                  variant="contained"
+                  color="primary"
+                  sx={{ mt: 1 }}
+                >
+                  查看支持的模型
+                </Button>
               </MainCard>
             </Container>
           </Box>
@@ -56,6 +66,16 @@ const About = () => {
               <>
                 <Container>
                   <div style={{ fontSize: 'larger' }} dangerouslySetInnerHTML={{ __html: about }}></div>
+                  <Box sx={{ mt: 3, textAlign: 'center' }}>
+                    <Button
+                      component={Link}
+                      to="/panel/models"
+                      variant="contained"
+                      color="primary"
+                    >
+                      查看支持的模型
+                    </Button>
+                  </Box>
                 </Container>
               </>
             )}

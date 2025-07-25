@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card } from 'semantic-ui-react';
+import { Card, Button } from 'semantic-ui-react';
 import { API, showError } from '../../helpers';
 import { marked } from 'marked';
+import { Link } from 'react-router-dom';
 
 const About = () => {
   const { t } = useTranslation();
@@ -39,6 +40,11 @@ const About = () => {
             <Card.Content>
               <Card.Header className='header'>{t('about.title')}</Card.Header>
               <p>{t('about.description')}</p>
+              <p>
+                <Button as={Link} to='/models' primary>
+                  {t('about.view_models', 'View Supported Models')}
+                </Button>
+              </p>
               {t('about.repository')}
               <a href='https://github.com/Laisky/one-api'>
                 https://github.com/Laisky/one-api
@@ -57,6 +63,11 @@ const About = () => {
             <div className='dashboard-container'>
               <Card fluid className='chart-card'>
                 <Card.Content>
+                  <div style={{ marginTop: '20px', textAlign: 'center' }}>
+                    <Button as={Link} to='/models' primary>
+                      {t('about.view_models', 'View Supported Models')}
+                    </Button>
+                  </div>
                   <div
                     style={{ fontSize: 'larger' }}
                     dangerouslySetInnerHTML={{ __html: about }}
