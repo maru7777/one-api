@@ -25,8 +25,11 @@ import {
   Switch,
   Checkbox,
   Box,
-  Typography
+  Typography,
+  Tooltip,
+  IconButton
 } from '@mui/material';
+import { HelpOutline } from '@mui/icons-material';
 
 import { Formik } from 'formik';
 import * as Yup from 'yup';
@@ -138,6 +141,23 @@ const validationSchema = Yup.object().shape({
     return false;
   })
 });
+
+// Helper component for labels with tooltips
+const LabelWithTooltip = ({ label, helpText, children, ...props }) => (
+  <Box sx={{ display: 'flex', alignItems: 'center', ...props.sx }}>
+    <InputLabel {...props}>
+      {label}
+    </InputLabel>
+    {helpText && (
+      <Tooltip title={helpText} placement="top" arrow>
+        <IconButton size="small" sx={{ ml: 0.5, p: 0.25 }}>
+          <HelpOutline sx={{ fontSize: 16, color: 'text.secondary' }} />
+        </IconButton>
+      </Tooltip>
+    )}
+    {children}
+  </Box>
+);
 
 const EditModal = ({ open, channelId, onCancel, onOk }) => {
   const theme = useTheme();
@@ -785,8 +805,10 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
 
               <FormControl fullWidth error={Boolean(touched.model_mapping && errors.model_mapping)} sx={{ ...theme.typography.otherInput }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                  <InputLabel
+                  <LabelWithTooltip
                     htmlFor="channel-model_mapping-label"
+                    label={inputLabel.model_mapping}
+                    helpText="将传入的模型请求重定向到不同的模型。例如，将'gpt-4-0314'映射到'gpt-4'以处理已弃用的模型名称。JSON格式：{&quot;请求模型&quot;: &quot;实际模型&quot;}"
                     sx={{
                       position: 'relative',
                       transform: 'none',
@@ -794,9 +816,7 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
                       fontWeight: 500,
                       color: theme.palette.text.primary
                     }}
-                  >
-                    {inputLabel.model_mapping}
-                  </InputLabel>
+                  />
                   <Box>
                     <Button
                       size="small"
@@ -860,11 +880,22 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
                 )}
               </FormControl>
               <FormControl fullWidth error={Boolean(touched.system_prompt && errors.system_prompt)} sx={{ ...theme.typography.otherInput }}>
-                {/* <InputLabel htmlFor="channel-model_mapping-label">{inputLabel.model_mapping}</InputLabel> */}
+                <LabelWithTooltip
+                  htmlFor="channel-system_prompt-label"
+                  label={inputLabel.system_prompt}
+                  helpText="为通过此渠道的所有请求强制设置特定的系统提示词。适用于创建专门的AI助手或强制执行特定的行为模式。"
+                  sx={{
+                    position: 'relative',
+                    transform: 'none',
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    color: theme.palette.text.primary,
+                    mb: 1
+                  }}
+                />
                 <TextField
                   multiline
                   id="channel-system_prompt-label"
-                  label={inputLabel.system_prompt}
                   value={values.system_prompt}
                   name="system_prompt"
                   onBlur={handleBlur}
@@ -886,8 +917,10 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
 
               <FormControl fullWidth error={Boolean(touched.model_configs && errors.model_configs)} sx={{ ...theme.typography.otherInput }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                  <InputLabel
+                  <LabelWithTooltip
                     htmlFor="channel-model_configs-label"
+                    label="模型配置"
+                    helpText="为每个模型配置定价和限制。'ratio'设置输入token成本，'completion_ratio'设置输出token成本倍数，'max_tokens'设置请求限制。覆盖默认定价。"
                     sx={{
                       position: 'relative',
                       transform: 'none',
@@ -895,9 +928,7 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
                       fontWeight: 500,
                       color: theme.palette.text.primary
                     }}
-                  >
-                    模型配置
-                  </InputLabel>
+                  />
                   <Box>
                     <Button
                       size="small"
@@ -1009,6 +1040,43 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
                   )}
                 </FormControl>
               )}
+
+              {/* Rate Limit Field */}
+              <FormControl fullWidth error={Boolean(touched.ratelimit && errors.ratelimit)} sx={{ ...theme.typography.otherInput }}>
+                <LabelWithTooltip
+                  htmlFor="channel-ratelimit-label"
+                  label={inputLabel.ratelimit}
+                  helpText="控制每个令牌在每个渠道3分钟内的最大请求次数。设置为0表示不限制。这有助于防止滥用和管理API使用量。"
+                  sx={{
+                    position: 'relative',
+                    transform: 'none',
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    color: theme.palette.text.primary,
+                    mb: 1
+                  }}
+                />
+                <OutlinedInput
+                  id="channel-ratelimit-label"
+                  type="number"
+                  value={values.ratelimit}
+                  name="ratelimit"
+                  onBlur={handleBlur}
+                  onChange={handleChange}
+                  placeholder={inputPrompt.ratelimit}
+                  inputProps={{ min: 0 }}
+                  aria-describedby="helper-text-channel-ratelimit-label"
+                />
+                {touched.ratelimit && errors.ratelimit ? (
+                  <FormHelperText error id="helper-text-channel-ratelimit-label">
+                    {errors.ratelimit}
+                  </FormHelperText>
+                ) : (
+                  <FormHelperText id="helper-text-channel-ratelimit-label">
+                    {inputPrompt.ratelimit}
+                  </FormHelperText>
+                )}
+              </FormControl>
 
               <DialogActions>
                 <Button onClick={onCancel}>取消</Button>

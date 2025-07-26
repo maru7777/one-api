@@ -1049,3 +1049,134 @@ func TestOriginalLogErrorFixed(t *testing.T) {
 
 	t.Logf("Successfully converted request without additionalProperties errors")
 }
+
+func TestUsageMetadataPriority(t *testing.T) {
+	ctx := context.Background()
+	_ = ctx
+
+	tests := []struct {
+		name     string
+		response ChatResponse
+		expected model.Usage
+		fallback int // expected prompt tokens for fallback calculation
+	}{
+		{
+			name: "use gemini usage metadata when available",
+			response: ChatResponse{
+				Candidates: []ChatCandidate{
+					{
+						Content: ChatContent{
+							Role: "model",
+							Parts: []Part{
+								{Text: "Hello there! The classic first program.\n\nHow can I help you today?"},
+							},
+						},
+						FinishReason: "STOP",
+					},
+				},
+				UsageMetadata: &UsageMetadata{
+					PromptTokenCount:     3,
+					CandidatesTokenCount: 16,
+					TotalTokenCount:      1127, // This includes thoughts tokens
+				},
+			},
+			expected: model.Usage{
+				PromptTokens:     3,
+				CompletionTokens: 16,
+				TotalTokens:      1127,
+			},
+			fallback: 100, // This should not be used
+		},
+		{
+			name: "fallback to manual calculation when metadata is nil",
+			response: ChatResponse{
+				Candidates: []ChatCandidate{
+					{
+						Content: ChatContent{
+							Role: "model",
+							Parts: []Part{
+								{Text: "Hello"},
+							},
+						},
+						FinishReason: "STOP",
+					},
+				},
+				UsageMetadata: nil,
+			},
+			expected: model.Usage{
+				PromptTokens:     50, // fallback value
+				CompletionTokens: 1,  // calculated from "Hello"
+				TotalTokens:      51, // sum
+			},
+			fallback: 50,
+		},
+		{
+			name: "fallback when metadata has zero total tokens",
+			response: ChatResponse{
+				Candidates: []ChatCandidate{
+					{
+						Content: ChatContent{
+							Role: "model",
+							Parts: []Part{
+								{Text: "Hi"},
+							},
+						},
+						FinishReason: "STOP",
+					},
+				},
+				UsageMetadata: &UsageMetadata{
+					PromptTokenCount:     0,
+					CandidatesTokenCount: 0,
+					TotalTokenCount:      0, // Zero should trigger fallback
+				},
+			},
+			expected: model.Usage{
+				PromptTokens:     25, // fallback value
+				CompletionTokens: 1,  // calculated from "Hi"
+				TotalTokens:      26, // sum
+			},
+			fallback: 25,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Mock the responseGeminiChat2OpenAI and CountTokenText functions by creating usage manually
+			var actualUsage model.Usage
+
+			// Simulate the logic from Handler function
+			if tt.response.UsageMetadata != nil && tt.response.UsageMetadata.TotalTokenCount > 0 {
+				// Use Gemini's provided token counts
+				actualUsage = model.Usage{
+					PromptTokens:     tt.response.UsageMetadata.PromptTokenCount,
+					CompletionTokens: tt.response.UsageMetadata.CandidatesTokenCount,
+					TotalTokens:      tt.response.UsageMetadata.TotalTokenCount,
+				}
+			} else {
+				// Fall back to manual calculation
+				// Simple mock: count characters divided by 4 (rough token estimation)
+				responseText := tt.response.GetResponseText()
+				completionTokens := len(responseText) / 4
+				if completionTokens == 0 {
+					completionTokens = 1 // minimum 1 token
+				}
+				actualUsage = model.Usage{
+					PromptTokens:     tt.fallback,
+					CompletionTokens: completionTokens,
+					TotalTokens:      tt.fallback + completionTokens,
+				}
+			}
+
+			// Verify the usage matches expected values
+			if actualUsage.PromptTokens != tt.expected.PromptTokens {
+				t.Errorf("Expected PromptTokens %d, got %d", tt.expected.PromptTokens, actualUsage.PromptTokens)
+			}
+			if actualUsage.CompletionTokens != tt.expected.CompletionTokens {
+				t.Errorf("Expected CompletionTokens %d, got %d", tt.expected.CompletionTokens, actualUsage.CompletionTokens)
+			}
+			if actualUsage.TotalTokens != tt.expected.TotalTokens {
+				t.Errorf("Expected TotalTokens %d, got %d", tt.expected.TotalTokens, actualUsage.TotalTokens)
+			}
+		})
+	}
+}

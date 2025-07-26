@@ -29,6 +29,7 @@ import Dashboard from './pages/Dashboard';
 
 const Home = lazy(() => import('./pages/Home'));
 const About = lazy(() => import('./pages/About'));
+const Models = lazy(() => import('./pages/Models'));
 
 function App() {
   const [userState, userDispatch] = useContext(UserContext);
@@ -287,6 +288,14 @@ function App() {
         element={
           <Suspense fallback={<Loading></Loading>}>
             <About />
+          </Suspense>
+        }
+      />
+      <Route
+        path='/models'
+        element={
+          <Suspense fallback={<Loading></Loading>}>
+            <Models />
           </Suspense>
         }
       />

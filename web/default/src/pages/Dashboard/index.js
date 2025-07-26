@@ -1,4 +1,4 @@
-import React, {useEffect, useState, useCallback} from 'react';
+import React, {useEffect, useState, useCallback, useRef} from 'react';
 import {useTranslation} from 'react-i18next';
 import {Card, Grid, Dropdown, Form, Button, Message, Statistic, Icon} from 'semantic-ui-react';
 import {
@@ -98,6 +98,7 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const isInitialized = useRef(false);
 
   // Move useEffect hooks after function definitions
 
@@ -132,34 +133,7 @@ const Dashboard = () => {
     return dates;
   }, []);
 
-  const handlePresetDateRange = (preset) => {
-    const today = new Date();
-    let startDate;
 
-    switch (preset) {
-      case 'today':
-        startDate = new Date(today);
-        break;
-      case '7days':
-        startDate = new Date();
-        startDate.setDate(today.getDate() - 6);
-        break;
-      case '30days':
-        startDate = new Date();
-        startDate.setDate(today.getDate() - 29);
-        break;
-      default:
-        return;
-    }
-
-    const fromDateStr = startDate.toISOString().split('T')[0];
-    const toDateStr = today.toISOString().split('T')[0];
-
-    setFromDate(fromDateStr);
-    setToDate(toDateStr);
-    setIsRefreshing(true);
-    fetchDashboardData(selectedUserId, fromDateStr, toDateStr);
-  };
 
   const getMaxDate = () => {
     const today = new Date();
@@ -185,13 +159,15 @@ const Dashboard = () => {
       const response = await axios.get('/api/user/dashboard/users');
       if (response.data.success) {
         setUsers(response.data.data || []);
-        // Set default selection to "All Users" for root users
-        setSelectedUserId('all');
+        // Only set default selection if no user is currently selected
+        if (!selectedUserId) {
+          setSelectedUserId('all');
+        }
       }
     } catch (error) {
       console.error('Failed to fetch users:', error);
     }
-  }, []);
+  }, [selectedUserId]);
 
   const calculateSummary = useCallback((dashboardData) => {
     if (!Array.isArray(dashboardData) || dashboardData.length === 0) {
@@ -215,18 +191,49 @@ const Dashboard = () => {
 
     // Calculate metrics for the selected date range instead of just "today"
     const totalRequests = dashboardData.reduce((sum, item) => sum + item.RequestCount, 0);
-    const totalQuota = dashboardData.reduce((sum, item) => sum + item.Quota, 0) / 1000000;
+
+    // Don't divide by quotaPerUnit here - renderQuota function will handle the conversion
+    const totalQuota = dashboardData.reduce((sum, item) => sum + item.Quota, 0);
+
+    // Debug logging
+    console.log('Dashboard Debug:', {
+      totalQuota,
+      dataLength: dashboardData.length,
+      sampleData: dashboardData.slice(0, 3)
+    });
+
     const totalTokens = dashboardData.reduce((sum, item) => sum + item.PromptTokens + item.CompletionTokens, 0);
 
-    // For trend calculation, we would need to compare with previous period data
-    // Since the API only returns data for the selected range, we'll disable trends for now
-    // In a real implementation, we'd need to fetch previous period data separately
-    const requestTrend = 0; // Placeholder - would need previous period data
-    const quotaTrend = 0;   // Placeholder - would need previous period data
-    const tokenTrend = 0;   // Placeholder - would need previous period data
+    // Calculate trends by comparing first half vs second half of the selected period
+    const calculateTrend = (data, field) => {
+      if (data.length < 2) return 0;
+
+      const midpoint = Math.floor(data.length / 2);
+      const firstHalf = data.slice(0, midpoint);
+      const secondHalf = data.slice(midpoint);
+
+      const firstHalfSum = firstHalf.reduce((sum, item) => sum + item[field], 0);
+      const secondHalfSum = secondHalf.reduce((sum, item) => sum + item[field], 0);
+
+      const firstHalfAvg = firstHalfSum / firstHalf.length;
+      const secondHalfAvg = secondHalfSum / secondHalf.length;
+
+      if (firstHalfAvg === 0) return secondHalfAvg > 0 ? 100 : 0;
+      return ((secondHalfAvg - firstHalfAvg) / firstHalfAvg) * 100;
+    };
+
+    const requestTrend = calculateTrend(dashboardData, 'RequestCount');
+    const quotaTrend = calculateTrend(dashboardData, 'Quota');
+    const tokenTrend = calculateTrend(dashboardData.map(item => ({
+      ...item,
+      TotalTokens: item.PromptTokens + item.CompletionTokens
+    })), 'TotalTokens');
 
     // Advanced metrics
-    const avgCostPerRequest = totalRequests > 0 ? totalQuota / totalRequests : 0;
+    // Convert quota to currency units first, then calculate average cost per request
+    const quotaPerUnit = parseFloat(localStorage.getItem('quota_per_unit') || '500000');
+    const totalQuotaInCurrency = totalQuota / quotaPerUnit;
+    const avgCostPerRequest = totalRequests > 0 ? totalQuotaInCurrency / totalRequests : 0;
     const avgTokensPerRequest = totalRequests > 0 ? totalTokens / totalRequests : 0;
 
     // Find top model by usage across the selected date range
@@ -315,10 +322,42 @@ const Dashboard = () => {
     }
   }, [selectedUserId, fromDate, toDate, isRootUser, calculateSummary]);
 
+  const handlePresetDateRange = useCallback((preset) => {
+    const today = new Date();
+    let startDate;
 
+    switch (preset) {
+      case 'today':
+        startDate = new Date(today);
+        break;
+      case '7days':
+        startDate = new Date();
+        startDate.setDate(today.getDate() - 6);
+        break;
+      case '30days':
+        startDate = new Date();
+        startDate.setDate(today.getDate() - 29);
+        break;
+      default:
+        return;
+    }
+
+    const fromDateStr = startDate.toISOString().split('T')[0];
+    const toDateStr = today.toISOString().split('T')[0];
+
+    // Use functional updates to ensure we get the latest state
+    setFromDate(() => fromDateStr);
+    setToDate(() => toDateStr);
+
+    // Immediately trigger data fetch with the new dates
+    setIsRefreshing(true);
+    fetchDashboardData(selectedUserId, fromDateStr, toDateStr);
+  }, [selectedUserId, fetchDashboardData]);
 
   // Initialize component and set up data fetching
   useEffect(() => {
+    if (isInitialized.current) return; // Prevent re-initialization
+
     const rootUser = isRoot();
     setIsRootUser(rootUser);
 
@@ -327,28 +366,27 @@ const Dashboard = () => {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(today.getDate() - 6);
 
-    setToDate(today.toISOString().split('T')[0]);
-    setFromDate(sevenDaysAgo.toISOString().split('T')[0]);
+    const defaultFromDate = sevenDaysAgo.toISOString().split('T')[0];
+    const defaultToDate = today.toISOString().split('T')[0];
+
+    setFromDate(defaultFromDate);
+    setToDate(defaultToDate);
 
     if (rootUser) {
       fetchUsers();
-    } else {
-      fetchDashboardData();
     }
-  }, [fetchDashboardData, fetchUsers]);
+
+    isInitialized.current = true;
+  }, []);
 
   useEffect(() => {
-    if (selectedUserId) {
-      fetchDashboardData(selectedUserId);
-    }
-  }, [selectedUserId, fetchDashboardData]);
-
-  // Refresh data when date range changes
-  useEffect(() => {
-    if (fromDate && toDate) {
+    if (selectedUserId && fromDate && toDate) {
+      setIsRefreshing(true);
       fetchDashboardData(selectedUserId, fromDate, toDate);
     }
-  }, [fromDate, toDate, selectedUserId, fetchDashboardData]);
+  }, [selectedUserId, fromDate, toDate, fetchDashboardData]);
+
+
 
   // 处理数据以供折线图使用，补充缺失的日期
   const processTimeSeriesData = () => {
@@ -383,7 +421,7 @@ const Dashboard = () => {
     // 填充实际数据
     data.forEach((item) => {
       dailyData[item.Day].requests += item.RequestCount;
-      dailyData[item.Day].quota += item.Quota / 1000000;
+      dailyData[item.Day].quota += item.Quota; // Don't divide here - renderQuota will handle conversion
       dailyData[item.Day].tokens += item.PromptTokens + item.CompletionTokens;
     });
 
@@ -468,17 +506,20 @@ const Dashboard = () => {
       }
 
       modelStats[item.ModelName].requests += item.RequestCount;
-      modelStats[item.ModelName].quota += item.Quota / 1000000;
+      modelStats[item.ModelName].quota += item.Quota; // Don't divide here - renderQuota will handle conversion
       modelStats[item.ModelName].tokens += item.PromptTokens + item.CompletionTokens;
     });
 
     // Calculate derived metrics
+    const quotaPerUnit = parseFloat(localStorage.getItem('quota_per_unit') || '500000');
     Object.values(modelStats).forEach(model => {
       if (model.requests > 0) {
-        model.avgCostPerRequest = model.quota / model.requests;
+        // Convert quota to currency units first, then calculate average cost per request
+        const modelQuotaInCurrency = model.quota / quotaPerUnit;
+        model.avgCostPerRequest = modelQuotaInCurrency / model.requests;
         model.avgTokensPerRequest = model.tokens / model.requests;
         // Efficiency score: higher tokens per dollar is better
-        model.efficiency = model.quota > 0 ? model.tokens / model.quota : 0;
+        model.efficiency = modelQuotaInCurrency > 0 ? model.tokens / modelQuotaInCurrency : 0;
       }
     });
 
@@ -502,7 +543,7 @@ const Dashboard = () => {
         };
       }
       dailyUsage[item.Day].requests += item.RequestCount;
-      dailyUsage[item.Day].quota += item.Quota / 1000000;
+      dailyUsage[item.Day].quota += item.Quota; // Don't divide here - renderQuota will handle conversion
       dailyUsage[item.Day].tokens += item.PromptTokens + item.CompletionTokens;
     });
 
@@ -677,16 +718,20 @@ const Dashboard = () => {
             <Form.Field style={{ marginBottom: '1rem' }}>
               <label>{t('dashboard.user_selector.title', 'Select User')}</label>
               <Dropdown
-                placeholder={t('dashboard.user_selector.placeholder', 'Select a user to view dashboard')}
+                placeholder={t('dashboard.user_selector.placeholder', 'Search and select a user to view dashboard')}
                 fluid
                 selection
+                search
+                clearable
                 value={selectedUserId}
                 onChange={handleUserChange}
                 options={users.map(user => ({
                   key: user.id,
                   value: user.id === 0 ? 'all' : user.id.toString(),
-                  text: user.display_name || user.username
+                  text: user.id === 0 ? user.display_name : `${user.display_name || user.username} (${user.username})`,
+                  description: user.id === 0 ? 'View site-wide statistics' : `User ID: ${user.id}`
                 }))}
+                noResultsMessage={t('dashboard.user_selector.no_results', 'No users found')}
               />
             </Form.Field>
           )}
@@ -1215,9 +1260,11 @@ const Dashboard = () => {
                   }}
                   content={({ active, payload, label }) => {
                     if (active && payload && payload.length) {
-                      // Models are already sorted by request count in descending order
-                      // Filter out entries with zero values to avoid showing meaningless data
-                      const filteredPayload = payload.filter(entry => entry.value > 0);
+                      // Filter out entries with zero values and sort by value in descending order
+                      // This ensures the tooltip shows models ordered by their usage for this specific day
+                      const filteredAndSortedPayload = payload
+                        .filter(entry => entry.value > 0)
+                        .sort((a, b) => b.value - a.value);
 
                       return (
                         <div style={{
@@ -1231,7 +1278,7 @@ const Dashboard = () => {
                           <div style={{ fontWeight: '600', marginBottom: '8px' }}>
                             {formatDate(label)}
                           </div>
-                          {filteredPayload.map((entry, index) => (
+                          {filteredAndSortedPayload.map((entry, index) => (
                             <div key={index} style={{ marginBottom: '4px' }}>
                               <span style={{
                                 display: 'inline-block',
