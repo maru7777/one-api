@@ -124,6 +124,7 @@ var getGroupModelsV2Cache = gutils.NewExpCache[[]EnabledAbility](context.Backgro
 type EnabledAbility struct {
 	Model       string `json:"model" gorm:"model"`
 	ChannelType int    `json:"channel_type" gorm:"channel_type"`
+	ChannelId   int    `json:"channel_id" gorm:"channel_id"`
 }
 
 // GetGroupModelsV2 returns all enabled models for this group with their channel names.
@@ -142,10 +143,10 @@ func GetGroupModelsV2(ctx context.Context, group string) ([]EnabledAbility, erro
 	}
 	now := time.Now()
 
-	// query with JOIN to get model and channel name in a single query
+	// query with JOIN to get model, channel type, and channel ID in a single query
 	var models []EnabledAbility
 	query := DB.Model(&Ability{}).
-		Select("DISTINCT abilities.model AS model, channels.type AS channel_type").
+		Select("DISTINCT abilities.model AS model, channels.type AS channel_type, abilities.channel_id AS channel_id").
 		Joins("JOIN channels ON abilities.channel_id = channels.id").
 		Where("abilities."+groupCol+" = ? AND abilities.enabled = "+trueVal+" AND (abilities.suspend_until IS NULL OR abilities.suspend_until < ?)", group, now).
 		Order("abilities.model")

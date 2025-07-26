@@ -241,6 +241,20 @@ The Channel Settings page is the central hub for configuring and managing API ch
 - **Behavior**: Distributes requests proportionally among same-priority channels
 - **Example**: Weight 3 channel gets 3x more requests than weight 1 channel
 
+**Rate Limit**
+
+- **Purpose**: Controls the maximum number of requests per token per channel within a 3-minute window
+- **Format**: Integer value (requests per 3 minutes)
+- **Default**: 0 (unlimited)
+- **Behavior**: When limit is reached, requests are rejected with HTTP 429 (Too Many Requests)
+- **Use Cases**:
+  - Prevent API abuse and excessive usage
+  - Manage costs by limiting request frequency
+  - Ensure fair usage across multiple users
+  - Comply with upstream provider rate limits
+- **Implementation**: Uses token-based rate limiting with SHA-256 hashed keys for privacy
+- **Example**: Setting to 100 allows maximum 100 requests per token per channel every 3 minutes
+
 ## Model Configs: Unified Pricing System
 
 ### What is Model Configs?
@@ -427,6 +441,11 @@ The system provides clear indicators of migration status:
 - **Load Default**: Automatically populate with provider-appropriate defaults
 - **Format JSON**: Manually trigger pretty-printing
 - **Validation**: Real-time feedback on JSON syntax
+- **Interactive Tooltips**: Hover over question mark icons (❓) next to field labels for detailed explanations
+  - **Rate Limit**: Explains the 3-minute window and usage scenarios
+  - **Model Mapping**: Shows JSON format examples and use cases
+  - **Model Configs**: Details pricing structure and field meanings
+  - **System Prompt**: Describes forced prompt behavior and setup requirements
 
 #### **3. 🎨 Visual Feedback**
 
@@ -838,6 +857,49 @@ Low Priority (51-100): Development and testing
 - **Migration Guide**: Detailed upgrade instructions
 - **Best Practices**: Recommended configurations
 - **Troubleshooting FAQ**: Common issues and solutions
+
+## User Interface Enhancements
+
+### Interactive Help System
+
+The channel configuration interface includes comprehensive tooltips to help users understand each field:
+
+**Tooltip Features**
+
+- **Question Mark Icons**: Hover over ❓ icons next to field labels for detailed explanations
+- **Context-Sensitive Help**: Each tooltip provides specific guidance for that field
+- **Multi-Language Support**: Available in both English and Chinese
+- **Consistent Design**: Uniform tooltip styling across all three frontend templates
+
+**Available Tooltips**
+
+| Field | Description |
+|-------|-------------|
+| **Rate Limit** | Explains the 3-minute window, usage scenarios, and abuse prevention |
+| **Model Mapping** | Shows JSON format examples and model redirection use cases |
+| **Model Configs** | Details pricing structure, field meanings, and configuration options |
+| **System Prompt** | Describes forced prompt behavior and setup requirements |
+
+**Implementation Details**
+
+- **Default Template**: Uses Semantic UI React `Popup` component
+- **Berry Template**: Uses Material-UI `Tooltip` component
+- **Air Template**: Uses Semi Design `Tooltip` component
+- **Accessibility**: All tooltips include proper ARIA attributes and keyboard navigation
+
+### Form Validation and Feedback
+
+**Real-Time Validation**
+
+- **JSON Syntax**: Immediate feedback for JSON fields with color-coded borders
+- **Required Fields**: Clear indication of mandatory vs optional fields
+- **Format Validation**: Specific validation for different field types
+
+**Visual Indicators**
+
+- **Success States**: Green borders and checkmarks for valid input
+- **Error States**: Red borders and error messages for invalid input
+- **Loading States**: Progress indicators during form submission
 
 ## Quick Reference
 

@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {Button, Col, Form, Layout, Row, Spin} from "@douyinfe/semi-ui";
+import {Button, Col, Form, Layout, Row, Spin, AutoComplete} from "@douyinfe/semi-ui";
 import VChart from '@visactor/vchart';
 import {API, isAdmin, showError, timestamp2string, timestamp2string1} from "../../helpers";
 import {
@@ -32,6 +32,8 @@ const Detail = (props) => {
     const [consumeQuota, setConsumeQuota] = useState(0);
     const [times, setTimes] = useState(0);
     const [dataExportDefaultTime, setDataExportDefaultTime] = useState(localStorage.getItem('data_export_default_time') || 'hour');
+    const [users, setUsers] = useState([]);
+    const [userOptions, setUserOptions] = useState([]);
 
     const handleInputChange = (value, name) => {
         if (name === 'data_export_default_time') {
@@ -39,6 +41,29 @@ const Detail = (props) => {
             return
         }
         setInputs((inputs) => ({...inputs, [name]: value}));
+    };
+
+    const fetchUsers = async () => {
+        if (!isAdminUser) return;
+
+        try {
+            const res = await API.get('/api/user/dashboard/users');
+            const { success, message, data } = res.data;
+            if (success) {
+                setUsers(data || []);
+                // Create options for AutoComplete
+                const options = data.map(user => ({
+                    value: user.username,
+                    label: user.id === 0 ? user.display_name : `${user.display_name || user.username} (${user.username})`,
+                    user: user
+                }));
+                setUserOptions(options);
+            } else {
+                showError(message);
+            }
+        } catch (error) {
+            console.error('Failed to fetch users:', error);
+        }
     };
 
     const spec_line = {
@@ -211,6 +236,52 @@ const Detail = (props) => {
         await loadQuotaData(modelDataChart, modelDataPieChart);
     };
 
+    const handlePresetDateRange = (preset) => {
+        const now = new Date();
+        let startDate;
+
+        switch (preset) {
+            case 'today':
+                startDate = new Date(now);
+                startDate.setHours(0, 0, 0, 0);
+                break;
+            case '7days':
+                startDate = new Date();
+                startDate.setDate(now.getDate() - 6);
+                startDate.setHours(0, 0, 0, 0);
+                break;
+            case '30days':
+                startDate = new Date();
+                startDate.setDate(now.getDate() - 29);
+                startDate.setHours(0, 0, 0, 0);
+                break;
+            default:
+                return;
+        }
+
+        const endDate = new Date(now);
+        endDate.setHours(23, 59, 59, 999);
+
+        const startTimestamp = timestamp2string(startDate.getTime() / 1000);
+        const endTimestamp = timestamp2string(endDate.getTime() / 1000);
+
+        // Update the inputs state
+        setInputs(prev => ({
+            ...prev,
+            start_timestamp: startTimestamp,
+            end_timestamp: endTimestamp
+        }));
+
+        // Update the form values
+        if (formRef.current) {
+            formRef.current.formApi.setValue('start_timestamp', startTimestamp);
+            formRef.current.formApi.setValue('end_timestamp', endTimestamp);
+        }
+
+        // Immediately trigger data refresh
+        loadQuotaData(modelDataChart, modelDataPieChart);
+    };
+
     const initChart = async () => {
         let lineChart = modelDataChart
         if (!modelDataChart) {
@@ -295,6 +366,11 @@ const Detail = (props) => {
             initialized.current = true;
             initChart();
         }
+
+        // Fetch users for admin users
+        if (isAdminUser) {
+            fetchUsers();
+        }
     }, []);
 
     return (
@@ -306,6 +382,36 @@ const Detail = (props) => {
                 <Layout.Content>
                     <Form ref={formRef} layout='horizontal' style={{marginTop: 10}}>
                         <>
+                            {/* Date range preset buttons */}
+                            <Form.Section>
+                                <div style={{ marginBottom: 16 }}>
+                                    <span style={{ marginRight: 16, fontWeight: 'bold' }}>快速选择时间:</span>
+                                    <Button
+                                        type="tertiary"
+                                        size="small"
+                                        onClick={() => handlePresetDateRange('today')}
+                                        style={{ marginRight: 8 }}
+                                    >
+                                        今天
+                                    </Button>
+                                    <Button
+                                        type="tertiary"
+                                        size="small"
+                                        onClick={() => handlePresetDateRange('7days')}
+                                        style={{ marginRight: 8 }}
+                                    >
+                                        最近7天
+                                    </Button>
+                                    <Button
+                                        type="tertiary"
+                                        size="small"
+                                        onClick={() => handlePresetDateRange('30days')}
+                                        style={{ marginRight: 8 }}
+                                    >
+                                        最近30天
+                                    </Button>
+                                </div>
+                            </Form.Section>
                             <Form.DatePicker field="start_timestamp" label='起始时间' style={{width: 272}}
                                              initValue={start_timestamp}
                                              value={start_timestamp} type='dateTime'
@@ -330,9 +436,28 @@ const Detail = (props) => {
                             </Form.Select>
                             {
                                 isAdminUser && <>
-                                    <Form.Input field="username" label='用户名称' style={{width: 176}} value={username}
-                                                placeholder={'可选值'} name='username'
-                                                onChange={value => handleInputChange(value, 'username')}/>
+                                    <AutoComplete
+                                        style={{width: 200}}
+                                        data={userOptions}
+                                        value={username}
+                                        placeholder="搜索并选择用户"
+                                        emptyContent="未找到用户"
+                                        onSelect={(value, option) => {
+                                            handleInputChange(value, 'username');
+                                        }}
+                                        onChange={(value) => {
+                                            handleInputChange(value, 'username');
+                                        }}
+                                        renderSelectedItem={(option) => option.label}
+                                        renderItem={(option) => (
+                                            <div>
+                                                <div>{option.label}</div>
+                                                <div style={{ fontSize: '12px', color: '#666' }}>
+                                                    {option.user.id === 0 ? '查看全站统计' : `用户ID: ${option.user.id}`}
+                                                </div>
+                                            </div>
+                                        )}
+                                    />
                                 </>
                             }
                             <Form.Section>
