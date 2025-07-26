@@ -1,4 +1,4 @@
-# * for amd64: docker build -t ppcelery/one-api:arm64-latest .
+# * for amd64: docker build -t ppcelery/one-api:amd64-latest .
 # * for arm64: DOCKER_BUILDKIT=1 docker build --platform linux/arm64 --build-arg TARGETARCH=arm64 -t ppcelery/one-api:arm64-latest .
 FROM node:24-bookworm AS builder
 
@@ -74,32 +74,28 @@ RUN if [ "${TARGETARCH}" = "arm64" ]; then \
         go build -trimpath -ldflags "-s -w -X github.com/songquanpeng/one-api/common.Version=$(cat VERSION)" -o one-api; \
     fi
 
-# Use a pre-built image that already has ffmpeg for ARM64
-FROM --platform=$TARGETPLATFORM jrottenberg/ffmpeg:6.1.2-ubuntu2404 AS ffmpeg
-
-# Use Ubuntu as the base image which has better ARM64 support
-FROM --platform=$TARGETPLATFORM ubuntu:24.04
+# Use Fedora as the base image which has better ARM64 support
+FROM fedora:latest
 
 ARG TARGETARCH=amd64
-ENV DEBIAN_FRONTEND=noninteractive
+ENV NO_AT_BRIDGE=1
 
-# Install basic requirements without triggering libc-bin reconfiguration
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Install basic requirements
+RUN dnf install -y --setopt=install_weak_deps=False \
     ca-certificates tzdata bash haveged && \
-    rm -rf /var/lib/apt/lists/*
+    dnf clean all
 
-# Copy ffmpeg binaries from the ffmpeg image
-COPY --from=ffmpeg /usr/local/bin/ffmpeg /usr/local/bin/
-COPY --from=ffmpeg /usr/local/bin/ffprobe /usr/local/bin/
+# Create a non-root user with fixed name and password
+RUN useradd -m -s /bin/bash appuser && \
+    echo "appuser:hwe@ecn.ynr0VZK_kwk" | chpasswd && \
+    mkdir -p /data && chown appuser:appuser /data
 
-COPY --from=builder2 /build/one-api /
-# COPY --from=builder /web/build /web/build
+# Copy the one-api binary
+COPY --from=builder2 /build/one-api /usr/local/bin/one-api
 
-# RUN if [ "${TARGETARCH}" = "arm64" ]; then \
-#     else \
-#         rm -rf /web/build \
-#     fi
+# Switch to non-root user
+USER appuser
 
 EXPOSE 3000
 WORKDIR /data
-ENTRYPOINT ["/one-api"]
+ENTRYPOINT ["/usr/local/bin/one-api"]
