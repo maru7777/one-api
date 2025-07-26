@@ -16,3 +16,4 @@ temp
 .DS_Store
 /__debug_bin*
 /cmd/migrate/migrate
+/patch

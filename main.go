@@ -132,11 +132,17 @@ func main() {
 		logger.FatalLog("failed to initialize i18n: " + err.Error())
 	}
 
-	// Initialize HTTP server
 	logLevel := glog.LevelInfo
 	if config.DebugEnabled {
 		logLevel = glog.LevelDebug
 	}
+
+	ginLogger, err := glog.New(glog.WithLevel(logLevel))
+	if err != nil {
+		logger.FatalLog("failed to create logger: " + err.Error())
+	}
+
+	// Initialize HTTP server
 	server := gin.New()
 	server.RedirectTrailingSlash = false
 	server.Use(
@@ -144,7 +150,7 @@ func main() {
 		gmw.NewLoggerMiddleware(
 			gmw.WithLoggerMwColored(),
 			gmw.WithLevel(logLevel.String()),
-			gmw.WithLogger(glog.Shared.Named("one-api")),
+			gmw.WithLogger(ginLogger.Named("one-api")),
 		),
 	)
 	// This will cause SSE not to work!!!

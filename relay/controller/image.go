@@ -190,6 +190,42 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 		return openai.ErrorWrapper(err, "invalid_image_request", http.StatusBadRequest)
 	}
 
+	// // map model name
+	// var isModelMapped bool
+	// meta.OriginModelName = imageRequest.Model
+	// imageRequest.Model = meta.ActualModelName
+	// isModelMapped = meta.OriginModelName != meta.ActualModelName
+	// meta.ActualModelName = imageRequest.Model
+	// metalib.Set2Context(c, meta)
+
+	// // model validation
+	// bizErr := validateImageRequest(imageRequest, meta)
+	// if bizErr != nil {
+	// 	return bizErr
+	// }
+
+	// imageCostRatio, err := getImageCostRatio(imageRequest)
+	// if err != nil {
+	// 	return openai.ErrorWrapper(err, "get_image_cost_ratio_failed", http.StatusInternalServerError)
+	// }
+
+	// imageModel := imageRequest.Model
+	// // Convert the original image model
+	// imageRequest.Model = metalib.GetMappedModelName(imageRequest.Model, billingratio.ImageOriginModelName)
+	// c.Set(ctxkey.ResponseFormat, imageRequest.ResponseFormat)
+
+	// var requestBody io.Reader
+	// if strings.ToLower(c.GetString(ctxkey.ContentType)) == "application/json" &&
+	// 	isModelMapped || meta.ChannelType == channeltype.Azure { // make Azure channel request body
+	// 	jsonStr, err := json.Marshal(imageRequest)
+	// 	if err != nil {
+	// 		return openai.ErrorWrapper(err, "marshal_image_request_failed", http.StatusInternalServerError)
+	// 	}
+	// 	requestBody = bytes.NewBuffer(jsonStr)
+	// } else {
+	// 	requestBody = c.Request.Body
+	// }
+
 	adaptor := relay.GetAdaptor(meta.APIType)
 	if adaptor == nil {
 		return openai.ErrorWrapper(fmt.Errorf("invalid api type: %d", meta.APIType), "invalid_api_type", http.StatusBadRequest)

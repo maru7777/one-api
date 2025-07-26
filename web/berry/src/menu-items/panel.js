@@ -81,6 +81,15 @@ const panel = {
       isAdmin: true
     },
     {
+      id: 'models',
+      title: '模型',
+      type: 'item',
+      url: '/panel/models',
+      icon: icons.IconList,
+      breadcrumbs: false,
+      isAdmin: false
+    },
+    {
       id: 'profile',
       title: '我的',
       type: 'item',

@@ -21,6 +21,13 @@ func (a *Adaptor) Init(meta *meta.Meta) {}
 
 // Implement required adaptor interface methods (Novita uses OpenAI-compatible API)
 func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
+	// Handle Claude Messages requests - convert to OpenAI Chat Completions endpoint
+	if meta.RequestURLPath == "/v1/messages" {
+		// Claude Messages requests should use OpenAI's chat completions endpoint
+		chatCompletionsPath := "/v1/chat/completions"
+		return openai_compatible.GetFullRequestURL(meta.BaseURL, chatCompletionsPath, meta.ChannelType), nil
+	}
+
 	// Novita uses OpenAI-compatible API endpoints
 	return openai_compatible.GetFullRequestURL(meta.BaseURL, meta.RequestURLPath, meta.ChannelType), nil
 }
@@ -42,6 +49,11 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.G
 
 func (a *Adaptor) ConvertImageRequest(c *gin.Context, request *model.ImageRequest) (any, error) {
 	return nil, errors.New("novita does not support image generation")
+}
+
+func (a *Adaptor) ConvertClaudeRequest(c *gin.Context, request *model.ClaudeRequest) (any, error) {
+	// Use the shared OpenAI-compatible Claude Messages conversion
+	return openai_compatible.ConvertClaudeRequest(c, request)
 }
 
 func (a *Adaptor) DoRequest(c *gin.Context, meta *meta.Meta, requestBody io.Reader) (*http.Response, error) {

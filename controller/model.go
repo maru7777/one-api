@@ -146,6 +146,166 @@ func ListAllModels(c *gin.Context) {
 	})
 }
 
+// ModelsDisplayResponse represents the response structure for the models display page
+type ModelsDisplayResponse struct {
+	Success bool                                `json:"success"`
+	Message string                              `json:"message"`
+	Data    map[string]ChannelModelsDisplayInfo `json:"data"`
+}
+
+// ChannelModelsDisplayInfo represents model information for a specific channel/adaptor
+type ChannelModelsDisplayInfo struct {
+	ChannelName string                      `json:"channel_name"`
+	ChannelType int                         `json:"channel_type"`
+	Models      map[string]ModelDisplayInfo `json:"models"`
+}
+
+// ModelDisplayInfo represents display information for a single model
+type ModelDisplayInfo struct {
+	InputPrice  float64 `json:"input_price"`  // Price per 1M input tokens in USD
+	OutputPrice float64 `json:"output_price"` // Price per 1M output tokens in USD
+	MaxTokens   int32   `json:"max_tokens"`   // Maximum tokens limit, 0 means unlimited
+}
+
+// GetModelsDisplay returns models available to the current user grouped by channel/adaptor with pricing information
+// This endpoint is designed for the Models display page in the frontend
+func GetModelsDisplay(c *gin.Context) {
+	userId := c.GetInt(ctxkey.Id)
+
+	// Get user's group to determine available models
+	userGroup, err := model.CacheGetUserGroup(userId)
+	if err != nil {
+		c.JSON(http.StatusOK, ModelsDisplayResponse{
+			Success: false,
+			Message: "Failed to get user group: " + err.Error(),
+			Data:    nil,
+		})
+		return
+	}
+
+	// Get available models with their channel information for this user group
+	availableAbilities, err := model.CacheGetGroupModelsV2(c.Request.Context(), userGroup)
+	if err != nil {
+		c.JSON(http.StatusOK, ModelsDisplayResponse{
+			Success: false,
+			Message: "Failed to get available models: " + err.Error(),
+			Data:    nil,
+		})
+		return
+	}
+
+	// Group models by individual channels to support Custom Channels and distinguish between multiple channels of the same type
+	result := make(map[string]ChannelModelsDisplayInfo)
+	channelToModels := make(map[int][]string)
+
+	// Group models by individual channel ID
+	for _, ability := range availableAbilities {
+		channelToModels[ability.ChannelId] = append(channelToModels[ability.ChannelId], ability.Model)
+	}
+
+	// For each channel, get the channel information and pricing
+	for channelId, models := range channelToModels {
+		// Get channel information from database
+		channel, err := model.GetChannelById(channelId, true)
+		if err != nil {
+			continue
+		}
+
+		// Get adaptor for this channel type
+		adaptor := relay.GetAdaptor(channeltype.ToAPIType(channel.Type))
+		if adaptor == nil {
+			// For Custom Channels and other unsupported types, use OpenAI adaptor as fallback
+			adaptor = relay.GetAdaptor(apitype.OpenAI)
+			if adaptor == nil {
+				continue
+			}
+		}
+
+		meta := &meta.Meta{
+			ChannelType: channel.Type,
+		}
+		adaptor.Init(meta)
+
+		// Get channel type name and pricing
+		channelTypeName := channeltype.IdToName(channel.Type)
+		pricing := adaptor.GetDefaultModelPricing()
+
+		// Get model mapping for this channel to resolve mapped model pricing
+		modelMapping := channel.GetModelMapping()
+
+		// Create display key in format {channel_type}:{channel_name}
+		displayKey := fmt.Sprintf("%s:%s", channelTypeName, channel.Name)
+
+		// Create models display info for available models only
+		modelsInfo := make(map[string]ModelDisplayInfo)
+		for _, modelName := range models {
+			var inputPrice, outputPrice float64
+			var maxTokens int32
+
+			// Resolve the actual model name for pricing lookup
+			// If the model is mapped, use the target model for pricing
+			actualModelName := modelName
+			if modelMapping != nil {
+				if mappedModel, exists := modelMapping[modelName]; exists && mappedModel != "" {
+					actualModelName = mappedModel
+				}
+			}
+
+			if modelConfig, exists := pricing[actualModelName]; exists {
+				// Convert pricing based on the format used by the adapter
+				// Some adapters use quota-based pricing (ratio.MilliTokensUsd = 0.5)
+				// Others use USD-based pricing (MilliTokensUsd = 0.000001)
+				// We detect the format by checking the magnitude of the ratio
+				if modelConfig.Ratio < 0.001 {
+					// USD-based pricing (like AWS): ratio is already in USD per token
+					// Just convert to USD per 1M tokens
+					inputPrice = modelConfig.Ratio * 1000000
+				} else {
+					// Quota-based pricing (like OpenAI): ratio is in quota per token
+					// Convert from quota to USD: ratio.QuotaPerUsd = 500000
+					inputPrice = (modelConfig.Ratio * 1000000) / 500000
+				}
+				outputPrice = inputPrice * modelConfig.CompletionRatio
+				maxTokens = modelConfig.MaxTokens
+			} else {
+				// Fallback to adapter methods if not in pricing map
+				inputRatio := adaptor.GetModelRatio(actualModelName)
+				completionRatio := adaptor.GetCompletionRatio(actualModelName)
+				// Apply the same detection logic for fallback pricing
+				if inputRatio < 0.001 {
+					// USD-based pricing
+					inputPrice = inputRatio * 1000000
+				} else {
+					// Quota-based pricing
+					inputPrice = (inputRatio * 1000000) / 500000
+				}
+				outputPrice = inputPrice * completionRatio
+				maxTokens = 0 // Default to unlimited
+			}
+
+			modelsInfo[modelName] = ModelDisplayInfo{
+				InputPrice:  inputPrice,
+				OutputPrice: outputPrice,
+				MaxTokens:   maxTokens,
+			}
+		}
+
+		if len(modelsInfo) > 0 {
+			result[displayKey] = ChannelModelsDisplayInfo{
+				ChannelName: displayKey,
+				ChannelType: channel.Type,
+				Models:      modelsInfo,
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, ModelsDisplayResponse{
+		Success: true,
+		Message: "",
+		Data:    result,
+	})
+}
+
 // ListModels lists all models available to the user.
 func ListModels(c *gin.Context) {
 	userId := c.GetInt(ctxkey.Id)

@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import {useTranslation} from 'react-i18next';
-import {Button, Card, Form, Input, Message} from 'semantic-ui-react';
+import {Button, Card, Form, Input, Message, Popup, Icon} from 'semantic-ui-react';
 import {useNavigate, useParams} from 'react-router-dom';
 import {API, copy, getChannelModels, showError, showInfo, showSuccess, verifyJSON,} from '../../helpers';
 import {CHANNEL_OPTIONS, COZE_AUTH_OPTIONS} from '../../constants';
@@ -104,6 +104,23 @@ function type2secretPrompt(type, t) {
       return t('channel.edit.key_prompts.default');
   }
 }
+
+// Helper component for labels with tooltips
+const LabelWithTooltip = ({ label, helpText, children }) => (
+  <label>
+    {label}
+    {helpText && (
+      <Popup
+        trigger={<Icon name="question circle outline" style={{ marginLeft: '5px', color: '#999', cursor: 'help' }} />}
+        content={helpText}
+        position="top left"
+        size="small"
+        inverted
+      />
+    )}
+    {children}
+  </label>
+);
 
 const EditChannel = () => {
   const { t } = useTranslation();
@@ -781,8 +798,10 @@ const EditChannel = () => {
             {inputs.type !== 43 && (
               <>
                 <Form.Field>
-                  <label>
-                    {t('channel.edit.model_mapping')}
+                  <LabelWithTooltip
+                    label={t('channel.edit.model_mapping')}
+                    helpText={t('channel.edit.model_mapping_help')}
+                  >
                     <Button
                       type="button"
                       size="mini"
@@ -798,7 +817,7 @@ const EditChannel = () => {
                     >
                       Format JSON
                     </Button>
-                  </label>
+                  </LabelWithTooltip>
                   <Form.TextArea
                     placeholder={`${t(
                       'channel.edit.model_mapping_placeholder'
@@ -833,8 +852,10 @@ const EditChannel = () => {
                   </div>
                 </Form.Field>
                 <Form.Field>
-                  <label>
-                    {t('channel.edit.model_configs')}
+                  <LabelWithTooltip
+                    label={t('channel.edit.model_configs')}
+                    helpText={t('channel.edit.model_configs_help')}
+                  >
                     <Button
                       type="button"
                       size="mini"
@@ -864,7 +885,7 @@ const EditChannel = () => {
                     >
                       Format JSON
                     </Button>
-                  </label>
+                  </LabelWithTooltip>
                   <Form.TextArea
                     placeholder={`${t(
                       'channel.edit.model_configs_placeholder'
@@ -899,8 +920,11 @@ const EditChannel = () => {
                   </div>
                 </Form.Field>
                 <Form.Field>
-                  <Form.TextArea
+                  <LabelWithTooltip
                     label={t('channel.edit.system_prompt')}
+                    helpText={t('channel.edit.system_prompt_help')}
+                  />
+                  <Form.TextArea
                     placeholder={t('channel.edit.system_prompt_placeholder')}
                     name='system_prompt'
                     onChange={handleInputChange}
@@ -1121,22 +1145,20 @@ const EditChannel = () => {
                 />
               </Form.Field>
             )}
-            {inputs.type !== 3 &&
-              inputs.type !== 33 &&
-              inputs.type !== 8 &&
-                inputs.type !== 50 &&
-              inputs.type !== 22 && (
-                <Form.Field>
-                  <Form.Input
-                      label={t('channel.edit.ratelimit')}
-                    name='ratelimit'
-                      placeholder={t('channel.edit.ratelimit_placeholder')}
-                    onChange={handleInputChange}
-                    value={inputs.ratelimit}
-                    autoComplete='new-password'
-                  />
-                </Form.Field>
-              )}
+
+            <Form.Field>
+              <LabelWithTooltip
+                label={t('channel.edit.ratelimit')}
+                helpText={t('channel.edit.ratelimit_help')}
+              />
+              <Form.Input
+                name='ratelimit'
+                placeholder={t('channel.edit.ratelimit_placeholder')}
+                onChange={handleInputChange}
+                value={inputs.ratelimit}
+                autoComplete='new-password'
+              />
+            </Form.Field>
 
             {/* Channel-specific pricing fields - now handled through model_configs */}
 
